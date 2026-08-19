@@ -90,6 +90,17 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Primera vez puede tardar varios minutos (descarga imágenes y builds).
 
+### Tareas en Cursor / VS Code (sin Docker)
+
+El repo versiona `.vscode/tasks.json` (no `settings.json`: el JDK es local). Terminal → Run Task:
+
+| Tarea | Qué arranca |
+|---|---|
+| **Arrancar Ecosistema Zona K** | Core Go `:8081` + Portal Java `:8080` en paralelo |
+| **Arrancar Ecosistema Zona K (ventanas externas)** | `start-services.ps1` |
+
+Plantilla de secretos de despliegue: `deploy/hostinger/.env.example` (copiar a `.env` fuera de Git).
+
 ### URLs útiles
 
 | Servicio | URL | Uso |

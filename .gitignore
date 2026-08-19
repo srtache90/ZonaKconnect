@@ -26,9 +26,11 @@ tmp-*
 .idea/
 .vs/
 **/.vs/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .cursor/
 *.iml
+*.user
 Thumbs.db
 Desktop.ini
 .DS_Store
