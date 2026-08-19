@@ -12,20 +12,12 @@ final class DianReceptionSpec {
     static final int MAX_MAIL_ZIP_BYTES = 2 * 1024 * 1024;
 
     /**
-     * z + NIT(10) + PT(3) + año(2) + consecutivo hex(8) + .zip
-     * Ejemplo anexo: Z08001972680001900000011.zip
+     * Prefijo + NIT(10) + PT(3) + año(2) + consecutivo hex(8).
+     * ZIP hacia DIAN: {@code z…zip}. Entrega al adquirente (anexo 9.1): el FileName
+     * no está reglamentado; proveedores como FyM usan {@code ad…zip} (mismo stem que el AttachedDocument).
      */
-    private static final Pattern DIAN_ZIP_NAME = Pattern.compile(
-            "^z[0-9]{10}[0-9]{3}[0-9]{2}[0-9a-f]{8}\\.zip$",
-            Pattern.CASE_INSENSITIVE
-    );
-
-    /**
-     * fv|nc|nd|ad|ar + misma cola de 23 caracteres + .xml
-     * Ejemplo: fv08001972680001900000011.xml
-     */
-    private static final Pattern DIAN_XML_NAME = Pattern.compile(
-            "^(fv|nc|nd|ad|ar)[0-9]{10}[0-9]{3}[0-9]{2}[0-9a-f]{8}\\.xml$",
+    private static final Pattern DIAN_PACKAGE_STEM = Pattern.compile(
+            "^(z|ad|fv|nc|nd|ar)[0-9]{10}[0-9]{3}[0-9]{2}[0-9a-f]{8}$",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -59,13 +51,28 @@ final class DianReceptionSpec {
     }
 
     static boolean isDianZipName(String fileName) {
-        String name = baseName(fileName).toLowerCase(Locale.ROOT);
-        return DIAN_ZIP_NAME.matcher(name).matches();
+        return matchesPackage(fileName, ".zip");
     }
 
     static boolean isDianXmlName(String fileName) {
+        return matchesPackage(fileName, ".xml");
+    }
+
+    static boolean isDianPackageFile(String fileName) {
         String name = baseName(fileName).toLowerCase(Locale.ROOT);
-        return DIAN_XML_NAME.matcher(name).matches();
+        if (name.endsWith(".zip") || name.endsWith(".xml")) {
+            name = name.substring(0, name.length() - 4);
+        }
+        return DIAN_PACKAGE_STEM.matcher(name).matches();
+    }
+
+    private static boolean matchesPackage(String fileName, String extension) {
+        String name = baseName(fileName).toLowerCase(Locale.ROOT);
+        if (!name.endsWith(extension)) {
+            return false;
+        }
+        String stem = name.substring(0, name.length() - extension.length());
+        return DIAN_PACKAGE_STEM.matcher(stem).matches();
     }
 
     static boolean isInvoiceReceptionSubject(String subject) {

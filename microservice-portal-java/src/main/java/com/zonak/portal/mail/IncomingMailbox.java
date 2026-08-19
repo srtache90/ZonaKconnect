@@ -45,9 +45,9 @@ public record IncomingMailbox(
         props.put("mail.store.protocol", protocol);
         props.put("mail." + protocol + ".host", host);
         props.put("mail." + protocol + ".port", String.valueOf(port));
-        props.put("mail." + protocol + ".connectiontimeout", "12000");
-        props.put("mail." + protocol + ".timeout", "25000");
-        props.put("mail." + protocol + ".writetimeout", "25000");
+        props.put("mail." + protocol + ".connectiontimeout", "20000");
+        props.put("mail." + protocol + ".timeout", "90000");
+        props.put("mail." + protocol + ".writetimeout", "90000");
         props.put("mail." + protocol + ".partialfetch", "false");
         props.put("mail." + protocol + ".fetchsize", "1048576");
         if (protocol.endsWith("s")) {

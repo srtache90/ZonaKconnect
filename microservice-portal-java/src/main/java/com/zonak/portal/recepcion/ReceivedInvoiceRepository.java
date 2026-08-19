@@ -93,6 +93,51 @@ public class ReceivedInvoiceRepository {
         return xmls.stream().filter(StringUtils::hasText).findFirst();
     }
 
+    public Optional<UUID> findOwnedCompanyId(UUID invoiceId, List<UUID> sociedadIds) {
+        if (invoiceId == null || sociedadIds == null || sociedadIds.isEmpty()) {
+            return Optional.empty();
+        }
+        String placeholders = sociedadIds.stream().map(id -> "?").reduce((a, b) -> a + "," + b).orElse("?");
+        List<Object> params = new ArrayList<>();
+        params.add(invoiceId);
+        params.addAll(sociedadIds);
+        List<UUID> ids = jdbcTemplate.query(
+                """
+                        SELECT company_id
+                        FROM invoices
+                        WHERE id = ?
+                          AND company_id IN (""" + placeholders + ")",
+                (rs, rowNum) -> rs.getObject("company_id", UUID.class),
+                params.toArray()
+        );
+        return ids.stream().findFirst();
+    }
+
+    public Optional<byte[]> findPdfBase(UUID sociedadId, UUID invoiceId) {
+        List<String> encoded = jdbcTemplate.query(
+                """
+                        SELECT COALESCE(i.raw_dian_payload_jsonb->>'pdf_base', '') AS pdf_content
+                        FROM invoices i
+                        WHERE i.company_id = ?
+                          AND i.id = ?
+                        """,
+                (rs, rowNum) -> rs.getString("pdf_content"),
+                sociedadId,
+                invoiceId
+        );
+        return encoded.stream()
+                .filter(StringUtils::hasText)
+                .map(value -> {
+                    try {
+                        return java.util.Base64.getDecoder().decode(value);
+                    } catch (IllegalArgumentException ex) {
+                        return new byte[0];
+                    }
+                })
+                .filter(bytes -> bytes.length > 4)
+                .findFirst();
+    }
+
     private ReceivedInvoiceRow mapRow(ResultSet rs) throws SQLException {
         JsonNode rawPayload = readTree(rs.getString("raw_payload"));
         JsonNode totalsPayload = readTree(rs.getString("totals_payload"));

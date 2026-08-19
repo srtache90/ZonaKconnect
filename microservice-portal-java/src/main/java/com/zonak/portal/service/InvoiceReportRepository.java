@@ -123,11 +123,17 @@ public class InvoiceReportRepository {
         JsonNode rawPayload = readTree(rs.getString("raw_payload"));
         JsonNode dianResponse = readTree(rs.getString("dian_response"));
         SignedXmlMetadata signedXml = signedXmlMetadata(dianResponse.path("signedXmlBase64").asText(""));
+        if (signedXml.uniqueCode().isBlank()) {
+            signedXml = signedXmlFromPlainXml(text(rawPayload, "xml_base", ""));
+        }
 
         String prefijo = rs.getString("prefijo");
         long numero = rs.getLong("numero");
-        String documentNumber = prefijo + numero;
-        InvoicePdfData.Company company = new InvoicePdfData.Company(
+        boolean received = "RECIBIDA".equalsIgnoreCase(text(rawPayload, "role", ""));
+        String documentNumber = received
+                ? firstString(text(rawPayload, "invoice_number", ""), prefijo + numero)
+                : prefijo + numero;
+        InvoicePdfData.Company tenantCompany = new InvoicePdfData.Company(
                 rs.getString("razon_social"),
                 rs.getString("nit"),
                 rs.getString("dv"),
@@ -137,7 +143,26 @@ public class InvoiceReportRepository {
                 rs.getString("company_phone"),
                 ""
         );
-        InvoicePdfData.Customer customer = mapCustomer(rawPayload.path("cliente"));
+        InvoicePdfData.Company company = received
+                ? new InvoicePdfData.Company(
+                        text(rawPayload.path("proveedor"), "razon_social", "Proveedor"),
+                        text(rawPayload.path("proveedor"), "nit", ""),
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        ""
+                )
+                : tenantCompany;
+        InvoicePdfData.Customer customer = received
+                ? new InvoicePdfData.Customer(
+                        tenantCompany.razonSocial(),
+                        tenantCompany.nit(),
+                        tenantCompany.direccion(),
+                        tenantCompany.email()
+                )
+                : mapCustomer(rawPayload.path("cliente"));
         List<InvoicePdfData.Item> items = mapItems(rawPayload.path("items"));
         List<InvoicePdfData.TaxDetail> impuestos = taxDetails(rawPayload.path("items"), false);
         List<InvoicePdfData.TaxDetail> retenciones = taxDetails(rawPayload.path("items"), true);
@@ -500,20 +525,38 @@ public class InvoiceReportRepository {
         return nodes.getLength() == 0 ? null : (Element) nodes.item(0);
     }
 
+    private SignedXmlMetadata signedXmlFromPlainXml(String xml) {
+        if (xml == null || xml.isBlank()) {
+            return SignedXmlMetadata.empty();
+        }
+        return signedXmlMetadata(Base64.getEncoder().encodeToString(xml.getBytes(StandardCharsets.UTF_8)));
+    }
+
     private LocalDate fallbackIssueDate(JsonNode rawPayload) {
         String rawDate = firstString(text(rawPayload, "fechaEmision", ""), text(rawPayload, "fecha_emision", ""));
-        if (!rawDate.isBlank()) {
-            return OffsetDateTime.parse(rawDate).toLocalDate();
+        if (rawDate.isBlank()) {
+            throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
         }
-        throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
+        try {
+            return OffsetDateTime.parse(rawDate).toLocalDate();
+        } catch (Exception ignored) {
+            if (rawDate.length() >= 10) {
+                return LocalDate.parse(rawDate.substring(0, 10));
+            }
+            throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
+        }
     }
 
     private OffsetTime fallbackIssueTime(JsonNode rawPayload) {
         String rawDate = firstString(text(rawPayload, "fechaEmision", ""), text(rawPayload, "fecha_emision", ""));
         if (!rawDate.isBlank()) {
-            return OffsetDateTime.parse(rawDate).toOffsetTime().withOffsetSameInstant(COLOMBIA_OFFSET);
+            try {
+                return OffsetDateTime.parse(rawDate).toOffsetTime().withOffsetSameInstant(COLOMBIA_OFFSET);
+            } catch (Exception ignored) {
+                return OffsetTime.of(0, 0, 0, 0, COLOMBIA_OFFSET);
+            }
         }
-        throw new InvoiceStorageException("IssueTime fiscal no disponible para representación gráfica");
+        return OffsetTime.of(0, 0, 0, 0, COLOMBIA_OFFSET);
     }
 
     private DianFiscalContext.DocumentKind inferDocumentKind(JsonNode rawPayload) {

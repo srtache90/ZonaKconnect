@@ -141,8 +141,22 @@ public class RecepcionPortalController {
             @PathVariable UUID id,
             HttpSession session
     ) {
-        UUID tenantId = UUID.fromString(portalSessionService.resolveTenantId(session));
-        byte[] pdfBytes = invoiceOrchestratorService.downloadOrGeneratePdf(tenantId, id).block();
+        UUID tenantId = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+        byte[] storedPdf = receivedInvoiceRepository.findPdfBase(tenantId, id).orElse(null);
+        byte[] pdfBytes = storedPdf;
+        if (pdfBytes == null || pdfBytes.length == 0) {
+            try {
+                pdfBytes = invoiceOrchestratorService.downloadOrGeneratePdf(tenantId, id).block();
+            } catch (Exception ex) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "PDF no disponible. Vuelva a sincronizar el correo o importe el ZIP con la representación gráfica. "
+                                + ex.getMessage()
+                );
+            }
+        }
         if (pdfBytes == null || pdfBytes.length == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PDF no disponible para la factura recibida");
         }
@@ -158,7 +172,9 @@ public class RecepcionPortalController {
             @PathVariable UUID id,
             HttpSession session
     ) {
-        UUID tenantId = UUID.fromString(portalSessionService.resolveTenantId(session));
+        UUID tenantId = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
         String xml = receivedInvoiceRepository.findXmlBase(tenantId, id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "XML no disponible para la factura recibida"));
         byte[] xmlBytes = xml.getBytes(java.nio.charset.StandardCharsets.UTF_8);

@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Base64;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,8 +40,8 @@ import org.springframework.util.StringUtils;
 @Service
 public class MailReceptionSyncService {
     private static final Logger log = LoggerFactory.getLogger(MailReceptionSyncService.class);
-    private static final int MAX_MESSAGES_PER_SYNC = 50;
-    private static final int MAX_MESSAGES_PER_FOLDER = 40;
+    private static final int MAX_BODIES_PER_SYNC = 80;
+    private static final int MAX_MESSAGES_PER_FOLDER = 200;
     private static final int LOOKBACK_DAYS = 21;
     private final MailAppProperties mailAppProperties;
     private final SociedadMailAccountRepository sociedadMailAccountRepository;
@@ -75,8 +75,10 @@ public class MailReceptionSyncService {
                 throw new IllegalStateException("No se encontró INBOX ni carpetas de recepción en el buzón.");
             }
             Date since = Date.from(Instant.now().minus(LOOKBACK_DAYS, ChronoUnit.DAYS));
+            Set<String> seenMessageIds = new LinkedHashSet<>();
+            int bodies = 0;
             for (Folder folder : folders) {
-                if (messages >= MAX_MESSAGES_PER_SYNC) {
+                if (bodies >= MAX_BODIES_PER_SYNC) {
                     break;
                 }
                 folder.open(Folder.READ_ONLY);
@@ -89,17 +91,29 @@ public class MailReceptionSyncService {
                     profile.add(FetchProfile.Item.ENVELOPE);
                     profile.add(FetchProfile.Item.CONTENT_INFO);
                     folder.fetch(folderMessages, profile);
-                    for (int i = folderMessages.length - 1; i >= 0 && messages < MAX_MESSAGES_PER_SYNC; i--) {
+                    for (int i = folderMessages.length - 1; i >= 0 && bodies < MAX_BODIES_PER_SYNC; i--) {
                         Message message = folderMessages[i];
                         messages++;
+                        String messageId = messageIdOf(message);
+                        if (StringUtils.hasText(messageId) && !seenMessageIds.add(messageId)) {
+                            continue;
+                        }
                         try {
                             if (!mightContainFiscalAttachment(message)) {
                                 continue;
                             }
-                            List<String> xmlAttachments = extractXmlParts(message);
-                            xmlFound += xmlAttachments.size();
-                            for (String xml : xmlAttachments) {
-                                if (insertReceivedInvoice(companyId, xml, "MAIL_INBOX")) {
+                            bodies++;
+                            FiscalPackage pack = extractFiscalPackage(message);
+                            if (pack.xmls.isEmpty()) {
+                                log.info(
+                                        "Correo fiscal sin XML/ZIP UBL en {}: asunto={}",
+                                        folder.getFullName(),
+                                        decodeSubject(message)
+                                );
+                            }
+                            xmlFound += pack.xmls.size();
+                            for (String xml : pack.xmls) {
+                                if (insertReceivedInvoice(companyId, xml, "MAIL_INBOX", pack.pdf)) {
                                     imported++;
                                 } else {
                                     skipped++;
@@ -179,31 +193,14 @@ public class MailReceptionSyncService {
         List<Folder> selected = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (String name : List.of(
-                "INBOX",
                 "[Gmail]/Todos",
                 "[Gmail]/All Mail",
                 "[Google Mail]/Todos",
-                "[Google Mail]/All Mail"
+                "[Google Mail]/All Mail",
+                "INBOX"
         )) {
             addFolderIfUsable(store.getFolder(name), selected, seen);
         }
-        try {
-            Folder root = store.getDefaultFolder();
-            Folder[] listed = root != null ? root.list("*") : new Folder[0];
-            List<Folder> listedFolders = new ArrayList<>(List.of(listed));
-            listedFolders.sort(Comparator.comparingInt((Folder folder) -> folderPriority(folder.getFullName())));
-            for (Folder folder : listedFolders) {
-                if (selected.size() >= 8) {
-                    break;
-                }
-                if (isReceptionLabel(folder.getFullName())) {
-                    addFolderIfUsable(folder, selected, seen);
-                }
-            }
-        } catch (Exception ex) {
-            log.warn("No se listaron etiquetas IMAP adicionales: {}", ex.getMessage());
-        }
-        selected.sort(Comparator.comparingInt((Folder folder) -> folderPriority(folder.getFullName())));
         return selected;
     }
 
@@ -223,43 +220,6 @@ public class MailReceptionSyncService {
         } catch (Exception ex) {
             log.debug("Carpeta IMAP ignorada: {}", ex.getMessage());
         }
-    }
-
-    private boolean isReceptionLabel(String fullName) {
-        if (!StringUtils.hasText(fullName)) {
-            return false;
-        }
-        String name = fullName.toLowerCase(Locale.ROOT);
-        if (name.contains("trash") || name.contains("papelera") || name.contains("spam")
-                || name.contains("junk") || name.contains("draft") || name.contains("borrador")
-                || name.contains("sent") || name.contains("enviado") || name.contains("starred")
-                || name.contains("destacado") || name.contains("snoozed")) {
-            return false;
-        }
-        return name.contains("dispa")
-                || name.contains("revisar")
-                || name.contains("recibid")
-                || name.contains("factura")
-                || name.contains("copia encargado")
-                || name.contains("todos")
-                || name.contains("all mail");
-    }
-
-    private int folderPriority(String fullName) {
-        String name = fullName == null ? "" : fullName.toLowerCase(Locale.ROOT);
-        if (name.contains("dispa")) {
-            return 0;
-        }
-        if (name.contains("revisar") || name.contains("copia encargado")) {
-            return 1;
-        }
-        if (name.equals("inbox")) {
-            return 2;
-        }
-        if (name.contains("todos") || name.contains("all mail")) {
-            return 3;
-        }
-        return 4;
     }
 
     private Message[] recentFolderMessages(Folder folder, Date since) throws Exception {
@@ -290,11 +250,34 @@ public class MailReceptionSyncService {
     }
 
     private boolean mightContainFiscalAttachment(Message message) throws Exception {
-        String subject = message.getSubject() == null ? "" : message.getSubject();
-        if (DianReceptionSpec.isReceptionMail(subject)) {
+        if (DianReceptionSpec.isReceptionMail(decodeSubject(message))) {
             return true;
         }
         return hasDianNamedAttachment(message);
+    }
+
+    private String decodeSubject(Message message) {
+        try {
+            String subject = message.getSubject();
+            if (!StringUtils.hasText(subject)) {
+                return "";
+            }
+            return MimeUtility.decodeText(subject).replace('\n', ' ').replace('\r', ' ').trim();
+        } catch (Exception ex) {
+            return "";
+        }
+    }
+
+    private String messageIdOf(Message message) {
+        try {
+            String[] headers = message.getHeader("Message-ID");
+            if (headers != null && headers.length > 0 && StringUtils.hasText(headers[0])) {
+                return headers[0].trim();
+            }
+        } catch (Exception ignored) {
+            return "";
+        }
+        return "";
     }
 
     private boolean hasDianNamedAttachment(Part part) throws Exception {
@@ -307,8 +290,13 @@ public class MailReceptionSyncService {
             }
             return false;
         }
-        String fileName = decodeFileName(part.getFileName());
-        return DianReceptionSpec.isDianZipName(fileName) || DianReceptionSpec.isDianXmlName(fileName);
+        if (part.isMimeType("message/rfc822")) {
+            Object content = part.getContent();
+            if (content instanceof Part nested) {
+                return hasDianNamedAttachment(nested);
+            }
+        }
+        return DianReceptionSpec.isDianPackageFile(partFileName(part));
     }
 
     private IncomingMailbox resolveMailbox(UUID companyId) {
@@ -346,15 +334,15 @@ public class MailReceptionSyncService {
         if (content == null || content.length == 0) {
             throw new IllegalArgumentException("El archivo XML/ZIP está vacío.");
         }
-        List<String> xmlDocuments = extractXmlDocuments(content, fileName);
-        if (xmlDocuments.isEmpty()) {
+        FiscalPackage pack = extractFiscalPackage(content, fileName);
+        if (pack.xmls.isEmpty()) {
             throw new IllegalArgumentException(
                     "No se encontró XML de factura (Invoice o AttachedDocument) en el archivo."
             );
         }
         int imported = 0;
-        for (String xml : xmlDocuments) {
-            if (insertReceivedInvoice(companyId, xml, source)) {
+        for (String xml : pack.xmls) {
+            if (insertReceivedInvoice(companyId, xml, source, pack.pdf)) {
                 imported++;
             }
         }
@@ -366,9 +354,12 @@ public class MailReceptionSyncService {
         return imported;
     }
 
-    private boolean insertReceivedInvoice(UUID companyId, String xml, String source) {
+    private boolean insertReceivedInvoice(UUID companyId, String xml, String source, byte[] pdf) {
         ParsedXml parsed = parseXml(xml);
         if (StringUtils.hasText(parsed.cufe()) && alreadyImported(companyId, parsed.cufe())) {
+            if (pdf != null && pdf.length > 0) {
+                attachPdfIfMissing(companyId, parsed.cufe(), pdf);
+            }
             log.info("XML de recepción omitido: CUFE duplicado {}", parsed.cufe());
             return false;
         }
@@ -384,6 +375,9 @@ public class MailReceptionSyncService {
         ObjectNode proveedor = payload.putObject("proveedor");
         proveedor.put("razon_social", parsed.proveedorNombre());
         proveedor.put("nit", parsed.proveedorNit());
+        if (pdf != null && pdf.length > 4 && pdf[0] == 0x25 && pdf[1] == 0x50) {
+            payload.put("pdf_base", Base64.getEncoder().encodeToString(pdf));
+        }
 
         try {
             ObjectNode totals = objectMapper.createObjectNode();
@@ -450,6 +444,31 @@ public class MailReceptionSyncService {
         return Boolean.TRUE.equals(exists);
     }
 
+    private void attachPdfIfMissing(UUID companyId, String cufe, byte[] pdf) {
+        try {
+            String encoded = Base64.getEncoder().encodeToString(pdf);
+            jdbcTemplate.update(
+                    """
+                            UPDATE invoices
+                            SET raw_dian_payload_jsonb = jsonb_set(
+                                    COALESCE(raw_dian_payload_jsonb, '{}'::jsonb),
+                                    '{pdf_base}',
+                                    to_jsonb(?::text)
+                                ),
+                                updated_at = now()
+                            WHERE company_id = ?
+                              AND uuid_cude = ?
+                              AND COALESCE(raw_dian_payload_jsonb->>'pdf_base', '') = ''
+                            """,
+                    encoded,
+                    companyId,
+                    cufe
+            );
+        } catch (Exception ex) {
+            log.warn("No se adjuntó PDF de recepción al CUFE {}: {}", cufe, ex.getMessage());
+        }
+    }
+
     private String readableMailError(Exception ex) {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         if (message.toLowerCase(Locale.ROOT).contains("authenticationfailed")
@@ -459,10 +478,16 @@ public class MailReceptionSyncService {
         return message;
     }
 
-    private List<String> extractXmlDocuments(byte[] content, String fileName) {
-        List<String> xmlParts = new ArrayList<>();
-        collectFromBytes(content, fileName == null ? "" : fileName.toLowerCase(Locale.ROOT), xmlParts);
-        return xmlParts;
+    private FiscalPackage extractFiscalPackage(byte[] content, String fileName) {
+        FiscalPackage pack = new FiscalPackage();
+        collectFromBytes(content, fileName == null ? "" : fileName.toLowerCase(Locale.ROOT), pack);
+        return pack;
+    }
+
+    private FiscalPackage extractFiscalPackage(Message message) throws Exception {
+        FiscalPackage pack = new FiscalPackage();
+        collectXmlParts(message, pack);
+        return pack;
     }
 
     private boolean looksLikeZip(byte[] content) {
@@ -470,7 +495,7 @@ public class MailReceptionSyncService {
                 && content[0] == 0x50 && content[1] == 0x4B;
     }
 
-    private void collectXmlFromZip(byte[] content, List<String> xmlParts) {
+    private void collectXmlFromZip(byte[] content, FiscalPackage pack) {
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(content))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
@@ -480,16 +505,20 @@ public class MailReceptionSyncService {
                 byte[] entryBytes = zip.readAllBytes();
                 String entryName = DianReceptionSpec.baseName(entry.getName());
                 String lower = entryName.toLowerCase(Locale.ROOT);
-                if (lower.endsWith(".pdf") || lower.endsWith(".jpg") || lower.endsWith(".png")) {
+                if (lower.endsWith(".jpg") || lower.endsWith(".png")) {
+                    continue;
+                }
+                if (lower.endsWith(".pdf") || isPdf(entryBytes)) {
+                    pack.addPdf(entryBytes);
                     continue;
                 }
                 if (lower.endsWith(".zip") || looksLikeZip(entryBytes)) {
-                    collectXmlFromZip(entryBytes, xmlParts);
+                    collectXmlFromZip(entryBytes, pack);
                 } else {
                     String xml = decodeXml(entryBytes);
                     if (DianReceptionSpec.isReceivableUbl(xml)
                             || DianReceptionSpec.isDianXmlName(entryName) && looksLikeXml(xml)) {
-                        xmlParts.add(xml);
+                        pack.xmls.add(xml);
                     }
                 }
                 zip.closeEntry();
@@ -499,47 +528,50 @@ public class MailReceptionSyncService {
         }
     }
 
-    private List<String> extractXmlParts(Message message) throws Exception {
-        List<String> xmlParts = new ArrayList<>();
-        collectXmlParts(message, xmlParts);
-        return xmlParts;
-    }
-
-    private void collectXmlParts(Part part, List<String> xmlParts) throws Exception {
+    private void collectXmlParts(Part part, FiscalPackage pack) throws Exception {
         if (part.isMimeType("multipart/*")) {
             Multipart multipart = (Multipart) part.getContent();
             for (int i = 0; i < multipart.getCount(); i++) {
-                collectXmlParts(multipart.getBodyPart(i), xmlParts);
+                collectXmlParts(multipart.getBodyPart(i), pack);
+            }
+            return;
+        }
+        if (part.isMimeType("message/rfc822")) {
+            Object nested = part.getContent();
+            if (nested instanceof Part nestedPart) {
+                collectXmlParts(nestedPart, pack);
             }
             return;
         }
 
-        String fileName = decodeFileName(part.getFileName());
+        String fileName = partFileName(part);
         String contentType = part.getContentType() == null ? "" : part.getContentType().toLowerCase(Locale.ROOT);
-        if (contentType.contains("text/html") || contentType.contains("text/calendar")) {
+        if (contentType.contains("text/html")
+                || contentType.contains("text/calendar")
+                || contentType.startsWith("image/")) {
             return;
         }
 
         boolean looksZip = contentType.contains("zip")
                 || fileName.endsWith(".zip")
-                || DianReceptionSpec.isDianZipName(fileName);
+                || DianReceptionSpec.isDianPackageFile(fileName);
         boolean looksXml = contentType.contains("xml")
-                || DianReceptionSpec.isDianXmlName(fileName)
-                || fileName.endsWith(".xml");
-        boolean attachmentLike = Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())
+                || fileName.endsWith(".xml")
+                || DianReceptionSpec.isDianXmlName(fileName);
+        boolean looksPdf = contentType.contains("application/pdf") || fileName.endsWith(".pdf");
+        boolean binaryAttachment = Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())
                 || contentType.contains("octet-stream")
-                || looksZip
-                || looksXml;
+                || contentType.contains("application/");
 
-        if (!looksXml && !looksZip && part.isMimeType("text/plain") && !attachmentLike) {
+        if (!looksXml && !looksZip && !looksPdf && part.isMimeType("text/plain") && !binaryAttachment) {
             Object content = part.getContent();
             if (content instanceof String text && DianReceptionSpec.isReceivableUbl(text)) {
-                xmlParts.add(text);
+                pack.xmls.add(text);
             }
             return;
         }
 
-        if (!looksXml && !looksZip) {
+        if (!looksXml && !looksZip && !looksPdf && !binaryAttachment) {
             return;
         }
 
@@ -555,23 +587,48 @@ public class MailReceptionSyncService {
                 log.info("Adjunto omitido por peso > 2 MB (anexo 9.1): {}", fileName);
                 return;
             }
-            collectFromBytes(bytes, fileName, xmlParts);
+            collectFromBytes(bytes, fileName, pack);
         }
     }
 
-    private void collectFromBytes(byte[] bytes, String fileName, List<String> xmlParts) {
+    private String partFileName(Part part) throws Exception {
+        String name = decodeFileName(part.getFileName());
+        if (StringUtils.hasText(name)) {
+            return name;
+        }
+        String[] types = part.getHeader("Content-Type");
+        if (types != null && types.length > 0 && types[0] != null) {
+            Matcher matcher = Pattern.compile("name\\s*=\\s*\"?([^\\\";]+)\"?", Pattern.CASE_INSENSITIVE)
+                    .matcher(types[0]);
+            if (matcher.find()) {
+                return decodeFileName(matcher.group(1));
+            }
+        }
+        return "";
+    }
+
+    private void collectFromBytes(byte[] bytes, String fileName, FiscalPackage pack) {
         if (bytes == null || bytes.length == 0) {
             return;
         }
         String name = DianReceptionSpec.baseName(fileName).toLowerCase(Locale.ROOT);
-        if (name.endsWith(".zip") || DianReceptionSpec.isDianZipName(name) || looksLikeZip(bytes)) {
-            collectXmlFromZip(bytes, xmlParts);
+        if (name.endsWith(".pdf") || isPdf(bytes)) {
+            pack.addPdf(bytes);
+            return;
+        }
+        if (name.endsWith(".zip") || DianReceptionSpec.isDianPackageFile(name) || looksLikeZip(bytes)) {
+            collectXmlFromZip(bytes, pack);
             return;
         }
         String xml = decodeXml(bytes);
         if (DianReceptionSpec.isReceivableUbl(xml)) {
-            xmlParts.add(xml);
+            pack.xmls.add(xml);
         }
+    }
+
+    private boolean isPdf(byte[] bytes) {
+        return bytes != null && bytes.length > 4
+                && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46;
     }
 
     private String decodeFileName(String fileName) {
@@ -723,10 +780,24 @@ public class MailReceptionSyncService {
         }
     }
 
+    private static final class FiscalPackage {
+        private final List<String> xmls = new ArrayList<>();
+        private byte[] pdf;
+
+        private void addPdf(byte[] bytes) {
+            if (bytes == null || bytes.length < 5) {
+                return;
+            }
+            if (pdf == null || bytes.length > pdf.length) {
+                pdf = bytes;
+            }
+        }
+    }
+
     public record SyncResult(int messages, int xmlFound, int imported, int skipped) {
         public String summary() {
             return "Sincronización completada. Correos revisados: " + messages
-                    + " (filtro anexo DIAN 9.1/9.2: asunto NIT;…;tipo y ZIP zNNNNNNNNNNpppaadddddddd). "
+                    + " (All Mail/INBOX, filtro 9.1 y ZIP/XML DIAN). "
                     + "XML encontrados: " + xmlFound
                     + ". Documentos importados: " + imported
                     + ". Omitidos: " + skipped + ".";
