@@ -1,0 +1,46 @@
+{
+  "ambiente": "Habilitacion",
+  "cliente": {
+    "tipo_identificacion": "31",
+    "numero_identificacion": "901234567",
+    "razon_social": "Cliente Integracion Local S.A.S.",
+    "email": "cliente@zonak.local"
+  },
+  "items": [
+    {
+      "codigo": "SERV-IVA-001",
+      "descripcion": "Servicio gravado con IVA",
+      "cantidad": 2,
+      "precio_unitario": 100000,
+      "descuento": 0,
+      "impuestos": [
+        {
+          "codigo": "01",
+          "nombre": "IVA",
+          "porcentaje": 19
+        },
+        {
+          "codigo": "05",
+          "nombre": "ReteIVA",
+          "porcentaje": 15,
+          "baseImponible": 38000,
+          "esRetencion": true
+        }
+      ]
+    },
+    {
+      "codigo": "CONS-INC-001",
+      "descripcion": "Producto con impuesto nacional al consumo",
+      "cantidad": 1,
+      "precio_unitario": 50000,
+      "descuento": 0,
+      "impuestos": [
+        {
+          "codigo": "04",
+          "nombre": "INC",
+          "porcentaje": 8
+        }
+      ]
+    }
+  ]
+}

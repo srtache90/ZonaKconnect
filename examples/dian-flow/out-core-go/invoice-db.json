@@ -1,0 +1,12 @@
+﻿{
+    "id":  "75ba7ee0-1347-4549-a922-e669b40cebc3",
+    "tipo":  "EMITIDA",
+    "uuid_cude":  "9f1d0700bb532ac69483af24a49ab2de0f507c8b234c6a16f988845669f8721ac63758c341785a3647b297992d0cf2b9",
+    "prefijo":  "EPR",
+    "numero":  12,
+    "estado_dian":  "Documento Validado Exitosamente",
+    "xml_s3_url":  "/api/v1/invoices/75ba7ee0-1347-4549-a922-e669b40cebc3/documents/signed-xml",
+    "pdf_s3_url":  "/api/v1/invoices/75ba7ee0-1347-4549-a922-e669b40cebc3/documents/pdf",
+    "created_at":  "2026-06-05T21:17:07.856728Z",
+    "updated_at":  "2026-06-05T21:17:08.122312Z"
+}

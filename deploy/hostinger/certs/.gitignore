@@ -1,0 +1,7 @@
+# Certificado DIAN (.p12)
+# Coloca aquí el archivo con este nombre exacto:
+#   dian-certificate.p12
+#
+# No subas este archivo a Git.
+*
+!.gitignore

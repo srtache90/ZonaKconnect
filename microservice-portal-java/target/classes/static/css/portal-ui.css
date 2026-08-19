@@ -1,0 +1,516 @@
+/* DIAN Connect — UI unificada (portal)
+   Se carga después de Bootstrap/Tailwind para normalizar componentes. */
+
+:root {
+    --dc-primary: #000000;
+    --dc-on-primary: #ffffff;
+    --dc-surface: #fcf9f5;
+    --dc-surface-low: #f6f3ef;
+    --dc-surface-lowest: #ffffff;
+    --dc-surface-high: #e5e2de;
+    --dc-on-surface: #1c1c1a;
+    --dc-on-variant: #444748;
+    --dc-outline: #747878;
+    --dc-error: #ba1a1a;
+    --dc-error-container: #ffdad6;
+    --dc-success: #1b5e3b;
+    --dc-success-container: #d8f3e3;
+    --dc-warning: #7a5a00;
+    --dc-warning-container: #fff1c2;
+    --dc-radius: 0.75rem;
+    --dc-radius-sm: 0.5rem;
+    --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    --dc-font: "TT Commons", Arial, sans-serif;
+    --dc-header-h: 4rem;
+}
+
+html.light,
+html:not(.dark) {
+    color-scheme: light;
+}
+
+body,
+body.bg-light,
+body.text-on-surface {
+    min-height: 100dvh;
+    margin: 0;
+    color: var(--dc-on-surface) !important;
+    background-color: var(--dc-surface) !important;
+    font-family: var(--dc-font) !important;
+    -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+    background-color: #1c1c1a !important;
+    color: #f3f0ec !important;
+}
+
+/* ---- Layout shell ---- */
+.dc-page,
+main.container,
+main.container-fluid,
+main.pt-24 {
+    padding-top: calc(var(--dc-header-h) + 2rem) !important;
+    padding-bottom: 8rem !important;
+}
+
+.dc-page-narrow {
+    max-width: 960px;
+    margin-inline: auto;
+}
+
+.dc-page-wide {
+    max-width: 1280px;
+    margin-inline: auto;
+}
+
+.dc-page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--dc-primary);
+    margin: 0 0 0.35rem;
+}
+
+.dc-page-subtitle {
+    margin: 0;
+    color: var(--dc-on-variant);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.dc-section-gap {
+    margin-top: 1.5rem;
+}
+
+/* ---- Cards / panels ---- */
+.dc-card,
+.glass-card,
+.card,
+.zk-card,
+.zk-filter-card {
+    background: var(--dc-surface-lowest) !important;
+    border: 1px solid var(--dc-surface-high) !important;
+    border-radius: var(--dc-radius) !important;
+    box-shadow: var(--dc-shadow) !important;
+    color: var(--dc-on-surface);
+}
+
+.card-header,
+.card-header.bg-primary,
+.card-header.bg-white {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-surface) !important;
+    border-bottom: 1px solid var(--dc-surface-high) !important;
+    border-radius: var(--dc-radius) var(--dc-radius) 0 0 !important;
+    font-weight: 600;
+}
+
+.card-header.bg-primary.text-white {
+    background: var(--dc-primary) !important;
+    color: var(--dc-on-primary) !important;
+}
+
+.card-body {
+    padding: 1.25rem 1.5rem;
+}
+
+/* ---- Typography overrides (kill serif/gold themes) ---- */
+.zk-title,
+.display-6,
+h1, h2, h3, h4, h5 {
+    font-family: var(--dc-font) !important;
+    color: var(--dc-primary);
+    letter-spacing: -0.01em;
+}
+
+.zk-data,
+.font-monospace {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--dc-font) !important;
+}
+
+.text-muted,
+small.text-muted {
+    color: var(--dc-on-variant) !important;
+}
+
+/* ---- Buttons ---- */
+.btn,
+button.btn {
+    font-family: var(--dc-font);
+    font-weight: 500;
+    border-radius: var(--dc-radius-sm) !important;
+    letter-spacing: 0.01em;
+}
+
+.btn-primary,
+.btn-zk,
+.btn-dark {
+    background: var(--dc-primary) !important;
+    border-color: var(--dc-primary) !important;
+    color: var(--dc-on-primary) !important;
+}
+
+.btn-primary:hover,
+.btn-zk:hover,
+.btn-dark:hover {
+    background: #222 !important;
+    border-color: #222 !important;
+    color: #fff !important;
+}
+
+.btn-outline-primary,
+.btn-outline-dark,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-info {
+    background: transparent !important;
+    border-color: var(--dc-surface-high) !important;
+    color: var(--dc-on-surface) !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-dark:hover,
+.btn-outline-secondary:hover,
+.btn-outline-success:hover,
+.btn-outline-info:hover {
+    background: var(--dc-surface-low) !important;
+    border-color: var(--dc-primary) !important;
+    color: var(--dc-primary) !important;
+}
+
+.btn-outline-danger {
+    border-color: #e8b4ae !important;
+    color: var(--dc-error) !important;
+}
+
+.btn-sm {
+    border-radius: 0.4rem !important;
+}
+
+.rounded-pill {
+    border-radius: 999px !important;
+}
+
+/* ---- Forms ---- */
+.form-control,
+.form-select,
+input.form-control,
+select.form-select,
+textarea.form-control {
+    border-radius: var(--dc-radius-sm) !important;
+    border-color: var(--dc-surface-high) !important;
+    background: var(--dc-surface-lowest) !important;
+    color: var(--dc-on-surface) !important;
+    font-family: var(--dc-font);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--dc-primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--dc-on-surface);
+}
+
+.form-text {
+    color: var(--dc-on-variant);
+}
+
+/* ---- Tables ---- */
+.table {
+    --bs-table-bg: transparent;
+    color: var(--dc-on-surface);
+}
+
+.table > :not(caption) > * > * {
+    background: transparent !important;
+    border-bottom-color: var(--dc-surface-high) !important;
+    padding: 0.9rem 0.85rem;
+    vertical-align: middle;
+}
+
+.table thead th,
+.table-light th,
+.table > thead {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-variant) !important;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.table-hover > tbody > tr:hover > * {
+    background: var(--dc-surface-low) !important;
+}
+
+.table-responsive {
+    border-radius: var(--dc-radius);
+}
+
+/* ---- Alerts / badges ---- */
+.alert {
+    border-radius: var(--dc-radius-sm) !important;
+    border: 1px solid transparent;
+    font-family: var(--dc-font);
+}
+
+.alert-success {
+    background: var(--dc-success-container) !important;
+    color: var(--dc-success) !important;
+    border-color: #b7e4cb !important;
+}
+
+.alert-danger {
+    background: var(--dc-error-container) !important;
+    color: #7a0610 !important;
+    border-color: #f0b8b2 !important;
+}
+
+.alert-warning {
+    background: var(--dc-warning-container) !important;
+    color: var(--dc-warning) !important;
+    border-color: #ead48a !important;
+}
+
+.badge,
+.badge-soft {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 999px !important;
+    border: 1px solid transparent;
+}
+
+.badge-pendiente,
+.badge.text-bg-secondary,
+.badge.text-bg-light {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-variant) !important;
+    border-color: var(--dc-surface-high) !important;
+}
+
+.badge-085 { background: #e8eef6 !important; color: #2f4d6a !important; }
+.badge-086 { background: #e7f2ea !important; color: #2f5a3a !important; }
+.badge-087 { background: #e6f4ef !important; color: #1f5c48 !important; }
+.badge-088 { background: #f6e8e6 !important; color: #7a3a32 !important; }
+.text-bg-success { background: var(--dc-success-container) !important; color: var(--dc-success) !important; }
+.text-bg-primary { background: #e8e8e8 !important; color: #111 !important; }
+.text-bg-danger { background: var(--dc-error-container) !important; color: #7a0610 !important; }
+
+/* ---- Accordion (manual invoice) ---- */
+.accordion-item {
+    border-color: var(--dc-surface-high) !important;
+    border-radius: var(--dc-radius) !important;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    background: var(--dc-surface-lowest);
+}
+
+.accordion-button {
+    font-family: var(--dc-font);
+    font-weight: 600;
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-surface) !important;
+    box-shadow: none !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background: #eceae6 !important;
+    color: var(--dc-primary) !important;
+}
+
+/* ---- Modals ---- */
+.modal-content {
+    border: 1px solid var(--dc-surface-high) !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12) !important;
+    font-family: var(--dc-font);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--dc-surface-high) !important;
+}
+
+/* ---- Reception leftovers ---- */
+.pdf-viewer-frame {
+    width: 100%;
+    min-height: 70vh;
+    border: 0;
+    border-radius: var(--dc-radius);
+    background: #fff;
+}
+
+/* ---- Dashboard module panel (zkm) aligned to DIAN Connect ---- */
+.zkm-body {
+    background: var(--dc-surface) !important;
+    color: var(--dc-on-surface) !important;
+    font-family: var(--dc-font) !important;
+}
+
+.zkm-body[data-theme="dark"] {
+    background: #1c1c1a !important;
+    color: #f3f0ec !important;
+}
+
+.zkm-topbar {
+    background: rgba(252, 249, 245, 0.92) !important;
+    border-bottom: 1px solid var(--dc-surface-high) !important;
+    backdrop-filter: blur(12px);
+}
+
+.zkm-body[data-theme="dark"] .zkm-topbar {
+    background: rgba(28, 28, 26, 0.92) !important;
+}
+
+.zkm-brand {
+    color: var(--dc-primary) !important;
+    font-family: var(--dc-font) !important;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+}
+
+.zkm-brand-icon {
+    background: var(--dc-primary) !important;
+    color: var(--dc-on-primary) !important;
+    border-radius: 999px;
+}
+
+.zkm-icon-btn,
+.zkm-theme-btn {
+    border-radius: 999px !important;
+    border: 1px solid var(--dc-surface-high) !important;
+    background: var(--dc-surface-lowest) !important;
+    color: var(--dc-on-variant) !important;
+}
+
+.zkm-user {
+    background: var(--dc-primary) !important;
+    color: var(--dc-on-primary) !important;
+    border-radius: 0.75rem !important;
+}
+
+.zkm-module-panel {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+
+.zkm-kicker {
+    color: var(--dc-on-variant) !important;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.zkm-module-panel h1 {
+    font-family: var(--dc-font) !important;
+    color: var(--dc-primary) !important;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.zkm-copy {
+    color: var(--dc-on-variant) !important;
+}
+
+.zkm-kpi-card,
+.zkm-module-card {
+    background: var(--dc-surface-lowest) !important;
+    border: 1px solid var(--dc-surface-high) !important;
+    border-radius: var(--dc-radius) !important;
+    box-shadow: var(--dc-shadow) !important;
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+.zkm-module-card:hover {
+    transform: translateY(-2px);
+    border-color: #cfcbc4 !important;
+}
+
+.zkm-module-icon {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-primary) !important;
+    border-radius: 0.75rem !important;
+    font-weight: 600;
+}
+
+.zkm-kpi-label {
+    color: var(--dc-on-variant) !important;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.zkm-kpi-value {
+    color: var(--dc-primary) !important;
+    font-weight: 600;
+}
+
+.zkm-floating-action {
+    background: var(--dc-primary) !important;
+    color: var(--dc-on-primary) !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* ---- Login ---- */
+.dc-login-body {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background:
+        radial-gradient(circle at 12% 20%, rgba(0, 0, 0, 0.04), transparent 28%),
+        radial-gradient(circle at 88% 78%, rgba(0, 0, 0, 0.03), transparent 24%),
+        var(--dc-surface);
+    font-family: var(--dc-font);
+}
+
+.dc-login-card {
+    width: min(100%, 420px);
+    background: var(--dc-surface-lowest);
+    border: 1px solid var(--dc-surface-high);
+    border-radius: 1rem;
+    box-shadow: var(--dc-shadow);
+    padding: 2rem;
+}
+
+.dc-login-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.dc-login-brand-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--dc-primary);
+    color: var(--dc-on-primary);
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+}
+
+.dc-login-brand h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+.dc-login-brand p {
+    margin: 0.15rem 0 0;
+    color: var(--dc-on-variant);
+    font-size: 0.9rem;
+}

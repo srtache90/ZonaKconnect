@@ -1,0 +1,96 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Certificados Digitales | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Certificados Digitales</h1>
+        <p class="dc-page-subtitle">Carga segura de certificados .pfx/.p12 por sociedad</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <section class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Cargar certificado</div>
+        <div class="card-body">
+            <form th:action="@{/portal/admin/certificados}" method="post" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-4">
+                    <label for="sociedadId" class="form-label">Sociedad</label>
+                    <select id="sociedadId" name="sociedadId" class="form-select" required>
+                        <option value="">Seleccione...</option>
+                        <option th:each="sociedad : ${sociedades}" th:value="${sociedad.id}" th:text="${sociedad.razonSocial}">
+                            Sociedad
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="alias" class="form-label">Alias</label>
+                    <input id="alias" name="alias" class="form-control" placeholder="certificado-principal" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="validoHasta" class="form-label">Válido hasta</label>
+                    <input id="validoHasta" name="validoHasta" type="date" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="password" class="form-label">Password certificado</label>
+                    <input id="password" name="password" type="password" class="form-control" autocomplete="new-password" required>
+                </div>
+                <div class="col-md-8">
+                    <label for="certificado" class="form-label">Archivo .pfx / .p12</label>
+                    <input id="certificado" name="certificado" type="file" class="form-control" accept=".pfx,.p12" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input id="activo" name="activo" type="checkbox" class="form-check-input" value="true" checked>
+                        <label for="activo" class="form-check-label">Activo</label>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end justify-content-end">
+                    <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-white">Certificados registrados</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Sociedad</th>
+                    <th>Alias</th>
+                    <th>Válido hasta</th>
+                    <th>Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="certificado : ${certificados}">
+                    <td th:text="${certificado.sociedadRazonSocial}">Sociedad</td>
+                    <td th:text="${certificado.alias}">alias</td>
+                    <td th:text="${certificado.validoHasta}">2026-12-31</td>
+                    <td>
+                        <span class="badge" th:classappend="${certificado.activo} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${certificado.activo} ? 'Activo' : 'Inactivo'">
+                            Activo
+                        </span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(certificados)}">
+                    <td colspan="4" class="text-center text-muted py-4">No hay certificados registrados.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

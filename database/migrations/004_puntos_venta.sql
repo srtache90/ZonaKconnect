@@ -1,0 +1,4 @@
+ALTER TABLE emission_points
+    ADD COLUMN IF NOT EXISTS direccion VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS clave_tecnica VARCHAR(255);
+

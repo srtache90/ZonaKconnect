@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${invoice.fiscalContext.documentTitle + ' ' + invoice.documentNumber}">Factura</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 18mm 14mm;
+        }
+
+        body {
+            color: #1f2937;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .header {
+            border-bottom: 3px solid #12355b;
+            display: table;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            width: 100%;
+        }
+
+        .header-left,
+        .header-right {
+            display: table-cell;
+            vertical-align: top;
+            width: 50%;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .logo {
+            border: 1px solid #d1d5db;
+            color: #12355b;
+            font-size: 20px;
+            font-weight: bold;
+            height: 58px;
+            letter-spacing: 1px;
+            line-height: 58px;
+            margin-bottom: 8px;
+            text-align: center;
+            width: 160px;
+        }
+
+        h1, h2, h3, p {
+            margin: 0;
+        }
+
+        h1 {
+            color: #12355b;
+            font-size: 21px;
+            margin-bottom: 4px;
+        }
+
+        h2 {
+            color: #12355b;
+            font-size: 13px;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+        }
+
+        .document-box {
+            border: 1px solid #12355b;
+            border-radius: 4px;
+            display: inline-block;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .grid {
+            display: table;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .grid-col {
+            display: table-cell;
+            padding-right: 10px;
+            vertical-align: top;
+            width: 50%;
+        }
+
+        .card {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .row {
+            margin-bottom: 3px;
+        }
+
+        .label {
+            color: #4b5563;
+            font-weight: bold;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        th {
+            background: #12355b;
+            color: white;
+            font-size: 10px;
+            padding: 7px 6px;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 7px 6px;
+            vertical-align: top;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .totals {
+            margin-left: auto;
+            margin-top: 10px;
+            width: 42%;
+        }
+
+        .totals td {
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        .tax-row td {
+            background: #f9fafb;
+            color: #4b5563;
+        }
+
+        .withholding-row td {
+            color: #7f1d1d;
+            font-style: italic;
+        }
+
+        .charge-row td {
+            color: #166534;
+            font-weight: bold;
+        }
+
+        .grand-total {
+            background: #eef4fb;
+            color: #12355b;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .legal-footer {
+            border-top: 2px solid #12355b;
+            display: table;
+            margin-top: 18px;
+            padding-top: 12px;
+            width: 100%;
+        }
+
+        .legal-text,
+        .qr-box {
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        .legal-text {
+            padding-right: 14px;
+            width: 72%;
+        }
+
+        .qr-box {
+            text-align: center;
+            width: 28%;
+        }
+
+        .qr-box img {
+            height: 130px;
+            width: 130px;
+        }
+
+        .cufe {
+            font-family: "Courier New", monospace;
+            font-size: 9px;
+        }
+    </style>
+</head>
+<body>
+<section class="header">
+    <div class="header-left">
+        <img th:if="${invoice.company.logoDataUri != null and !#strings.isEmpty(invoice.company.logoDataUri)}"
+             th:src="${invoice.company.logoDataUri}"
+             alt="Logo"
+             style="max-height:58px; max-width:160px;"/>
+        <div th:unless="${invoice.company.logoDataUri != null and !#strings.isEmpty(invoice.company.logoDataUri)}"
+             class="logo">ZONA K</div>
+        <h1 th:text="${invoice.company.razonSocial}">Sociedad</h1>
+        <p><span class="label">NIT:</span> <span th:text="${invoice.company.nit + '-' + invoice.company.dv}">900000000-0</span></p>
+        <p><span class="label">Régimen:</span> <span th:text="${invoice.company.regimen}">R-99-PN</span></p>
+        <p><span class="label">Dirección:</span> <span th:text="${invoice.company.direccion}">Dirección</span></p>
+        <p><span class="label">Correo:</span> <span th:text="${invoice.company.email}">correo@empresa.com</span></p>
+    </div>
+    <div class="header-right">
+        <div class="document-box">
+            <h2 th:text="${invoice.fiscalContext.documentTitle}">Factura electrónica de venta</h2>
+            <p><span class="label">No.</span> <strong th:text="${invoice.documentNumber}">FE1</strong></p>
+            <p><span class="label">Fecha:</span> <span th:text="${invoice.fiscalContext.issueDate}">2026-01-01</span></p>
+            <p><span class="label">Hora:</span> <span th:text="${invoice.fiscalContext.issueTime}">12:00:00-05:00</span></p>
+            <p><span class="label">Estado DIAN:</span> <span th:text="${invoice.status}">Validado</span></p>
+        </div>
+    </div>
+</section>
+
+<section class="grid">
+    <div class="grid-col">
+        <div class="card">
+            <h2>Resolución de facturación</h2>
+            <p><span class="label">Resolución:</span> <span th:text="${invoice.resolution.numeroResolucion}">1876</span></p>
+            <p><span class="label">Prefijo:</span> <span th:text="${invoice.resolution.prefijo}">FE</span></p>
+            <p><span class="label">Rango autorizado:</span>
+                <span th:text="${invoice.resolution.rangoDesde + ' - ' + invoice.resolution.rangoHasta}">1 - 999</span>
+            </p>
+            <p><span class="label">Vigencia:</span>
+                <span th:text="${invoice.resolution.fechaDesde + ' a ' + invoice.resolution.fechaHasta}">2026 a 2027</span>
+            </p>
+        </div>
+    </div>
+    <div class="grid-col">
+        <div class="card">
+            <h2>Cliente / adquirente</h2>
+            <p><span class="label">Nombre:</span> <span th:text="${invoice.customer.razonSocial}">Cliente</span></p>
+            <p><span class="label">NIT/Cédula:</span> <span th:text="${invoice.customer.identificacion}">000</span></p>
+            <p><span class="label">Dirección:</span> <span th:text="${invoice.customer.direccion}">Dirección cliente</span></p>
+            <p><span class="label">Correo:</span> <span th:text="${invoice.customer.email}">cliente@correo.com</span></p>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2>Detalle de productos y servicios</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Cantidad</th>
+            <th>Descripción</th>
+            <th class="text-right">Valor unitario</th>
+            <th class="text-right">IVA</th>
+            <th class="text-right">Total ítem</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${invoice.items}">
+            <td th:text="${#numbers.formatDecimal(item.cantidad, 1, 2)}">1</td>
+            <td th:text="${item.descripcion}">Servicio</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.valorUnitario, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.iva, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.total, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <table class="totals">
+        <tbody>
+        <tr>
+            <td>Subtotal</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.subtotal, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr>
+            <td>Descuentos</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.descuentos, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr class="tax-row" th:each="tax : ${invoice.impuestos}">
+            <td>
+                <span th:text="${tax.nombre}">IVA</span>
+                <span class="muted" th:if="${tax.porcentaje != null}" th:text="${' (' + #numbers.formatDecimal(tax.porcentaje, 1, 'POINT', 2, 'COMMA') + '%)'}">(19,00%)</span>
+            </td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(tax.valor, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr class="tax-row" th:if="${!#lists.isEmpty(invoice.impuestos)}">
+            <td>Total impuestos</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.totalImpuestos, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr class="withholding-row" th:each="withholding : ${invoice.retenciones}" th:if="${!#lists.isEmpty(invoice.retenciones)}">
+            <td>
+                <span th:text="${withholding.nombre}">ReteFuente</span>
+                <span class="muted" th:if="${withholding.porcentaje != null}" th:text="${' (' + #numbers.formatDecimal(withholding.porcentaje, 1, 'POINT', 2, 'COMMA') + '%)'}">(0,00%)</span>
+            </td>
+            <td class="text-right" th:text="${'- $ ' + #numbers.formatDecimal(withholding.valor, 1, 'POINT', 2, 'COMMA')}">- $ 0,00</td>
+        </tr>
+        <tr class="withholding-row" th:if="${!#lists.isEmpty(invoice.retenciones)}">
+            <td>Total retenciones</td>
+            <td class="text-right" th:text="${'- $ ' + #numbers.formatDecimal(invoice.totals.totalRetenciones, 1, 'POINT', 2, 'COMMA')}">- $ 0,00</td>
+        </tr>
+        <tr class="charge-row" th:each="charge : ${invoice.recargos}" th:if="${!#lists.isEmpty(invoice.recargos)}">
+            <td th:text="${charge.nombre}">Propina</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(charge.valor, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr class="charge-row" th:if="${!#lists.isEmpty(invoice.recargos)}">
+            <td>Total recargos</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.totalRecargos, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        <tr class="grand-total">
+            <td>Total a pagar</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.total, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+        </tr>
+        </tbody>
+    </table>
+    <p style="margin-top:12px;"><span class="label">Valor en letras:</span> <span th:text="${valorEnLetras}">CERO PESOS</span></p>
+</section>
+
+<section class="legal-footer">
+    <div class="legal-text">
+        <h2>Información legal DIAN</h2>
+        <p class="muted">Esta representación gráfica es válida para consulta de la factura electrónica emitida.</p>
+        <p><span class="label" th:text="${invoice.fiscalContext.uniqueCodeLabel + ':'}">CUFE:</span></p>
+        <p class="cufe" th:text="${invoice.fiscalContext.uniqueCode}">CUFE</p>
+    </div>
+    <div class="qr-box">
+        <img th:src="${qrDataUri}" alt="Código QR DIAN"/>
+        <p class="muted">Código QR DIAN</p>
+    </div>
+</section>
+</body>
+</html>

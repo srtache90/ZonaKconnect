@@ -1,0 +1,5 @@
+G:\Mi unidad\steven\personal\valkyr\DIAN net\DIAN_NET\DIAN_NET\obj\Debug\DIAN_NET.csproj.AssemblyReference.cache
+G:\Mi unidad\steven\personal\valkyr\DIAN net\DIAN_NET\DIAN_NET\obj\Debug\MainWindow.g.cs
+G:\Mi unidad\steven\personal\valkyr\DIAN net\DIAN_NET\DIAN_NET\obj\Debug\App.g.cs
+G:\Mi unidad\steven\personal\valkyr\DIAN net\DIAN_NET\DIAN_NET\obj\Debug\DIAN_NET_MarkupCompile.cache
+G:\Mi unidad\steven\personal\valkyr\DIAN net\DIAN_NET\DIAN_NET\obj\Debug\DIAN_NET_MarkupCompile.lref

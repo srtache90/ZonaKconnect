@@ -1,0 +1,5 @@
+<ApplicationResponse xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:ResponseCode>00</cbc:ResponseCode>
+  <cbc:Description>Documento Validado Exitosamente</cbc:Description>
+  <cbc:UUID>MOCK-DIAN-APPLICATION-RESPONSE</cbc:UUID>
+</ApplicationResponse>

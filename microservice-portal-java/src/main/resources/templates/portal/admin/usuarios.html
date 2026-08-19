@@ -1,0 +1,126 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Administración de Usuarios</h1>
+        <p class="dc-page-subtitle">Roles ADMIN, OPERADOR y CONSULTA con acceso multi-sociedad</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <section class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Crear o editar usuario</div>
+        <div class="card-body">
+            <form th:action="@{/portal/admin/usuarios}" method="post" class="row g-3">
+                <input type="hidden" name="id" id="usuarioId">
+
+                <div class="col-md-4">
+                    <label class="form-label" for="username">Usuario</label>
+                    <input class="form-control" id="username" name="username" required autocomplete="username">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="password">Contraseña</label>
+                    <input class="form-control" id="password" name="password" type="password"
+                           autocomplete="new-password"
+                           placeholder="Obligatoria en alta; vacía conserva en edición">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="rol">Rol</label>
+                    <select class="form-select" id="rol" name="rol" required>
+                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ADMIN</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="sociedadIds">Sociedades</label>
+                    <select class="form-select" id="sociedadIds" name="sociedadIds" multiple size="6">
+                        <option th:each="sociedad : ${sociedades}"
+                                th:value="${sociedad.id}"
+                                th:text="${sociedad.razonSocial + ' (' + sociedad.nit + ')'}">
+                            Sociedad
+                        </option>
+                    </select>
+                    <div class="form-text">Sin selección = acceso a todas las sociedades. Ctrl/Cmd para multi-selección.</div>
+                </div>
+                <div class="col-12 text-end">
+                    <button class="btn btn-outline-secondary me-2" type="button" onclick="limpiarFormulario()">Limpiar</button>
+                    <button class="btn btn-primary" type="submit">Guardar usuario</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-white">Usuarios registrados</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Sociedades</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="usuario : ${usuarios}">
+                    <td th:text="${usuario.username()}">admin</td>
+                    <td>
+                        <span class="badge text-bg-secondary" th:text="${usuario.rol()}">ADMIN</span>
+                    </td>
+                    <td th:text="${usuario.sociedadesLabel()}">Todas</td>
+                    <td class="text-end">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                th:attr="data-id=${usuario.id()},data-username=${usuario.username()},data-rol=${usuario.rol()},data-sociedades=${usuario.sociedadIdsCsv()}"
+                                onclick="editarUsuario(this)">
+                            Editar
+                        </button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(usuarios)}">
+                    <td colspan="4" class="text-center text-muted py-4">No hay usuarios registrados.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    function limpiarFormulario() {
+        document.getElementById('usuarioId').value = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('rol').value = 'OPERADOR';
+        const select = document.getElementById('sociedadIds');
+        Array.from(select.options).forEach(opt => opt.selected = false);
+    }
+
+    function editarUsuario(button) {
+        document.getElementById('usuarioId').value = button.dataset.id || '';
+        document.getElementById('username').value = button.dataset.username || '';
+        document.getElementById('password').value = '';
+        document.getElementById('rol').value = button.dataset.rol || 'OPERADOR';
+        const selected = (button.dataset.sociedades || '')
+            .split(',')
+            .map(v => v.trim())
+            .filter(Boolean);
+        const select = document.getElementById('sociedadIds');
+        Array.from(select.options).forEach(opt => {
+            opt.selected = selected.includes(opt.value);
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

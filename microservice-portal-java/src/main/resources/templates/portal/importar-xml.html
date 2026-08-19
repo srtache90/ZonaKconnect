@@ -1,0 +1,58 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Importar XML | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Importar XML para firma DIAN</h1>
+        <p class="dc-page-subtitle">Carga un XML nativo SAP, conviértelo al flujo común y envíalo a firma/envío DIAN.</p>
+    </div>
+
+    <section class="mb-4">
+        <div class="alert alert-success" role="alert" th:if="${success != null}">
+            XML importado y enviado al proceso DIAN. Factura ID:
+            <strong th:text="${success}">invoice-id</strong>
+        </div>
+
+        <div class="alert alert-danger" role="alert" th:if="${error != null}">
+            No fue posible importar el XML:
+            <strong th:text="${error}">detalle del error</strong>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            Cargar XML SAP
+        </div>
+        <div class="card-body">
+            <form th:action="@{/portal/importar-xml}" method="post" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label" for="archivoXml">Archivo XML</label>
+                    <input class="form-control" id="archivoXml" name="archivoXml" type="file" accept=".xml,application/xml,text/xml" required>
+                    <div class="form-text">
+                        Se soportan cantidades e importes SAP en notación científica, por ejemplo <code>5.04E2</code> o <code>4.192776E6</code>.
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" type="submit">
+                        Importar y enviar a DIAN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="alert alert-warning mt-4">
+        <strong>Importante:</strong>
+        el XML importado se conserva como <code>xml_base</code> para que el core lo envíe a DIAN_NET, donde se firma y se comprime antes del envío DIAN.
+    </section>
+</main>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

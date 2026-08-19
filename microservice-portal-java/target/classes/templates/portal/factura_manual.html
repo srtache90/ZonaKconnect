@@ -1,0 +1,338 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Facturación Manual | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Facturación Manual</h1>
+        <p class="dc-page-subtitle">Facturas estándar, notas crédito y contingencia con cálculo fiscal controlado.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <form th:action="@{/portal/facturacion/manual/emitir}" method="post" id="manualInvoiceForm">
+        <div class="accordion shadow-sm" id="manualAccordion">
+            <section class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#general">
+                        1. Datos generales y tipo
+                    </button>
+                </h2>
+                <div id="general" class="accordion-collapse collapse show" data-bs-parent="#manualAccordion">
+                    <div class="accordion-body row g-3">
+                        <div class="col-12" th:if="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
+                            <div class="alert alert-warning mb-0">
+                                No hay sociedades autorizadas o puntos de venta activos. Configure una sociedad y un punto de venta antes de emitir.
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label" for="tipoOperacion">Tipo de documento</label>
+                            <select class="form-select" id="tipoOperacion" name="tipoOperacion" required>
+                                <option value="01">01 - Factura estándar</option>
+                                <option value="91">91 - Nota crédito</option>
+                                <option value="05">05 - Factura de contingencia</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="sociedadId">Sociedad</label>
+                            <select class="form-select" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()" required>
+                                <option value="">Seleccione...</option>
+                                <option th:each="sociedad : ${sociedades}"
+                                        th:value="${sociedad.id}"
+                                        th:selected="${sociedad.id.toString() == selectedSociedadId}"
+                                        th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">
+                                    Sociedad
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="emissionPointId">Punto de venta</label>
+                            <select class="form-select" id="emissionPointId" name="emissionPointId" required>
+                                <option value="">Seleccione...</option>
+                                <option th:each="punto : ${puntosVenta}"
+                                        th:value="${punto.id}"
+                                        th:data-sociedad-id="${punto.sociedadId}"
+                                        th:selected="${punto.id.toString() == selectedEmissionPointId}"
+                                        th:text="${punto.codigo + ' - ' + punto.nombre + ' (' + punto.prefijo + ', actual: ' + punto.numeroActual + ')'}">
+                                    PV
+                                </option>
+                            </select>
+                            <div class="form-text">El Core asigna prefijo y consecutivo del rango activo del punto seleccionado.</div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="formaPago">Forma de pago</label>
+                            <select class="form-select" id="formaPago" name="formaPago">
+                                <option value="Contado">Contado</option>
+                                <option value="Crédito">Crédito</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="metodoPago">Método de pago</label>
+                            <select class="form-select" id="metodoPago" name="metodoPago">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Transferencia">Transferencia</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 border rounded p-3 bg-white d-none" id="creditNoteFields">
+                            <h3 class="h6">Referencia de nota crédito</h3>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label" for="cufeReferencia">CUFE/CUDE referencia</label>
+                                    <input class="form-control" id="cufeReferencia" name="cufeReferencia" maxlength="96">
+                                    <div class="form-text">Obligatorio para nota crédito. Debe tener 96 caracteres.</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" for="numeroDocumentoReferencia">Factura referenciada</label>
+                                    <input class="form-control" id="numeroDocumentoReferencia" name="numeroDocumentoReferencia" placeholder="FE123">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" for="fechaEmisionReferencia">Fecha factura</label>
+                                    <input class="form-control" id="fechaEmisionReferencia" name="fechaEmisionReferencia" type="date">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" for="conceptoCredito">Concepto</label>
+                                    <select class="form-select" id="conceptoCredito" name="conceptoCredito">
+                                        <option value="1">1 - Devolución parcial</option>
+                                        <option value="2">2 - Anulación</option>
+                                        <option value="3">3 - Rebaja total</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#customer">
+                        2. Datos del adquirente
+                    </button>
+                </h2>
+                <div id="customer" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                    <div class="accordion-body row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label" for="tipoDocumentoIdentidad">Tipo documento</label>
+                            <select class="form-select" id="tipoDocumentoIdentidad" name="tipoDocumentoIdentidad">
+                                <option value="31">31 - NIT</option>
+                                <option value="13">13 - Cédula</option>
+                                <option value="22">22 - Cédula extranjería</option>
+                                <option value="42">42 - Documento extranjero</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="identificacion">Identificación</label>
+                            <input class="form-control" id="identificacion" name="identificacion" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="razonSocial">Razón social / Nombre</label>
+                            <input class="form-control" id="razonSocial" name="razonSocial" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="direccion">Dirección</label>
+                            <input class="form-control" id="direccion" name="direccion">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="email">Email</label>
+                            <input class="form-control" id="email" name="email" type="email">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#items">
+                        3. Ítems del documento
+                    </button>
+                </h2>
+                <div id="items" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle" id="itemsTable">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Precio unitario</th>
+                                    <th class="text-end">IVA</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody id="itemsBody">
+                                <tr>
+                                    <td><input class="form-control form-control-sm item-code" name="items[0].codigo" value="MAN-001"></td>
+                                    <td><input class="form-control form-control-sm item-desc" name="items[0].descripcion" value="Producto o servicio manual" required></td>
+                                    <td><input class="form-control form-control-sm text-end item-qty" name="items[0].cantidad" type="number" min="0.01" step="0.01" value="1" required></td>
+                                    <td><input class="form-control form-control-sm text-end item-price" name="items[0].precioUnitario" type="number" min="0" step="0.01" value="0" required></td>
+                                    <td>
+                                        <select class="form-select form-select-sm item-tax" name="items[0].porcentajeIva">
+                                            <option value="0">0%</option>
+                                            <option value="5">5%</option>
+                                            <option value="19" selected>19%</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-end item-line-total">$ 0,00</td>
+                                    <td class="text-end"><button class="btn btn-sm btn-outline-danger btn-remove-item" type="button">Eliminar</button></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-outline-primary" id="btn-add-item" type="button">Agregar ítem</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#totals">
+                        4. Totales y propina
+                    </button>
+                </h2>
+                <div id="totals" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                    <div class="accordion-body row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="propinaValor">Propina</label>
+                            <input class="form-control text-end" id="propinaValor" name="propinaValor" type="number" min="0" step="0.01" value="0">
+                            <div class="form-text">Se suma al total a pagar como cargo global; no afecta base gravable de IVA/INC.</div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card bg-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between"><span>Subtotal gravable</span><strong id="subtotalValue">$ 0,00</strong></div>
+                                    <div class="d-flex justify-content-between"><span>IVA</span><strong id="ivaValue">$ 0,00</strong></div>
+                                    <div class="d-flex justify-content-between"><span>Retenciones</span><strong id="retentionsValue">$ 0,00</strong></div>
+                                    <div class="d-flex justify-content-between"><span>Propina</span><strong id="tipValue">$ 0,00</strong></div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between h5"><span>Total a emitir</span><strong id="totalValue">$ 0,00</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a class="btn btn-outline-secondary" th:href="@{/portal/invoices}">Cancelar</a>
+            <button class="btn btn-primary" type="submit" th:disabled="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
+                Emitir documento manual
+            </button>
+        </div>
+    </form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const money = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
+    const sociedadSelect = document.getElementById('sociedadId');
+    const puntoSelect = document.getElementById('emissionPointId');
+    const tipoOperacion = document.getElementById('tipoOperacion');
+    const creditNoteFields = document.getElementById('creditNoteFields');
+    const itemsBody = document.getElementById('itemsBody');
+    const propinaValor = document.getElementById('propinaValor');
+
+    function parseAmount(value) {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function actualizarPuntosVenta() {
+        const selectedSociedad = sociedadSelect.value;
+        let firstVisible = '';
+        Array.from(puntoSelect.options).forEach(option => {
+            if (!option.value) {
+                return;
+            }
+            const visible = option.dataset.sociedadId === selectedSociedad;
+            option.hidden = !visible;
+            if (visible && !firstVisible) {
+                firstVisible = option.value;
+            }
+        });
+        if (!puntoSelect.value || puntoSelect.selectedOptions[0]?.hidden) {
+            puntoSelect.value = firstVisible;
+        }
+    }
+
+    function toggleCreditNoteFields() {
+        creditNoteFields.classList.toggle('d-none', tipoOperacion.value !== '91');
+        document.getElementById('cufeReferencia').required = tipoOperacion.value === '91';
+        document.getElementById('conceptoCredito').required = tipoOperacion.value === '91';
+    }
+
+    function reindexItems() {
+        Array.from(itemsBody.querySelectorAll('tr')).forEach((row, index) => {
+            row.querySelector('.item-code').name = `items[${index}].codigo`;
+            row.querySelector('.item-desc').name = `items[${index}].descripcion`;
+            row.querySelector('.item-qty').name = `items[${index}].cantidad`;
+            row.querySelector('.item-price').name = `items[${index}].precioUnitario`;
+            row.querySelector('.item-tax').name = `items[${index}].porcentajeIva`;
+        });
+    }
+
+    function recalculate() {
+        let subtotal = 0;
+        let iva = 0;
+        Array.from(itemsBody.querySelectorAll('tr')).forEach(row => {
+            const qty = parseAmount(row.querySelector('.item-qty').value);
+            const price = parseAmount(row.querySelector('.item-price').value);
+            const taxRate = parseAmount(row.querySelector('.item-tax').value);
+            const base = Math.round(qty * price * 100) / 100;
+            const tax = Math.round(base * taxRate) / 100;
+            subtotal += base;
+            iva += tax;
+            row.querySelector('.item-line-total').textContent = money.format(base + tax);
+        });
+        const tip = Math.max(0, parseAmount(propinaValor.value));
+        const retentions = 0;
+        document.getElementById('subtotalValue').textContent = money.format(subtotal);
+        document.getElementById('ivaValue').textContent = money.format(iva);
+        document.getElementById('retentionsValue').textContent = money.format(retentions);
+        document.getElementById('tipValue').textContent = money.format(tip);
+        document.getElementById('totalValue').textContent = money.format(subtotal + iva + tip - retentions);
+    }
+
+    document.getElementById('btn-add-item').addEventListener('click', () => {
+        const row = itemsBody.querySelector('tr').cloneNode(true);
+        row.querySelectorAll('input').forEach(input => {
+            input.value = input.classList.contains('item-qty') ? '1' : input.classList.contains('item-price') ? '0' : '';
+        });
+        row.querySelector('.item-tax').value = '19';
+        row.querySelector('.item-line-total').textContent = money.format(0);
+        itemsBody.appendChild(row);
+        reindexItems();
+        recalculate();
+    });
+
+    itemsBody.addEventListener('click', event => {
+        if (event.target.classList.contains('btn-remove-item') && itemsBody.querySelectorAll('tr').length > 1) {
+            event.target.closest('tr').remove();
+            reindexItems();
+            recalculate();
+        }
+    });
+
+    document.getElementById('manualInvoiceForm').addEventListener('input', recalculate);
+    tipoOperacion.addEventListener('change', toggleCreditNoteFields);
+    sociedadSelect.addEventListener('change', actualizarPuntosVenta);
+    actualizarPuntosVenta();
+    toggleCreditNoteFields();
+    recalculate();
+</script>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

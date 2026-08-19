@@ -1,0 +1,358 @@
+name: zona-k-local-infra
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zona-k-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zona_k_facturacion
+      POSTGRES_USER: zona_k_app
+      POSTGRES_PASSWORD: zona_k_app_local_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - idle_in_transaction_session_timeout=60000
+      - -c
+      - statement_timeout=30000
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zona_k_app -d zona_k_facturacion"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - local_infra
+
+  db-migrate:
+    image: postgres:16-alpine
+    container_name: zona-k-db-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: zona_k_app_local_password
+    volumes:
+      - ./database/migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        for f in $(ls /migrations/*.sql | sort); do
+          echo "Applying migration: $$f"
+          psql -h postgres -U zona_k_app -d zona_k_facturacion -v ON_ERROR_STOP=1 -f "$$f"
+        done
+        echo "Migrations complete"
+    networks:
+      - local_infra
+
+  localstack:
+    image: localstack/localstack:3.0.2  # Fijamos una versión con soporte Community robusto y libre de bloqueos
+    container_name: zona-k-localstack
+    restart: unless-stopped
+    environment:
+      - SERVICES=s3,secretsmanager
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - DEBUG=0
+      - PERSISTENCE=1
+      - ACTIVATE_PRO=error              # Crucial: Apaga la inicialización del motor Pro comercial
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: localstack_init
+        target: /etc/localstack/init/ready.d/init.sh
+        mode: 0755
+      - source: localstack_init
+        target: /docker-entrypoint-initaws.d/init.sh
+        mode: 0755
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          awslocal s3api head-bucket --bucket invoice-documents-bucket
+          && awslocal secretsmanager describe-secret --secret-id dian/certificates/test-passwords
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+    networks:
+      - local_infra
+
+  dian-net:
+    build:
+      context: .
+      dockerfile: DIAN_NET/Dockerfile
+    container_name: zona-k-dian-net
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      DianConfig__Mock__Enabled: "true"
+    ports:
+      - "8090:8080"
+    networks:
+      - local_infra
+
+  zona-k-dian-mock:
+    image: wiremock/wiremock:latest
+    container_name: zona-k-dian-mock
+    restart: unless-stopped
+    command:
+      - --port
+      - "8089"
+      - --global-response-templating
+      - --verbose
+    ports:
+      - "8089:8089"
+    configs:
+      - source: dian_mock_success_mapping
+        target: /home/wiremock/mappings/emit-invoice-success.json
+      - source: dian_mock_rejection_mapping
+        target: /home/wiremock/mappings/emit-invoice-rejection.json
+    networks:
+      - local_infra
+
+  core-go:
+    build:
+      context: ./microservice-core-go
+    container_name: zona-k-core-go
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://zona_k_app:zona_k_app_local_password@postgres:5432/zona_k_facturacion?sslmode=disable
+      # Core siempre apunta al motor DIAN_NET; DIAN_NET decide si usa mock local o DIAN real.
+      DIAN_API_URL: http://dian-net:8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      dian-net:
+        condition: service_started
+      zona-k-dian-mock:
+        condition: service_started
+    networks:
+      - local_infra
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: zona-k-mailpit
+    restart: unless-stopped
+    environment:
+      MP_POP3_AUTH: "${MAIL_RECEPTION_DEFAULT_USERNAME:-recepcion}:${MAIL_RECEPTION_DEFAULT_PASSWORD:-recepcion}"
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+      - "1110:1110"
+    networks:
+      - local_infra
+
+  portal-java:
+    build:
+      context: ./microservice-portal-java
+    container_name: zona-k-portal-java
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SERVICES_CORE_GO_BASE_URL: http://core-go:8080
+      DIAN_API_URL: http://dian-net:8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zona_k_facturacion
+      SPRING_DATASOURCE_USERNAME: zona_k_app
+      SPRING_DATASOURCE_PASSWORD: zona_k_app_local_password
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/zona_k_facturacion
+      SPRING_R2DBC_USERNAME: zona_k_app
+      SPRING_R2DBC_PASSWORD: zona_k_app_local_password
+      JWT_SECRET: local-dev-secret-change-before-production-32-bytes-minimum
+      JWT_TTL_SECONDS: "28800"
+      JWT_COOKIE_SECURE: "false"
+      AWS_LOCAL_MODE: "true"
+      AWS_REGION: us-east-1
+      AWS_S3_ENDPOINT_OVERRIDE: http://localstack:4566
+      AWS_S3_INVOICE_DOCUMENTS_BUCKET: invoice-documents-bucket
+      AWS_S3_RECEIVED_INVOICES_BUCKET: received-invoices-bucket
+      MAIL_DISPATCH_ENABLED: "${MAIL_DISPATCH_ENABLED:-true}"
+      MAIL_RECEPTION_ENABLED: "${MAIL_RECEPTION_ENABLED:-true}"
+      MAIL_HOST: "${MAIL_HOST:-mailpit}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      MAIL_SMTP_AUTH: "${MAIL_SMTP_AUTH:-false}"
+      MAIL_SMTP_STARTTLS_ENABLE: "${MAIL_SMTP_STARTTLS_ENABLE:-false}"
+      MAIL_FROM: "${MAIL_FROM:-no-reply@zonak.local}"
+      MAIL_RECEPTION_DEFAULT_HOST: "${MAIL_RECEPTION_DEFAULT_HOST:-mailpit}"
+      MAIL_RECEPTION_DEFAULT_PORT: "${MAIL_RECEPTION_DEFAULT_PORT:-1110}"
+      MAIL_RECEPTION_PROTOCOL: "${MAIL_RECEPTION_PROTOCOL:-pop3}"
+      MAIL_RECEPTION_DEFAULT_USERNAME: "${MAIL_RECEPTION_DEFAULT_USERNAME:-recepcion}"
+      MAIL_RECEPTION_DEFAULT_PASSWORD: "${MAIL_RECEPTION_DEFAULT_PASSWORD:-recepcion}"
+      MAIL_RECEPTION_LOCAL_TENANT_ID: "${MAIL_RECEPTION_LOCAL_TENANT_ID:-00000000-0000-0000-0000-000000000001}"
+      MAIL_RECEPTION_IMAP_SSL: "${MAIL_RECEPTION_IMAP_SSL:-false}"
+    ports:
+      - "8080:8081"
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      core-go:
+        condition: service_started
+      localstack:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - local_infra
+
+  sap-mock:
+    build:
+      context: ./mocks/sap
+    container_name: zona-k-sap-mock
+    restart: unless-stopped
+    environment:
+      SAP_TARGET_URL: http://portal-java:8081/ws/enviardocumento
+      SAP_TRANSPORT_MODE: soap
+      SAP_COMPANY_ID: "1"
+      SAP_PREFIX: EPR
+      SAP_USUARIO: ULocalSap
+      SAP_PASSWORD: SapMock2026!
+      SAP_REQUEST_TIMEOUT: "150"
+      SAP_MAX_BATCH_SIZE: "500"
+    ports:
+      - "8095:8080"
+    depends_on:
+      portal-java:
+        condition: service_started
+    networks:
+      - local_infra
+
+networks:
+  local_infra:
+    name: zona-k-local-infra
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: zona-k-postgres-data
+  localstack_data:
+    name: zona-k-localstack-data
+
+configs:
+  localstack_init:
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      export AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION:-us-east-1}"
+      BUCKET_NAME="invoice-documents-bucket"
+      RECEIVED_BUCKET_NAME="received-invoices-bucket"
+      SECRET_NAME="dian/certificates/test-passwords"
+
+      echo "Inicializando recursos locales de AWS: S3 y Secrets Manager"
+
+      if ! awslocal s3api head-bucket --bucket "$${BUCKET_NAME}" >/dev/null 2>&1; then
+        awslocal s3api create-bucket --bucket "$${BUCKET_NAME}"
+        awslocal s3api put-bucket-versioning \
+          --bucket "$${BUCKET_NAME}" \
+          --versioning-configuration Status=Enabled
+      fi
+
+      if ! awslocal s3api head-bucket --bucket "$${RECEIVED_BUCKET_NAME}" >/dev/null 2>&1; then
+        awslocal s3api create-bucket --bucket "$${RECEIVED_BUCKET_NAME}"
+        awslocal s3api put-bucket-versioning \
+          --bucket "$${RECEIVED_BUCKET_NAME}" \
+          --versioning-configuration Status=Enabled
+      fi
+
+      SECRET_PAYLOAD='{
+        "tenant_id": "test-tenant",
+        "certificates": {
+          "default": {
+            "p12_password": "local-test-certificate-password",
+            "description": "Solo para pruebas integrales locales"
+          }
+        }
+      }'
+
+      if awslocal secretsmanager describe-secret --secret-id "$${SECRET_NAME}" >/dev/null 2>&1; then
+        awslocal secretsmanager put-secret-value \
+          --secret-id "$${SECRET_NAME}" \
+          --secret-string "$${SECRET_PAYLOAD}"
+      else
+        awslocal secretsmanager create-secret \
+          --name "$${SECRET_NAME}" \
+          --description "Passwords locales de certificados digitales DIAN para pruebas integrales" \
+          --secret-string "$${SECRET_PAYLOAD}"
+      fi
+
+      echo "Recursos locales listos: s3://$${BUCKET_NAME}, s3://$${RECEIVED_BUCKET_NAME}, secret:$${SECRET_NAME}"
+  dian_mock_success_mapping:
+    content: |
+      {
+        "priority": 10,
+        "request": {
+          "method": "POST",
+          "urlPath": "/api/v1/emit/invoice"
+        },
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "jsonBody": {
+            "status": "Documento Validado Exitosamente",
+            "estado_dian": "Documento Validado Exitosamente",
+            "statusCode": "00",
+            "statusDescription": "ApplicationResponse mock DIAN generado correctamente",
+            "cufe": "MOCK-CUFE-ZONA-K-LOCAL-000000000000000000000000000001",
+            "cufeCune": "MOCK-CUFE-ZONA-K-LOCAL-000000000000000000000000000001",
+            "uuid": "MOCK-TRACK-ZONA-K-LOCAL-0001",
+            "trackID": "MOCK-TRACK-ZONA-K-LOCAL-0001",
+            "applicationResponseXml": "<ApplicationResponse><cbc:ResponseCode>00</cbc:ResponseCode><cbc:Description>Documento Validado Exitosamente</cbc:Description></ApplicationResponse>"
+          }
+        }
+      }
+  dian_mock_rejection_mapping:
+    content: |
+      {
+        "priority": 1,
+        "request": {
+          "method": "POST",
+          "urlPath": "/api/v1/emit/invoice",
+          "bodyPatterns": [
+            {
+              "contains": "999999999"
+            }
+          ]
+        },
+        "response": {
+          "status": 422,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "jsonBody": {
+            "status": "RECHAZADO",
+            "estado_dian": "RECHAZADO",
+            "statusCode": "FAS01",
+            "statusDescription": "Error en Regla de Validación (Regla: FAS01)",
+            "cufe": "MOCK-CUFE-RECHAZADO-999999999",
+            "trackID": "MOCK-TRACK-RECHAZADO-FAS01",
+            "applicationResponseXml": "<ApplicationResponse><cbc:ResponseCode>FAS01</cbc:ResponseCode><cbc:Description>Error en Regla de Validación (Regla: FAS01)</cbc:Description></ApplicationResponse>"
+          }
+        }
+      }

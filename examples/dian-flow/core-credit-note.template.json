@@ -1,0 +1,41 @@
+{
+  "ambiente": "Habilitacion",
+  "customization_id": "20",
+  "credit_note_type_code": "91",
+  "cliente": {
+    "tipo_identificacion": "31",
+    "numero_identificacion": "901234567",
+    "razon_social": "Cliente Integracion Local S.A.S.",
+    "email": "cliente@zonak.local"
+  },
+  "factura_referencia": {
+    "tipoDocumento": "FV",
+    "numeroDocumento": "__NUMERO_FACTURA__",
+    "fechaEmision": "2026-06-05T16:00:00-05:00",
+    "cufe": "__CUFE_FACTURA__",
+    "schemeName": "CUFE-SHA384"
+  },
+  "conceptos_correccion": [
+    {
+      "referenceID": "__NUMERO_FACTURA__",
+      "codigo": "1",
+      "descripcion": "Devolucion parcial de los bienes y/o no aceptacion parcial del servicio"
+    }
+  ],
+  "items": [
+    {
+      "codigo": "SERV-IVA-001",
+      "descripcion": "Devolucion parcial del servicio gravado con IVA",
+      "cantidad": 1,
+      "precio_unitario": 100000,
+      "descuento": 0,
+      "impuestos": [
+        {
+          "codigo": "01",
+          "nombre": "IVA",
+          "porcentaje": 19
+        }
+      ]
+    }
+  ]
+}

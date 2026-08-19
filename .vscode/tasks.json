@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Arrancar Ecosistema Zona K",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Core Go :8081",
+        "Portal Java :8080"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Core Go :8081",
+      "type": "shell",
+      "command": "go run cmd/api/main.go",
+      "options": {
+        "cwd": "${workspaceFolder}/microservice-core-go"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "zona-k-services",
+        "clear": true
+      }
+    },
+    {
+      "label": "Portal Java :8080",
+      "type": "shell",
+      "command": "if (Test-Path .\\mvnw-jdk21.ps1) { .\\mvnw-jdk21.ps1 spring-boot:run -Dspring-boot.run.profiles=local } elseif (Test-Path .\\mvnw.cmd) { .\\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local } elseif (Test-Path .\\mvnw) { ./mvnw spring-boot:run -Dspring-boot.run.profiles=local } else { throw 'No se encontró Maven Wrapper: agregue mvnw/mvnw.cmd en microservice-portal-java.' }",
+      "options": {
+        "cwd": "${workspaceFolder}/microservice-portal-java"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "zona-k-services",
+        "clear": true
+      }
+    },
+    {
+      "label": "Arrancar Ecosistema Zona K (ventanas externas)",
+      "type": "shell",
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/start-services.ps1\"",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}

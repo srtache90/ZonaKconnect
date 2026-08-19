@@ -1,0 +1,753 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('DIAN Connect - Emisión de Facturas')}"></th:block>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e2de; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar('emision', 'emision')}"></div>
+
+<header class="fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
+    <div class="flex items-center gap-3">
+        <button class="p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
+            <span class="material-symbols-outlined text-on-surface-variant">menu</span>
+        </button>
+        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-on-primary text-[20px]">account_balance_wallet</span>
+        </div>
+        <h1 class="font-headline-md text-headline-md font-semibold text-primary">DIAN Connect</h1>
+    </div>
+
+    <div class="flex items-center gap-4">
+        <a class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-decoration-none" th:href="@{/portal/search}" aria-label="Buscar">
+            <span class="material-symbols-outlined text-on-surface-variant">search</span>
+        </a>
+        <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors" id="theme-toggle" type="button">
+            <span class="material-symbols-outlined text-on-surface-variant">contrast</span>
+        </button>
+        <div class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-semibold">JD</div>
+    </div>
+</header>
+
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+            <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Emisión de Facturas</h2>
+            <p class="font-body-md text-on-surface-variant max-w-lg">
+                Gestiona y monitorea tus comprobantes electrónicos en tiempo real con validación directa ante la DIAN.
+            </p>
+        </div>
+        <a class="group relative flex items-center justify-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-xl font-label-md transition-all hover:shadow-xl active:scale-95 overflow-hidden text-decoration-none"
+           th:href="@{/portal/facturacion/manual}">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            <span>Nueva Factura</span>
+            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </a>
+    </div>
+
+    <div class="mb-6 rounded-xl border px-4 py-3 font-body-md"
+         th:if="${success != null}"
+         th:classappend="' bg-emerald-50 border-emerald-200 text-emerald-800'"
+         th:text="${success}">Operación exitosa</div>
+    <div class="mb-6 rounded-xl border px-4 py-3 font-body-md"
+         th:if="${error != null}"
+         th:classappend="' bg-error-container border-error/20 text-on-error-container'"
+         th:text="${error}">Operación con error</div>
+
+    <section class="mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
+        <div class="flex flex-col gap-2 mb-5">
+            <h3 class="font-headline-md text-headline-md font-semibold text-primary">Contexto de emisión</h3>
+            <p class="font-body-md text-on-surface-variant">
+                Seleccione la sociedad y el punto de venta para listar las facturas asociadas.
+            </p>
+        </div>
+        <form class="grid grid-cols-1 md:grid-cols-3 gap-6" id="context-form" method="get" th:action="@{/portal/invoices}">
+            <input name="page" type="hidden" value="1">
+            <input name="estado" th:if="${estado != null}" th:value="${estado}" type="hidden">
+            <input name="tipo" th:if="${tipo != null}" th:value="${tipo}" type="hidden">
+            <input name="limit" th:value="${limit}" type="hidden">
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="sociedadId">Sociedad</label>
+                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                        id="sociedadId"
+                        name="sociedadId"
+                        required>
+                    <option th:each="sociedad : ${sociedades}"
+                            th:selected="${sociedad.id.toString() == selectedSociedadId}"
+                            th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}"
+                            th:value="${sociedad.id}">
+                        Sociedad
+                    </option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="emissionPointId">Punto de venta</label>
+                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                        id="emissionPointId"
+                        name="emissionPointId"
+                        required>
+                    <option th:each="punto : ${puntosVenta}"
+                            th:data-sociedad-id="${punto.sociedadId}"
+                            th:selected="${punto.id.toString() == selectedEmissionPointId}"
+                            th:text="${punto.codigo + ' - ' + punto.nombre + ' (' + punto.prefijo + ')'}"
+                            th:value="${punto.id}">
+                        Punto de venta
+                    </option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">&nbsp;</label>
+                <button class="px-5 py-3 bg-primary text-on-primary rounded-lg font-label-md" type="submit">Aplicar contexto</button>
+            </div>
+        </form>
+        <p class="font-body-md text-on-surface-variant mt-4 mb-0"
+           th:if="${#lists.isEmpty(puntosVenta)}">
+            No hay puntos de venta activos. Configúrelos en
+            <a class="text-primary" th:href="@{/portal/admin/puntos-venta}">Puntos de venta</a>.
+        </p>
+    </section>
+
+    <section class="mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
+        <form class="grid grid-cols-1 md:grid-cols-3 gap-6" method="get" th:action="@{/portal/invoices}">
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Filtrar por Estado</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">person_search</span>
+                    <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
+                           name="estado"
+                           placeholder="Estado DIAN..."
+                           th:value="${estado}"
+                           type="text">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Tipo de documento</label>
+                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                        name="tipo">
+                    <option value="" th:selected="${tipo == null or #strings.isEmpty(tipo)}">Todos los tipos</option>
+                    <option value="EMITIDA" th:selected="${tipo == 'EMITIDA'}">Emitidas</option>
+                    <option value="RECIBIDA" th:selected="${tipo == 'RECIBIDA'}">Recibidas</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Registros por página</label>
+                <div class="flex gap-3">
+                    <input class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
+                           min="1"
+                           max="100"
+                           name="limit"
+                           th:value="${limit}"
+                           type="number">
+                    <button class="px-5 py-3 bg-primary text-on-primary rounded-lg font-label-md" type="submit">Filtrar</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden border border-surface-container-highest">
+        <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low border-b border-surface-container-highest font-label-sm text-on-surface-variant">
+            <div class="col-span-2">No. Factura</div>
+            <div class="col-span-3">Documento</div>
+            <div class="col-span-2">Fecha</div>
+            <div class="col-span-1">Valor</div>
+            <div class="col-span-2">Estado DIAN</div>
+            <div class="col-span-2 text-right">Acciones</div>
+        </div>
+
+        <div class="divide-y divide-surface-container-highest">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group"
+                 th:each="invoice : ${invoices}"
+                 th:with="dianValidated=${T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)},
+                          canReemitDian=${invoice.tipo == 'EMITIDA' and !T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)}">
+                <div class="col-span-2 font-data-tabular font-semibold text-primary">
+                    <span th:text="${invoice.prefijo}">FE</span>-<span th:text="${invoice.numero}">48291</span>
+                </div>
+                <div class="col-span-3 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-semibold text-[12px]"
+                         th:text="${#strings.substring(invoice.tipo, 0, 1)}">E</div>
+                    <div>
+                        <span class="font-body-md text-on-surface d-block" th:text="${invoice.tipo}">EMITIDA</span>
+                        <span class="text-[12px] text-on-surface-variant" th:text="${invoice.id}">invoice-id</span>
+                    </div>
+                </div>
+                <div class="col-span-2 font-body-md text-on-surface-variant"
+                     th:text="${#temporals.format(invoice.createdAt, 'dd MMM yyyy')}">12 Oct 2023</div>
+                <div class="col-span-1 font-data-tabular font-semibold text-primary">--</div>
+                <div class="col-span-2 flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-label-sm"
+                          th:if="${dianValidated}">
+                        <span class="material-symbols-outlined text-[14px]">verified</span>
+                        Validado DIAN
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 font-label-sm"
+                          th:if="${!dianValidated and invoice.estadoDian == 'EN_REINTENTO'}">
+                        <span class="material-symbols-outlined text-[14px]">schedule</span>
+                        En reintento
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100 font-label-sm"
+                          th:if="${!dianValidated and invoice.estadoDian == 'PENDIENTE'}">
+                        <span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+                        Pendiente
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-on-error-container border border-error/10 font-label-sm"
+                          th:if="${!dianValidated and (invoice.estadoDian == 'RECHAZADO_DIAN' or invoice.estadoDian == 'ERROR_DIAN_NET')}">
+                        <span class="material-symbols-outlined text-[14px]">error</span>
+                        <span th:text="${invoice.estadoDian == 'ERROR_DIAN_NET' ? 'Error DIAN' : 'Rechazado'}">Rechazado</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant border border-surface-container-highest font-label-sm"
+                          th:if="${!dianValidated and invoice.estadoDian != 'EN_REINTENTO' and invoice.estadoDian != 'PENDIENTE' and invoice.estadoDian != 'RECHAZADO_DIAN' and invoice.estadoDian != 'ERROR_DIAN_NET'}">
+                        <span class="material-symbols-outlined text-[14px]">info</span>
+                        <span th:text="${invoice.estadoDian}">Estado</span>
+                    </span>
+                    <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-on-surface-variant invoice-row-actions"
+                            data-action="open-dian-detail"
+                            title="Ver detalle DIAN"
+                            th:attr="data-invoice-number=${invoice.prefijo + '-' + invoice.numero},
+                                     data-estado-dian=${invoice.estadoDian},
+                                     data-uuid-cude=${invoice.uuidCude},
+                                     data-dian-error-code=${invoice.dianErrorCode},
+                                     data-dian-error-description=${invoice.dianErrorDescription},
+                                     data-dian-status-message=${invoice.dianStatusMessage},
+                                     data-dian-track-id=${invoice.dianTrackId},
+                                     data-updated-at=${#temporals.format(invoice.updatedAt, 'dd/MM/yyyy HH:mm')}"
+                            type="button">
+                        <span class="material-symbols-outlined text-[16px]">info</span>
+                    </button>
+                </div>
+                <div class="col-span-2 flex justify-end gap-2 flex-wrap invoice-row-actions">
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg border border-secondary-container bg-secondary-container text-on-secondary-container hover:shadow-md transition-colors"
+                            data-action="open-reemit-dian"
+                            title="Reenviar a DIAN"
+                            th:if="${canReemitDian}"
+                            th:attr="data-invoice-number=${invoice.prefijo + '-' + invoice.numero},
+                                     data-estado-dian=${invoice.estadoDian},
+                                     data-reemit-url=@{/portal/invoices/{id}/reemit(id=${invoice.id})}"
+                            type="button">
+                        <span class="material-symbols-outlined text-[18px]">cloud_sync</span>
+                    </button>
+                    <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
+                       title="Descargar PDF"
+                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
+                       th:href="@{/portal/invoices/{id}/documents/pdf(id=${invoice.id})}">
+                        <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                    </a>
+                    <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
+                       title="Descargar XML firmado"
+                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
+                       th:href="@{/portal/invoices/{id}/documents/signed-xml(id=${invoice.id})}">
+                        <span class="material-symbols-outlined text-[18px]">code</span>
+                    </a>
+                    <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
+                       title="Descargar ZIP DIAN"
+                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
+                       th:href="@{/portal/invoices/{id}/documents/attachment(id=${invoice.id})}">
+                        <span class="material-symbols-outlined text-[18px]">folder_zip</span>
+                    </a>
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary"
+                            data-action="open-resend-mail"
+                            title="Reenviar por correo"
+                            th:attr="data-invoice-id=${invoice.id},
+                                     data-invoice-number=${invoice.prefijo + '-' + invoice.numero},
+                                     data-customer-email=${invoice.customerEmail},
+                                     data-send-url=@{/portal/invoices/{id}/documents/attachment/send(id=${invoice.id})}"
+                            th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none' : ''"
+                            type="button">
+                        <span class="material-symbols-outlined text-[18px]">mail</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 py-10 text-center text-on-surface-variant font-body-md" th:if="${#lists.isEmpty(invoices)}">
+                No hay facturas registradas para los filtros actuales.
+            </div>
+        </div>
+
+        <div class="px-6 py-4 bg-surface-container-lowest border-t border-surface-container-highest flex justify-between items-center">
+            <span class="font-label-sm text-on-surface-variant"
+                  th:text="'Mostrando página ' + ${page} + ' de ' + ${totalPages} + ' · Total: ' + ${totalRecords}">
+                Mostrando 5 de 1,240 facturas
+            </span>
+            <div class="flex gap-2">
+                <a class="w-10 h-10 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-decoration-none text-primary"
+                   th:classappend="${!hasPrevious} ? ' opacity-40 pointer-events-none'"
+                   th:href="@{/portal/invoices(page=${previousPage}, limit=${limit}, estado=${estado}, tipo=${tipo})}">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </a>
+                <span class="w-10 h-10 flex items-center justify-center rounded-lg border border-primary bg-primary text-on-primary font-label-sm"
+                      th:text="${page}">1</span>
+                <a class="w-10 h-10 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-decoration-none text-primary"
+                   th:classappend="${!hasNext} ? ' opacity-40 pointer-events-none'"
+                   th:href="@{/portal/invoices(page=${nextPage}, limit=${limit}, estado=${estado}, tipo=${tipo})}">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="fixed inset-0 z-[70] hidden items-center justify-center p-4" id="dian-detail-modal">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-action="close-dian-detail"></div>
+        <div class="relative w-full max-w-xl bg-surface-container-lowest rounded-2xl border border-surface-container-highest shadow-2xl overflow-hidden">
+            <div class="px-6 py-5 border-b border-surface-container-highest flex items-start justify-between gap-4">
+                <div>
+                    <p class="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Respuesta DIAN</p>
+                    <h3 class="font-headline-md text-headline-md font-semibold text-primary">Detalle de validación</h3>
+                </div>
+                <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+                        data-action="close-dian-detail"
+                        type="button">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div class="p-4 rounded-xl bg-surface-container-low border border-surface-container-highest">
+                    <div class="font-label-sm text-on-surface-variant uppercase">Factura</div>
+                    <div class="font-data-tabular text-primary text-lg font-semibold" id="dian-detail-invoice-number">FE-00000</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl border border-surface-container-highest">
+                        <div class="font-label-sm text-on-surface-variant uppercase mb-1">Estado DIAN</div>
+                        <div class="font-body-md font-semibold text-primary" id="dian-detail-estado">PENDIENTE</div>
+                    </div>
+                    <div class="p-4 rounded-xl border border-surface-container-highest">
+                        <div class="font-label-sm text-on-surface-variant uppercase mb-1">Última actualización</div>
+                        <div class="font-body-md text-on-surface" id="dian-detail-updated-at">--</div>
+                    </div>
+                </div>
+                <div class="p-4 rounded-xl border border-emerald-100 bg-emerald-50 hidden" id="dian-detail-success-box">
+                    <div class="font-label-sm text-emerald-800 uppercase mb-2">Envío exitoso</div>
+                    <div class="text-[13px] text-emerald-900"><span class="font-semibold">CUFE/CUDE:</span> <span id="dian-detail-cude">--</span></div>
+                    <div class="text-[13px] text-emerald-900 mt-2"><span class="font-semibold">Mensaje DIAN:</span> <span id="dian-detail-success-message">--</span></div>
+                    <div class="text-[13px] text-emerald-900 mt-2 hidden" id="dian-detail-track-row"><span class="font-semibold">Track ID:</span> <span id="dian-detail-track-id">--</span></div>
+                </div>
+                <div class="p-4 rounded-xl border border-error/20 bg-error-container hidden" id="dian-detail-error-box">
+                    <div class="font-label-sm text-on-error-container uppercase mb-2">Error de validación</div>
+                    <div class="text-[13px] text-on-error-container"><span class="font-semibold">Código:</span> <span id="dian-detail-error-code">--</span></div>
+                    <div class="text-[13px] text-on-error-container mt-2"><span class="font-semibold">Descripción:</span> <span id="dian-detail-error-description">--</span></div>
+                </div>
+                <div class="p-4 rounded-xl border border-surface-container-highest bg-surface-container-low hidden" id="dian-detail-pending-box">
+                    <div class="font-label-sm text-on-surface-variant uppercase mb-2">Estado en proceso</div>
+                    <p class="font-body-md text-on-surface-variant mb-0" id="dian-detail-pending-message">
+                        La factura aún no ha sido validada por la DIAN. Puede reenviarla usando la opción de reintento en la fila.
+                    </p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-surface-container-highest flex justify-end bg-surface-container-low">
+                <button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md"
+                        data-action="close-dian-detail"
+                        type="button">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 z-[70] hidden items-center justify-center p-4" id="reemit-dian-modal">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-action="close-reemit-dian"></div>
+        <div class="relative w-full max-w-lg bg-surface-container-lowest rounded-2xl border border-surface-container-highest shadow-2xl overflow-hidden">
+            <form id="reemit-dian-form" method="post">
+                <div class="px-6 py-5 border-b border-surface-container-highest flex items-start justify-between gap-4">
+                    <div>
+                        <p class="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Reenvío a DIAN</p>
+                        <h3 class="font-headline-md text-headline-md font-semibold text-primary">Reintentar validación</h3>
+                    </div>
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+                            data-action="close-reemit-dian"
+                            type="button">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="p-4 mb-4 rounded-xl bg-surface-container-low border border-surface-container-highest">
+                        <div class="font-label-sm text-on-surface-variant uppercase">Factura</div>
+                        <div class="font-data-tabular text-primary text-lg font-semibold" id="reemit-dian-invoice-number">FE-00000</div>
+                        <div class="text-[12px] text-on-surface-variant mt-1">Estado actual: <strong id="reemit-dian-estado">PENDIENTE</strong></div>
+                    </div>
+                    <p class="text-on-surface-variant font-body-md">
+                        La factura se enviará nuevamente a la DIAN para validación. El estado cambiará a
+                        <strong>EN_REINTENTO</strong> mientras se procesa la respuesta.
+                    </p>
+                </div>
+                <div class="px-6 py-4 border-t border-surface-container-highest flex justify-end gap-3 bg-surface-container-low">
+                    <button class="px-5 py-2.5 rounded-lg border border-surface-container-highest hover:bg-white transition-colors font-label-md"
+                            data-action="close-reemit-dian"
+                            type="button">
+                        Cancelar
+                    </button>
+                    <button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary hover:shadow-md transition-colors font-label-md"
+                            type="submit">
+                        Reenviar a DIAN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 z-[70] hidden items-center justify-center p-4" id="resend-mail-modal">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-action="close-resend-mail"></div>
+        <div class="relative w-full max-w-lg bg-surface-container-lowest rounded-2xl border border-surface-container-highest shadow-2xl overflow-hidden">
+            <form id="resend-mail-form" method="post">
+                <div class="px-6 py-5 border-b border-surface-container-highest flex items-start justify-between gap-4">
+                    <div>
+                        <p class="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Reenvío por correo</p>
+                        <h3 class="font-headline-md text-headline-md font-semibold text-primary">Reenviar ZIP DIAN</h3>
+                    </div>
+                    <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+                            data-action="close-resend-mail"
+                            type="button">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                </div>
+
+                <div class="px-6 py-5">
+                    <div class="p-4 mb-4 rounded-xl bg-surface-container-low border border-surface-container-highest">
+                        <div class="font-label-sm text-on-surface-variant uppercase">Factura</div>
+                        <div class="font-data-tabular text-primary text-lg font-semibold" id="resend-mail-invoice-number">FE-00000</div>
+                    </div>
+
+                    <p class="text-on-surface-variant font-body-md mb-4">
+                        Confirma el destinatario al que se enviará el paquete ZIP DIAN con XML AttachedDocument y PDF.
+                    </p>
+
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-surface-container-highest cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input class="mt-1"
+                                   id="resend-mail-mode-original"
+                                   name="recipientMode"
+                                   type="radio"
+                                   value="ORIGINAL">
+                            <span class="font-body-md text-on-surface">
+                                Usar correo del adquirente:
+                                <strong id="resend-mail-customer-email">No disponible</strong>
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-surface-container-highest cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input class="mt-1"
+                                   id="resend-mail-mode-custom"
+                                   name="recipientMode"
+                                   type="radio"
+                                   value="CUSTOM">
+                            <span class="font-body-md text-on-surface">Enviar a otro correo</span>
+                        </label>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="resend-mail-custom-email">
+                            Correo alterno
+                        </label>
+                        <input class="mt-2 w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
+                               id="resend-mail-custom-email"
+                               name="recipientEmail"
+                               placeholder="destinatario@empresa.com"
+                               type="email">
+                        <p class="mt-2 text-[12px] text-on-surface-variant">
+                            Requerido si seleccionas “Enviar a otro correo”.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-t border-surface-container-highest flex justify-end gap-3 bg-surface-container-low">
+                    <button class="px-5 py-2.5 rounded-lg border border-surface-container-highest hover:bg-white transition-colors font-label-md"
+                            data-action="close-resend-mail"
+                            type="button">
+                        Cancelar
+                    </button>
+                    <button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary hover:shadow-md transition-colors font-label-md"
+                            type="submit">
+                        Reenviar por correo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <section class="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="glass-card p-6 rounded-2xl flex flex-col gap-2">
+            <span class="font-label-sm text-on-surface-variant uppercase">Total Registros</span>
+            <div class="flex items-end gap-2">
+                <span class="font-display-lg text-primary" th:text="${totalRecords}">0</span>
+                <span class="font-label-sm text-on-surface-variant mb-2">facturas</span>
+            </div>
+        </div>
+        <div class="glass-card p-6 rounded-2xl flex flex-col gap-2">
+            <span class="font-label-sm text-on-surface-variant uppercase">Página Actual</span>
+            <div class="flex items-end gap-2">
+                <span class="font-display-lg text-primary" th:text="${page}">1</span>
+                <span class="font-label-sm text-on-surface-variant mb-2" th:text="'de ' + ${totalPages}">de 1</span>
+            </div>
+        </div>
+        <div class="bg-primary p-6 rounded-2xl flex flex-col gap-2 text-on-primary md:col-span-2 relative overflow-hidden group">
+            <div class="relative z-10">
+                <span class="font-label-sm opacity-70 uppercase">Flujo DIAN</span>
+                <div class="flex items-end gap-2 mt-1">
+                    <span class="text-[40px] font-semibold leading-none tracking-tight">Emisión</span>
+                </div>
+                <p class="mt-4 font-body-md opacity-80 max-w-[320px]">
+                    Control operativo de comprobantes electrónicos, validación y documentos disponibles.
+                </p>
+            </div>
+            <div class="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
+                <span class="material-symbols-outlined text-[160px]">insights</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav('emision', 'emision')}"></div>
+
+<div class="fixed top-0 right-0 -z-10 w-[500px] h-[500px] bg-secondary/5 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+<script>
+    const sociedadSelect = document.getElementById('sociedadId');
+    const puntoSelect = document.getElementById('emissionPointId');
+
+    function actualizarPuntosVentaContexto() {
+        if (!sociedadSelect || !puntoSelect) {
+            return;
+        }
+        const selectedSociedad = sociedadSelect.value;
+        let firstVisible = '';
+        Array.from(puntoSelect.options).forEach(option => {
+            if (!option.value) {
+                return;
+            }
+            const visible = option.dataset.sociedadId === selectedSociedad;
+            option.hidden = !visible;
+            if (visible && !firstVisible) {
+                firstVisible = option.value;
+            }
+        });
+        if (!puntoSelect.value || puntoSelect.selectedOptions[0]?.hidden) {
+            puntoSelect.value = firstVisible;
+        }
+    }
+
+    if (sociedadSelect && puntoSelect) {
+        sociedadSelect.addEventListener('change', actualizarPuntosVentaContexto);
+        actualizarPuntosVentaContexto();
+    }
+
+    const html = document.documentElement;
+    const sidebar = document.getElementById('sidebar-drawer');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const resendMailModal = document.getElementById('resend-mail-modal');
+    const resendMailForm = document.getElementById('resend-mail-form');
+    const resendMailInvoiceNumber = document.getElementById('resend-mail-invoice-number');
+    const resendMailCustomerEmail = document.getElementById('resend-mail-customer-email');
+    const resendMailModeOriginal = document.getElementById('resend-mail-mode-original');
+    const resendMailModeCustom = document.getElementById('resend-mail-mode-custom');
+    const resendMailCustomEmail = document.getElementById('resend-mail-custom-email');
+    const dianDetailModal = document.getElementById('dian-detail-modal');
+    const reemitDianModal = document.getElementById('reemit-dian-modal');
+    const reemitDianForm = document.getElementById('reemit-dian-form');
+
+    const hasText = (value) => value != null && String(value).trim().length > 0;
+
+    const openModal = (modal) => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+    };
+
+    const closeModal = (modal) => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        const anyOpen = [resendMailModal, dianDetailModal, reemitDianModal]
+            .some(openModal => openModal.classList.contains('flex'));
+        if (!anyOpen) {
+            document.body.classList.remove('overflow-hidden');
+        }
+    };
+    document.getElementById('sidebar-open').addEventListener('click', () => {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('opacity-0', 'pointer-events-none');
+    });
+
+    backdrop.addEventListener('click', () => {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('opacity-0', 'pointer-events-none');
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+        html.classList.toggle('dark');
+        html.classList.toggle('light');
+        localStorage.setItem('zk-theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('zk-theme') === 'dark') {
+        html.classList.add('dark');
+        html.classList.remove('light');
+    }
+
+    document.querySelectorAll('.grid.cursor-pointer').forEach(row => {
+        row.addEventListener('click', () => {
+            row.classList.add('scale-[0.99]');
+            setTimeout(() => row.classList.remove('scale-[0.99]'), 150);
+        });
+    });
+
+    document.querySelectorAll('.invoice-row-actions a, .invoice-row-actions button').forEach(action => {
+        action.addEventListener('click', event => event.stopPropagation());
+    });
+
+    const syncResendMailRequiredState = () => {
+        const useCustom = resendMailModeCustom.checked;
+        resendMailCustomEmail.required = useCustom;
+        if (!useCustom) {
+            resendMailCustomEmail.value = '';
+        }
+    };
+
+    const closeResendMailModal = () => closeModal(resendMailModal);
+
+    const openResendMailModal = (button) => {
+        const customerEmail = (button.dataset.customerEmail || '').trim();
+        const hasCustomerEmail = customerEmail.length > 0;
+
+        resendMailForm.action = button.dataset.sendUrl;
+        resendMailInvoiceNumber.textContent = button.dataset.invoiceNumber || 'Factura';
+        resendMailCustomerEmail.textContent = hasCustomerEmail ? customerEmail : 'No disponible';
+        resendMailModeOriginal.disabled = !hasCustomerEmail;
+        resendMailModeOriginal.checked = hasCustomerEmail;
+        resendMailModeCustom.checked = !hasCustomerEmail;
+        resendMailCustomEmail.value = '';
+        syncResendMailRequiredState();
+
+        syncResendMailRequiredState();
+
+        openModal(resendMailModal);
+    };
+
+    const openDianDetailModal = (button) => {
+        const estadoDian = button.dataset.estadoDian || 'SIN_ESTADO';
+        const uuidCude = button.dataset.uuidCude || '';
+        const errorCode = button.dataset.dianErrorCode || '';
+        const errorDescription = button.dataset.dianErrorDescription || '';
+        const statusMessage = button.dataset.dianStatusMessage || '';
+        const trackId = button.dataset.dianTrackId || '';
+        const isValidated = hasText(uuidCude) && estadoDian === 'ENVIADO';
+        const hasError = hasText(errorCode) || hasText(errorDescription);
+
+        document.getElementById('dian-detail-invoice-number').textContent = button.dataset.invoiceNumber || 'Factura';
+        document.getElementById('dian-detail-estado').textContent = estadoDian;
+        document.getElementById('dian-detail-updated-at').textContent = button.dataset.updatedAt || '--';
+
+        const successBox = document.getElementById('dian-detail-success-box');
+        const errorBox = document.getElementById('dian-detail-error-box');
+        const pendingBox = document.getElementById('dian-detail-pending-box');
+        const trackRow = document.getElementById('dian-detail-track-row');
+
+        successBox.classList.add('hidden');
+        errorBox.classList.add('hidden');
+        pendingBox.classList.add('hidden');
+        trackRow.classList.add('hidden');
+
+        if (isValidated) {
+            document.getElementById('dian-detail-cude').textContent = uuidCude;
+            document.getElementById('dian-detail-success-message').textContent = hasText(statusMessage)
+                ? statusMessage
+                : 'Documento validado correctamente por la DIAN.';
+            if (hasText(trackId)) {
+                document.getElementById('dian-detail-track-id').textContent = trackId;
+                trackRow.classList.remove('hidden');
+            }
+            successBox.classList.remove('hidden');
+        } else if (hasError) {
+            document.getElementById('dian-detail-error-code').textContent = hasText(errorCode) ? errorCode : 'N/D';
+            document.getElementById('dian-detail-error-description').textContent = hasText(errorDescription)
+                ? errorDescription
+                : (hasText(statusMessage) ? statusMessage : 'Sin descripción adicional de la DIAN.');
+            errorBox.classList.remove('hidden');
+        } else {
+            const pendingMessage = document.getElementById('dian-detail-pending-message');
+            if (estadoDian === 'EN_REINTENTO') {
+                pendingMessage.textContent = 'La factura está en cola de reintento ante la DIAN. Consulte nuevamente en unos minutos.';
+            } else if (estadoDian === 'PENDIENTE') {
+                pendingMessage.textContent = 'La factura fue persistida y está pendiente de respuesta de validación por la DIAN.';
+            } else {
+                pendingMessage.textContent = 'La factura aún no ha sido validada por la DIAN. Puede reenviarla usando la opción de reintento en la fila.';
+            }
+            pendingBox.classList.remove('hidden');
+        }
+
+        openModal(dianDetailModal);
+    };
+
+    const closeDianDetailModal = () => closeModal(dianDetailModal);
+
+    const openReemitDianModal = (button) => {
+        reemitDianForm.action = button.dataset.reemitUrl;
+        document.getElementById('reemit-dian-invoice-number').textContent = button.dataset.invoiceNumber || 'Factura';
+        document.getElementById('reemit-dian-estado').textContent = button.dataset.estadoDian || 'PENDIENTE';
+        openModal(reemitDianModal);
+    };
+
+    const closeReemitDianModal = () => closeModal(reemitDianModal);
+
+    document.querySelectorAll('[data-action="open-resend-mail"]').forEach(button => {
+        button.addEventListener('click', () => openResendMailModal(button));
+    });
+
+    document.querySelectorAll('[data-action="close-resend-mail"]').forEach(button => {
+        button.addEventListener('click', closeResendMailModal);
+    });
+
+    document.querySelectorAll('[data-action="open-dian-detail"]').forEach(button => {
+        button.addEventListener('click', () => openDianDetailModal(button));
+    });
+
+    document.querySelectorAll('[data-action="close-dian-detail"]').forEach(button => {
+        button.addEventListener('click', closeDianDetailModal);
+    });
+
+    document.querySelectorAll('[data-action="open-reemit-dian"]').forEach(button => {
+        button.addEventListener('click', () => openReemitDianModal(button));
+    });
+
+    document.querySelectorAll('[data-action="close-reemit-dian"]').forEach(button => {
+        button.addEventListener('click', closeReemitDianModal);
+    });
+
+    resendMailModeOriginal.addEventListener('change', syncResendMailRequiredState);
+    resendMailModeCustom.addEventListener('change', syncResendMailRequiredState);
+
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+        if (resendMailModal.classList.contains('flex')) {
+            closeResendMailModal();
+        }
+        if (dianDetailModal.classList.contains('flex')) {
+            closeDianDetailModal();
+        }
+        if (reemitDianModal.classList.contains('flex')) {
+            closeReemitDianModal();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('section, .glass-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100 * index);
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Medios magnéticos DIAN | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'medios')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[960px] mx-auto">
+    <div class="mb-8">
+        <a class="inline-flex items-center gap-1 text-on-surface-variant font-label-md mb-3 text-decoration-none" th:href="@{/portal/emision/reportes}">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Volver a reportes
+        </a>
+        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Medios magnéticos DIAN</h2>
+        <p class="font-body-md text-on-surface-variant">Generación de archivos para información exógena según formatos DIAN.</p>
+    </div>
+
+    <section class="glass-card rounded-2xl p-6 mb-6">
+        <h3 class="font-headline-md text-headline-md text-primary mb-4">Parámetros de exportación</h3>
+        <form method="get" th:action="@{/portal/emision/reportes/medios-magneticos/export}" class="grid md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+                <label class="block font-label-md mb-1" for="formato">Formato DIAN</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="formato" name="formato" required>
+                    <option th:each="format : ${formats}"
+                            th:value="${format.code()}"
+                            th:text="${format.code() + ' - ' + format.title()}">1007</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
+                    <option th:each="sociedad : ${sociedades}"
+                            th:value="${sociedad.id}"
+                            th:selected="${sociedad.id.toString() == selectedSociedadId}"
+                            th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="emissionPointId">Punto de venta</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="emissionPointId" name="emissionPointId">
+                    <option value="">Todos</option>
+                    <option th:each="puntoVenta : ${puntosVenta}"
+                            th:value="${puntoVenta.id}"
+                            th:data-sociedad-id="${puntoVenta.sociedadId}"
+                            th:selected="${puntoVenta.id.toString() == selectedEmissionPointId}"
+                            th:text="${puntoVenta.codigo + ' - ' + puntoVenta.nombre}">PV01</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="fromDate">Fecha inicio</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="fromDate" name="fromDate" th:value="${fromDate}" required>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="toDate">Fecha fin</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="toDate" name="toDate" th:value="${toDate}" required>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="anio">Año gravable</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="number" id="anio" name="anio" th:value="${selectedYear}" min="2000" max="2100" required>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="periodo">Periodo (mes)</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="number" id="periodo" name="periodo" th:value="${selectedPeriod}" min="1" max="12" required>
+            </div>
+            <div class="md:col-span-2">
+                <button class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-on-primary font-label-md" type="submit">
+                    <span class="material-symbols-outlined text-[18px]">download</span>
+                    Descargar archivo
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-4 mb-6">
+        <article class="glass-card rounded-2xl p-5" th:each="format : ${formats}">
+            <h4 class="font-headline-md text-headline-md text-primary mb-2" th:text="${format.code() + ' - ' + format.title()}">1007</h4>
+            <p class="font-body-md text-on-surface-variant mb-0" th:text="${format.description()}">Descripción</p>
+        </article>
+    </section>
+
+    <div class="rounded-2xl border border-surface-container-highest bg-surface-container-low px-5 py-4 font-body-md text-on-surface-variant">
+        Los archivos se generan con separador pipe (|), codificación UTF-8 con BOM y agrupan ingresos por tercero.
+        Valide el archivo con el prevalidador DIAN antes del envío oficial.
+    </div>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav('reportes', 'medios')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+<script>
+    function actualizarPuntosVenta() {
+        const sociedadId = document.getElementById('sociedadId').value;
+        const puntoVentaSelect = document.getElementById('emissionPointId');
+        Array.from(puntoVentaSelect.options).forEach((option) => {
+            if (!option.value) return;
+            const isVisible = option.dataset.sociedadId === sociedadId;
+            option.hidden = !isVisible;
+            option.disabled = !isVisible;
+        });
+        const firstVisible = Array.from(puntoVentaSelect.options).find((option) => option.value && !option.hidden);
+        puntoVentaSelect.value = firstVisible ? firstVisible.value : '';
+    }
+    document.addEventListener('DOMContentLoaded', actualizarPuntosVenta);
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Puntos de Venta | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Puntos de Venta</h1>
+        <p class="dc-page-subtitle">Resoluciones, prefijos y numeración DIAN por sociedad.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+
+    <section class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Crear o editar punto de venta</div>
+        <div class="card-body">
+            <form th:action="@{/portal/admin/puntos-venta}" method="post" class="row g-3">
+                <input type="hidden" name="id" id="puntoVentaId">
+
+                <div class="col-md-4">
+                    <label class="form-label" for="sociedadId">Sociedad</label>
+                    <select class="form-select" id="sociedadId" name="sociedadId" required>
+                        <option value="">Seleccione...</option>
+                        <option th:each="sociedad : ${sociedades}" th:value="${sociedad.id}" th:text="${sociedad.razonSocial}">
+                            Sociedad
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="codigo">Código POS</label>
+                    <input class="form-control" id="codigo" name="codigo" placeholder="PV-001" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="nombre">Nombre</label>
+                    <input class="form-control" id="nombre" name="nombre" placeholder="Caja principal" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="direccion">Dirección</label>
+                    <input class="form-control" id="direccion" name="direccion" placeholder="Cra 1 # 2-03">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label" for="prefijo">Prefijo</label>
+                    <input class="form-control" id="prefijo" name="prefijo" placeholder="FE" maxlength="12" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="resolucionDian">Resolución de facturación</label>
+                    <input class="form-control" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="claveTecnica">Clave técnica</label>
+                    <input class="form-control" id="claveTecnica" name="claveTecnica" autocomplete="off">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label" for="rangoDesde">Rango desde</label>
+                    <input class="form-control" id="rangoDesde" name="rangoDesde" type="number" min="1" value="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="rangoHasta">Rango hasta</label>
+                    <input class="form-control" id="rangoHasta" name="rangoHasta" type="number" min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="numeroActual">Número actual</label>
+                    <input class="form-control" id="numeroActual" name="numeroActual" type="number" min="0" value="0" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="vigenciaDesde">Vigencia desde</label>
+                    <input class="form-control" id="vigenciaDesde" name="vigenciaDesde" type="date" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="vigenciaHasta">Vigencia hasta</label>
+                    <input class="form-control" id="vigenciaHasta" name="vigenciaHasta" type="date" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" id="activo" name="activo" type="checkbox" value="true" checked>
+                        <label class="form-check-label" for="activo">Activo</label>
+                    </div>
+                </div>
+
+                <div class="col-12 text-end">
+                    <button class="btn btn-primary" type="submit">Guardar punto de venta</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-white">Puntos de venta registrados</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Sociedad</th>
+                    <th>Código</th>
+                    <th>Nombre / Dirección</th>
+                    <th>Prefijo</th>
+                    <th>Resolución</th>
+                    <th>Rango</th>
+                    <th>Vigencia</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="punto : ${puntosVenta}">
+                    <td th:text="${punto.sociedadRazonSocial}">Sociedad</td>
+                    <td th:text="${punto.codigo}">PV-001</td>
+                    <td>
+                        <div th:text="${punto.nombre}">Caja principal</div>
+                        <small class="text-muted" th:text="${punto.direccion}">Dirección</small>
+                    </td>
+                    <td th:text="${punto.prefijo}">FE</td>
+                    <td>
+                        <div th:text="${punto.resolucionDian}">18764000000000</div>
+                        <small class="text-muted" th:if="${punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica)}">
+                            Clave técnica configurada
+                        </small>
+                    </td>
+                    <td>
+                        <span th:text="${punto.rangoDesde}">1</span>
+                        -
+                        <span th:text="${punto.rangoHasta}">1000</span>
+                        <small class="text-muted d-block">Actual: <span th:text="${punto.numeroActual}">0</span></small>
+                    </td>
+                    <td>
+                        <span th:text="${punto.vigenciaDesde}">2026-01-01</span>
+                        <small class="text-muted d-block" th:text="${punto.vigenciaHasta}">2026-12-31</small>
+                    </td>
+                    <td>
+                        <span class="badge" th:classappend="${punto.activo} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${punto.activo} ? 'Activo' : 'Inactivo'">
+                            Activo
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                th:attr="data-id=${punto.id},data-sociedad=${punto.sociedadId},data-codigo=${punto.codigo},data-nombre=${punto.nombre},data-direccion=${punto.direccion},data-prefijo=${punto.prefijo},data-resolucion=${punto.resolucionDian},data-clave=${punto.claveTecnica},data-rango-desde=${punto.rangoDesde},data-rango-hasta=${punto.rangoHasta},data-numero-actual=${punto.numeroActual},data-vigencia-desde=${punto.vigenciaDesde},data-vigencia-hasta=${punto.vigenciaHasta},data-activo=${punto.activo}"
+                                onclick="editarPuntoVenta(this)">
+                            Editar
+                        </button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(puntosVenta)}">
+                    <td colspan="9" class="text-center text-muted py-4">No hay puntos de venta registrados.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    function editarPuntoVenta(button) {
+        document.getElementById('puntoVentaId').value = button.dataset.id || '';
+        document.getElementById('sociedadId').value = button.dataset.sociedad || '';
+        document.getElementById('codigo').value = button.dataset.codigo || '';
+        document.getElementById('nombre').value = button.dataset.nombre || '';
+        document.getElementById('direccion').value = button.dataset.direccion || '';
+        document.getElementById('prefijo').value = button.dataset.prefijo || '';
+        document.getElementById('resolucionDian').value = button.dataset.resolucion || '';
+        document.getElementById('claveTecnica').value = button.dataset.clave || '';
+        document.getElementById('rangoDesde').value = button.dataset.rangoDesde || '1';
+        document.getElementById('rangoHasta').value = button.dataset.rangoHasta || '';
+        document.getElementById('numeroActual').value = button.dataset.numeroActual || '0';
+        document.getElementById('vigenciaDesde').value = button.dataset.vigenciaDesde || '';
+        document.getElementById('vigenciaHasta').value = button.dataset.vigenciaHasta || '';
+        document.getElementById('activo').checked = button.dataset.activo === 'true';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

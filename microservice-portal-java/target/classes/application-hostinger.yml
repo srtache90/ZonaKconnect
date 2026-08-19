@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+services:
+  core-go:
+    base-url: ${SERVICES_CORE_GO_BASE_URL:http://core-go:8080}
+  dian-net:
+    base-url: ${DIAN_API_URL:http://dian-net:8080}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  r2dbc:
+    url: ${SPRING_R2DBC_URL}
+    username: ${SPRING_R2DBC_USERNAME:${SPRING_DATASOURCE_USERNAME}}
+    password: ${SPRING_R2DBC_PASSWORD:${SPRING_DATASOURCE_PASSWORD}}
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    ttl-seconds: ${JWT_TTL_SECONDS:28800}
+  cookie:
+    secure: ${JWT_COOKIE_SECURE:true}
+
+aws:
+  local-mode: true
+  region: ${AWS_REGION:us-east-1}
+  access-key: ${AWS_ACCESS_KEY_ID:minioadmin}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:minioadmin}
+  s3:
+    endpoint-override: ${AWS_S3_ENDPOINT_OVERRIDE:http://minio:9000}
+    invoice-documents-bucket: ${AWS_S3_INVOICE_DOCUMENTS_BUCKET:invoice-documents-bucket}
+    received-invoices-bucket: ${AWS_S3_RECEIVED_INVOICES_BUCKET:received-invoices-bucket}

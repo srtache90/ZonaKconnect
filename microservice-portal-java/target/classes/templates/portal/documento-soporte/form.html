@@ -1,0 +1,177 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Nuevo Documento Soporte | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Emitir documento soporte</h1>
+        <p class="dc-page-subtitle">Payload DIAN_NET con proveedor, ítems y totales.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <form th:action="@{/portal/documento-soporte/emitir}" method="post" id="supportForm">
+        <section class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">Sociedad y punto de venta</div>
+            <div class="card-body row g-3">
+                <div class="col-12" th:if="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
+                    <div class="alert alert-warning mb-0">
+                        Configure una sociedad y un punto de venta activos antes de emitir.
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="sociedadId">Sociedad</label>
+                    <select class="form-select" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()" required>
+                        <option value="">Seleccione...</option>
+                        <option th:each="sociedad : ${sociedades}"
+                                th:value="${sociedad.id}"
+                                th:selected="${sociedad.id.toString() == selectedSociedadId}"
+                                th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="emissionPointId">Punto de venta</label>
+                    <select class="form-select" id="emissionPointId" name="emissionPointId" required>
+                        <option value="">Seleccione...</option>
+                        <option th:each="punto : ${puntosVenta}"
+                                th:value="${punto.id}"
+                                th:data-sociedad-id="${punto.sociedadId}"
+                                th:selected="${punto.id.toString() == selectedEmissionPointId}"
+                                th:text="${punto.codigo + ' - ' + punto.nombre}">PV</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="card shadow-sm mb-4">
+            <div class="card-header bg-white">Datos del proveedor / cliente</div>
+            <div class="card-body row g-3">
+                <div class="col-md-3">
+                    <label class="form-label" for="tipoIdentificacion">Tipo identificación</label>
+                    <select class="form-select" id="tipoIdentificacion" name="tipoIdentificacion">
+                        <option value="NIT">NIT</option>
+                        <option value="CC">CC</option>
+                        <option value="CE">CE</option>
+                        <option value="PA">Pasaporte</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="numeroIdentificacion">Número identificación</label>
+                    <input class="form-control" id="numeroIdentificacion" name="numeroIdentificacion" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="razonSocial">Razón social</label>
+                    <input class="form-control" id="razonSocial" name="razonSocial" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="email">Email</label>
+                    <input class="form-control" id="email" name="email" type="email">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="observaciones">Observaciones</label>
+                    <input class="form-control" id="observaciones" name="observaciones">
+                </div>
+            </div>
+        </section>
+
+        <section class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span>Ítems</span>
+                <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-item">Agregar ítem</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle" id="itemsTable">
+                    <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Cantidad</th>
+                        <th>Precio unitario</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                    <tr>
+                        <td><input class="form-control item-code" name="items[0].codigo" value="DS-001"></td>
+                        <td><input class="form-control item-desc" name="items[0].descripcion" required></td>
+                        <td><input class="form-control item-qty" name="items[0].cantidad" type="number" step="0.01" min="0" value="1"></td>
+                        <td><input class="form-control item-price" name="items[0].precioUnitario" type="number" step="0.01" min="0" value="0"></td>
+                        <td><button class="btn btn-sm btn-outline-danger btn-remove-item" type="button">Quitar</button></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="d-flex justify-content-between">
+            <a class="btn btn-outline-secondary" th:href="@{/portal/documento-soporte}">Volver al listado</a>
+            <button class="btn btn-primary" type="submit">Emitir documento soporte</button>
+        </div>
+    </form>
+</main>
+
+<script>
+    const sociedadSelect = document.getElementById('sociedadId');
+    const emissionPointSelect = document.getElementById('emissionPointId');
+    const itemsBody = document.getElementById('itemsBody');
+
+    function actualizarPuntosVenta() {
+        const sociedadId = sociedadSelect.value;
+        Array.from(emissionPointSelect.options).forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+            const match = option.dataset.sociedadId === sociedadId;
+            option.hidden = !match;
+            if (!match && option.selected) {
+                option.selected = false;
+            }
+        });
+        if (!emissionPointSelect.value) {
+            const firstVisible = Array.from(emissionPointSelect.options).find(o => o.value && !o.hidden);
+            if (firstVisible) {
+                firstVisible.selected = true;
+            }
+        }
+    }
+
+    function reindexItems() {
+        Array.from(itemsBody.querySelectorAll('tr')).forEach((row, index) => {
+            row.querySelector('.item-code').name = `items[${index}].codigo`;
+            row.querySelector('.item-desc').name = `items[${index}].descripcion`;
+            row.querySelector('.item-qty').name = `items[${index}].cantidad`;
+            row.querySelector('.item-price').name = `items[${index}].precioUnitario`;
+        });
+    }
+
+    document.getElementById('btn-add-item').addEventListener('click', () => {
+        const row = itemsBody.querySelector('tr').cloneNode(true);
+        row.querySelectorAll('input').forEach(input => {
+            input.value = input.classList.contains('item-qty') ? '1' : input.classList.contains('item-price') ? '0' : '';
+        });
+        row.querySelector('.item-code').value = 'DS-001';
+        itemsBody.appendChild(row);
+        reindexItems();
+    });
+
+    itemsBody.addEventListener('click', event => {
+        if (event.target.classList.contains('btn-remove-item') && itemsBody.querySelectorAll('tr').length > 1) {
+            event.target.closest('tr').remove();
+            reindexItems();
+        }
+    });
+
+    sociedadSelect.addEventListener('change', actualizarPuntosVenta);
+    actualizarPuntosVenta();
+</script>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

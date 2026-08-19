@@ -1,0 +1,198 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Administración de Sociedades</h1>
+        <p class="dc-page-subtitle">Configuración multi-tenant, emisión y recepción de correo</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <section class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Crear o editar Sociedad</div>
+        <div class="card-body">
+            <form th:action="@{/portal/admin/sociedades}" method="post" class="row g-3">
+                <input type="hidden" name="id" id="sociedadId">
+
+                <div class="col-md-6">
+                    <label class="form-label" for="razonSocial">Razón social</label>
+                    <input class="form-control" id="razonSocial" name="razonSocial" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="nit">NIT</label>
+                    <input class="form-control" id="nit" name="nit" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="apiKey">API Key ingesta</label>
+                    <input class="form-control" id="apiKey" name="apiKey" autocomplete="off" placeholder="Dejar vacío conserva la actual">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="correoEmision">Correo emisión</label>
+                    <input class="form-control" id="correoEmision" name="correoEmision" type="email">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="correoRecepcion">Correo recepción</label>
+                    <input class="form-control" id="correoRecepcion" name="correoRecepcion" type="email">
+                </div>
+                <div class="col-12">
+                    <h2 class="h6 border-bottom pb-2 mb-0">Correo saliente (SMTP)</h2>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="hostSmtp">Host SMTP</label>
+                    <input class="form-control" id="hostSmtp" name="hostSmtp" placeholder="smtp.office365.com">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="puertoSmtp">Puerto SMTP</label>
+                    <input class="form-control" id="puertoSmtp" name="puertoSmtp" type="number" min="1" max="65535" value="587">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="usuarioSmtp">Usuario SMTP</label>
+                    <input class="form-control" id="usuarioSmtp" name="usuarioSmtp">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="passwordSmtp">Password SMTP</label>
+                    <input class="form-control" id="passwordSmtp" name="passwordSmtp" type="password" autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                </div>
+                <div class="col-12">
+                    <h2 class="h6 border-bottom pb-2 mb-0">Correo entrante (IMAP)</h2>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="hostImap">Host IMAP</label>
+                    <input class="form-control" id="hostImap" name="hostImap" placeholder="imap.office365.com">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="puertoImap">Puerto IMAP</label>
+                    <input class="form-control" id="puertoImap" name="puertoImap" type="number" min="1" max="65535" value="993">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="usuarioImap">Usuario IMAP</label>
+                    <input class="form-control" id="usuarioImap" name="usuarioImap">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="passwordImap">Password IMAP</label>
+                    <input class="form-control" id="passwordImap" name="passwordImap" type="password" autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="dianAmbiente">Web Service DIAN</label>
+                    <select class="form-select" id="dianAmbiente" name="dianAmbiente">
+                        <option value="Habilitacion">Pruebas / Habilitación</option>
+                        <option value="Produccion">Producción</option>
+                    </select>
+                </div>
+                <div class="col-12 text-end">
+                    <button class="btn btn-primary" type="submit">Guardar Sociedad</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-white">Sociedades registradas</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Razón social</th>
+                    <th>NIT</th>
+                    <th>Correo emisión</th>
+                    <th>Correo recepción</th>
+                    <th>API Key</th>
+                    <th>Correo saliente</th>
+                    <th>Correo entrante</th>
+                    <th>DIAN</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sociedad : ${sociedades}">
+                    <td th:text="${sociedad.razonSocial}">Sociedad</td>
+                    <td th:text="${sociedad.nit}">900123456</td>
+                    <td th:text="${sociedad.correoEmision}">emision@zonak.local</td>
+                    <td th:text="${sociedad.correoRecepcion}">recepcion@zonak.local</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${sociedad.apiKey != null and !#strings.isEmpty(sociedad.apiKey)} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${sociedad.apiKey != null and !#strings.isEmpty(sociedad.apiKey)} ? 'Configurada' : 'Sin API Key'">
+                            Configurada
+                        </span>
+                    </td>
+                    <td>
+                        <span th:text="${sociedad.hostSmtp}">smtp</span>:<span th:text="${sociedad.puertoSmtp}">587</span>
+                    </td>
+                    <td>
+                        <span th:text="${sociedad.hostImap}">imap</span>:<span th:text="${sociedad.puertoImap}">993</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : ' text-bg-info'"
+                              th:text="${sociedad.dianAmbiente == 'Produccion'} ? 'Producción' : 'Pruebas'">
+                            Pruebas
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente}"
+                                    onclick="editarSociedad(this)">
+                                Editar
+                            </button>
+                            <form th:action="@{/portal/admin/sociedades/eliminar}" method="post" class="d-inline"
+                                  onsubmit="return confirmarEliminar(this)"
+                                  th:data-razon="${sociedad.razonSocial}"
+                                  th:if="${sociedad.id.toString() != '00000000-0000-0000-0000-000000000001'}">
+                                <input type="hidden" name="id" th:value="${sociedad.id}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(sociedades)}">
+                        <td colspan="9" class="text-center text-muted py-4">No hay sociedades registradas.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    function confirmarEliminar(form) {
+        const razonSocial = form.dataset.razon || 'seleccionada';
+        return window.confirm(
+            '¿Eliminar la sociedad "' + razonSocial + '"? Se borrarán certificados, puntos de venta y datos asociados sin facturas.'
+        );
+    }
+
+    function editarSociedad(button) {
+        document.getElementById('sociedadId').value = button.dataset.id || '';
+        document.getElementById('razonSocial').value = button.dataset.razon || '';
+        document.getElementById('nit').value = button.dataset.nit || '';
+        document.getElementById('apiKey').value = '';
+        document.getElementById('correoEmision').value = button.dataset.emision || '';
+        document.getElementById('correoRecepcion').value = button.dataset.recepcion || '';
+        document.getElementById('hostSmtp').value = button.dataset.hostSmtp || '';
+        document.getElementById('puertoSmtp').value = button.dataset.puertoSmtp || '';
+        document.getElementById('usuarioSmtp').value = button.dataset.usuarioSmtp || '';
+        document.getElementById('passwordSmtp').value = '';
+        document.getElementById('hostImap').value = button.dataset.hostImap || '';
+        document.getElementById('puertoImap').value = button.dataset.puertoImap || '';
+        document.getElementById('usuarioImap').value = button.dataset.usuarioImap || '';
+        document.getElementById('passwordImap').value = '';
+        document.getElementById('dianAmbiente').value = button.dataset.ambiente || 'Habilitacion';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

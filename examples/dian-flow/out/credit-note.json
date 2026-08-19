@@ -1,0 +1,116 @@
+﻿{
+  "ambiente": "Habilitacion",
+  "notaCredito": {
+    "tipoDocumento": "NC",
+    "customizationID": "20",
+    "creditNoteTypeCode": "91",
+    "numeroDocumento": "EPR900002",
+    "fechaEmision": "2026-06-05T16:05:00-05:00",
+    "moneda": "COP",
+    "facturaReferencia": {
+      "tipoDocumento": "FV",
+      "numeroDocumento": "EPR900001",
+      "fechaEmision": "2026-06-05T16:00:00-05:00",
+      "cufe": "35e06be0c974e1ed5170d309cff055bc3bc1e877dd0c9e108874bd23c9f2fd4cef0eda7585dfcd5a7f72b17b5b4f0e58",
+      "schemeName": "CUFE-SHA384"
+    },
+    "emisor": {
+      "nit": "900123456",
+      "dv": "0",
+      "tipoIdentificacion": "31",
+      "tipoPersona": "1",
+      "razonSocial": "Sociedad Local Zona K",
+      "nombreComercial": "Zona K Local",
+      "direccion": {
+        "codigoPostal": "110111",
+        "departamento": "Bogota D.C.",
+        "codigoDepartamento": "11",
+        "municipio": "Bogota",
+        "codigoMunicipio": "11001",
+        "direccionCompleta": "Carrera 1 1 1",
+        "pais": "CO"
+      },
+      "telefono": "6010000000",
+      "email": "emision@zonak.local",
+      "regimenFiscal": "R-99-PN",
+      "tributoId": "01",
+      "tributoNombre": "IVA",
+      "actividadEconomica": "5611"
+    },
+    "cliente": {
+      "tipoIdentificacion": "31",
+      "numeroIdentificacion": "901234567",
+      "dv": "1",
+      "tipoPersona": "1",
+      "razonSocial": "Cliente Integracion Local S.A.S.",
+      "nombreComercial": "Cliente Integracion",
+      "direccion": {
+        "codigoPostal": "050001",
+        "departamento": "Antioquia",
+        "codigoDepartamento": "05",
+        "municipio": "Medellin",
+        "codigoMunicipio": "05001",
+        "direccionCompleta": "Calle 10 20 30",
+        "pais": "CO"
+      },
+      "telefono": "6040000000",
+      "email": "cliente@zonak.local",
+      "regimenFiscal": "R-99-PN",
+      "tributoId": "ZZ",
+      "tributoNombre": "No Aplica"
+    },
+    "conceptosCorreccion": [
+      {
+        "referenceID": "EPR900001",
+        "codigo": "1",
+        "descripcion": "Devolucion parcial de los bienes y/o no aceptacion parcial del servicio"
+      }
+    ],
+    "items": [
+      {
+        "numeroLinea": 1,
+        "codigo": "SERV-IVA-001",
+        "descripcion": "Devolucion parcial del servicio gravado con IVA",
+        "cantidad": 1,
+        "unidadMedida": "94",
+        "precioUnitario": 100000,
+        "descuento": 0,
+        "subtotal": 100000,
+        "impuestos": [
+          {
+            "codigo": "01",
+            "nombre": "IVA",
+            "porcentaje": 19,
+            "baseImponible": 100000,
+            "valor": 19000
+          }
+        ],
+        "total": 119000
+      }
+    ],
+    "totales": {
+      "subtotal": 100000,
+      "totalDescuentos": 0,
+      "totalImpuestos": 19000,
+      "total": 119000
+    },
+    "observaciones": "Nota credito de ejemplo para validar flujo DIAN local",
+    "notas": [
+      "Ejemplo de nota credito referenciando CUFE de factura emitida"
+    ],
+    "configuracionDian": {
+      "numeroResolucion": "18764000000000",
+      "fechaResolucion": "2026-01-01T00:00:00-05:00",
+      "fechaInicio": "2026-01-01T00:00:00-05:00",
+      "fechaFin": "2027-01-01T00:00:00-05:00",
+      "prefijo": "EPR",
+      "rangoInicio": "1",
+      "rangoFin": "99999999",
+      "tipoAmbiente": "2",
+      "softwareId": "SOFTWARE-ID-LOCAL",
+      "pin": "PIN-LOCAL",
+      "claveTecnica": "CLAVE-TECNICA-LOCAL"
+    }
+  }
+}
+

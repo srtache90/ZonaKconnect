@@ -1,0 +1,42 @@
+# ============================================================================
+# .cursorrules - Sistema de Facturación Electrónica (Multi-tenant)
+# Tech Stack: Java (Front/Portal), Go (Back/API), .NET (Core DIAN)
+# ============================================================================
+
+[Global Behavior - LOGICAL EXPLANATION MANDATORY]
+- Be clear, direct, and highly technical. Avoid polite greetings, fluff, or standard pleasantries.
+- DO NOT rewrite existing code unless explicitly asked. Only output modified or new blocks.
+- **MANDATORY RESPONSE STRUCTURE:** Every time you provide or modify code, you MUST append a "CONTEXTO Y LÓGICA TÉCNICA" section at the end of your response.
+- This section must explain:
+  1. **Qué hace el código:** Breve explicación del flujo implementado.
+  2. **Por qué se diseñó así:** Sustento arquitectónico (concurrencia, multi-tenancy, rendimiento o seguridad).
+  3. **Alertas Senior:** Qué errores comunes debemos evitar o qué pruebas debemos hacer en este bloque específico (ej. manejo de punteros, índices de BD, timeouts).
+- Keep explanations bulleted, dense in technical value, and completely free of conversation.
+
+[Git & Workflow Rules - MANDATORY EXECUTION]
+- **Pre-execution Sync:** ALWAYS run `git pull origin <current-branch>` to fetch and integrate remote changes before modifying or creating any file.
+- **Post-execution PR Generation:** Upon completing any change, automatically construct and prepare a Pull Request (PR):
+  1. Create a descriptive feature/fix branch if operating directly on main/develop (`feature/tenant-x` or `fix/issue-y`).
+  2. Stage and commit changes using Conventional Commits format (`feat:`, `fix:`, `refactor:`, `docs:`).
+  3. Push branch to remote repository (`git push origin <branch-name>`).
+  4. Generate or prompt for Pull Request creation targeting the base integration branch (`main` or `develop`) with a concise technical changelog.
+
+[Architecture & Tech Stack Context]
+- **Frontend / Web Portal:** Java (Spring Boot / Jakarta MVC). Handles user login, report downloads, and PDF rendering.
+- **Backend / Core API:** Go (Golang). Handles business logic, authentication, webhooks, and orchestration.
+- **DIAN Service:** .NET (C#). Microservice specialized in XML generation, digital signing (.p12), and SOAP/REST communication with DIAN. Already exists. Do not rewrite.
+- Communication between services must be asynchronous via queues (SQS) or minimal internal REST/gRPC.
+
+[Core Business Rules - MUST ENFORCE]
+1. **Multisociedad (Multi-tenancy):**
+   - Every database table, API request, and internal event MUST include a `tenant_id` (Society/Company) or equivalent partitioning key.
+   - Data isolation between different societies is priority #1. No data leaks allowed.
+   
+2. **Multi-punto (Multiple Emission Points):**
+   - Each Society (`tenant_id`) can have multiple emission points (Sucursales/Puntos de venta).
+   - Every invoice request must route and track the specific `branch_id` and `pos_id` (Punto de Emisión) to manage independent resolutions, prefixes, and numbering ranges authorized by DIAN.
+
+[Coding Standards by Language]
+- **Go:** Use idiomatic Go (with pgx for PostgreSQL). Ensure `tenant_id` is passed via context or middleware.
+- **Java:** Follow standard enterprise design patterns. Keep memory footprint low.
+- **.NET:** Treat as an isolated black box for cryptography/DIAN communication. Any integration from Go/Java to .NET must pass the `tenant_id` to select the correct digital certificate from S3/Secrets Manager.

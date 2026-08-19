@@ -1,0 +1,31 @@
+server:
+  port: 8081
+
+services:
+  core-go:
+    base-url: ${SERVICES_CORE_GO_BASE_URL:http://localhost:8081}
+  dian-net:
+    # DIAN_API_URL apunta al motor DIAN_NET; DIAN_NET decide si usa mock local o DIAN real.
+    base-url: ${DIAN_API_URL:http://localhost:8090}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/zona_k_facturacion}
+    username: ${SPRING_DATASOURCE_USERNAME:zona_k_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:zona_k_app_local_password}
+
+security:
+  jwt:
+    secret: local-dev-secret-change-before-production-32-bytes-minimum
+    ttl-seconds: 28800
+  cookie:
+    secure: false
+
+aws:
+  local-mode: true
+  region: us-east-1
+  access-key: ${AWS_ACCESS_KEY_ID:test}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+  s3:
+    endpoint-override: ${AWS_S3_ENDPOINT_OVERRIDE:http://localhost:4566}
+    invoice-documents-bucket: invoice-documents-bucket

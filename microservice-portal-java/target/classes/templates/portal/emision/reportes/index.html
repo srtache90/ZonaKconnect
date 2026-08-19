@@ -1,0 +1,52 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Reportes de Emisión | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'inicio')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
+    <div class="mb-10">
+        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Reportes de emisión</h2>
+        <p class="font-body-md text-on-surface-variant">Consultas analíticas y exportaciones normativas de facturación electrónica.</p>
+    </div>
+
+    <section class="grid md:grid-cols-2 gap-6">
+        <article class="glass-card rounded-2xl p-6">
+            <div class="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-primary">table_view</span>
+            </div>
+            <h3 class="font-headline-md text-headline-md text-primary mb-2">Reporte detallado de ventas</h3>
+            <p class="font-body-md text-on-surface-variant mb-6">
+                NIT, nombre, dirección, email, bases, impuestos, propinas, subtotales, totales, estado DIAN y CUFE.
+            </p>
+            <a class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-on-primary font-label-md text-decoration-none"
+               th:href="@{/portal/emision/reportes/ventas-detallado}">
+                Abrir reporte
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </a>
+        </article>
+
+        <article class="glass-card rounded-2xl p-6">
+            <div class="w-12 h-12 rounded-xl bg-secondary-fixed/40 flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-on-secondary-fixed">upload_file</span>
+            </div>
+            <h3 class="font-headline-md text-headline-md text-primary mb-2">Medios magnéticos DIAN</h3>
+            <p class="font-body-md text-on-surface-variant mb-6">
+                Formatos 1007 (ingresos) y 1001 (pagos y abonos) conforme a la normativa de información exógena.
+            </p>
+            <a class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-secondary-fixed text-on-secondary-fixed font-label-md text-decoration-none"
+               th:href="@{/portal/emision/reportes/medios-magneticos}">
+                Generar exportación
+                <span class="material-symbols-outlined text-[18px]">download</span>
+            </a>
+        </article>
+    </section>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav('reportes', 'inicio')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>
