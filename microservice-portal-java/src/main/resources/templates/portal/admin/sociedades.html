@@ -141,6 +141,13 @@
                         <div class="d-inline-flex gap-1">
                             <button
                                     type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    th:data-url="@{/portal/admin/sociedades/{id}/probar-conexion(id=${sociedad.id})}"
+                                    onclick="probarConexionImap(this)">
+                                Probar conexión
+                            </button>
+                            <button
+                                    type="button"
                                     class="btn btn-sm btn-outline-primary"
                                     th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente}"
                                     onclick="editarSociedad(this)">
@@ -190,6 +197,26 @@
         document.getElementById('passwordImap').value = '';
         document.getElementById('dianAmbiente').value = button.dataset.ambiente || 'Habilitacion';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function probarConexionImap(button) {
+        const url = button.dataset.url;
+        if (!url) {
+            return;
+        }
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Probando...';
+        try {
+            const response = await fetch(url, {method: 'POST', credentials: 'same-origin'});
+            const text = await response.text();
+            window.alert(text);
+        } catch (error) {
+            window.alert('No fue posible probar la conexión: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = original;
+        }
     }
 </script>
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>

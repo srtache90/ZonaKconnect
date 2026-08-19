@@ -113,7 +113,7 @@ public class ReceivedInvoiceRepository {
                 rs.getObject("id", UUID.class),
                 resolveProveedorName(rawPayload),
                 resolveProveedorNit(rawPayload),
-                prefijo + numero,
+                firstText(text(rawPayload, "invoice_number", ""), prefijo + numero),
                 cufe,
                 resolveTotal(totalsPayload, rawPayload),
                 fecha,

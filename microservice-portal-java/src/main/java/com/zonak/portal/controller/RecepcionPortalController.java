@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -93,15 +94,43 @@ public class RecepcionPortalController {
     ) {
         String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
         try {
-            int imported = mailReceptionSyncService.syncInbox(UUID.fromString(tenantId));
-            redirectAttributes.addFlashAttribute(
-                    "success",
-                    "Sincronización completada. Documentos importados: " + imported + "."
-            );
+            MailReceptionSyncService.SyncResult result = mailReceptionSyncService.syncInbox(UUID.fromString(tenantId));
+            redirectAttributes.addFlashAttribute("success", result.summary());
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
                     "error",
                     "No fue posible sincronizar el correo: " + ex.getMessage()
+            );
+        }
+        return bandejaRedirect(tenantId);
+    }
+
+    @PostMapping("/portal/recepcion/importar-xml")
+    public String importarXml(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam("archivo") MultipartFile archivo,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
+        try {
+            if (archivo == null || archivo.isEmpty()) {
+                throw new IllegalArgumentException("Debe seleccionar un archivo XML o ZIP.");
+            }
+            int imported = mailReceptionSyncService.importXmlDocuments(
+                    UUID.fromString(tenantId),
+                    archivo.getBytes(),
+                    archivo.getOriginalFilename(),
+                    "XML_UPLOAD"
+            );
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    "XML importado para la sociedad activa. Documentos nuevos: " + imported + "."
+            );
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "No fue posible importar el XML: " + ex.getMessage()
             );
         }
         return bandejaRedirect(tenantId);

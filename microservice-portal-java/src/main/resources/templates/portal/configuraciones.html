@@ -29,7 +29,7 @@
                     <th class="text-left px-6 py-3">Sociedad</th>
                     <th class="text-left px-6 py-3">NIT</th>
                     <th class="text-left px-6 py-3">Ambiente DIAN</th>
-                    <th class="text-right px-6 py-3">Guardar</th>
+                    <th class="text-right px-6 py-3">Acciones</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -46,6 +46,12 @@
                         </form>
                     </td>
                     <td class="px-6 py-4 text-right">
+                        <button class="px-4 py-2 rounded-xl border border-surface-container-highest font-label-md mr-2"
+                                type="button"
+                                th:data-url="@{/portal/admin/sociedades/{id}/probar-conexion(id=${sociedad.id})}"
+                                onclick="probarConexionImap(this)">
+                            Probar conexión
+                        </button>
                         <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit" th:form="'dianForm-' + ${sociedad.id}">
                             Guardar ambiente
                         </button>
@@ -74,6 +80,28 @@
         </a>
     </section>
 </main>
+
+<script>
+    async function probarConexionImap(button) {
+        const url = button.dataset.url;
+        if (!url) {
+            return;
+        }
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Probando...';
+        try {
+            const response = await fetch(url, {method: 'POST', credentials: 'same-origin'});
+            const text = await response.text();
+            window.alert(text);
+        } catch (error) {
+            window.alert('No fue posible probar la conexión: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = original;
+        }
+    }
+</script>
 
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>

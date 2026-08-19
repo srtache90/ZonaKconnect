@@ -19,7 +19,7 @@ public record IncomingMailbox(
                 account.puertoImap(),
                 protocol,
                 account.usuarioImap().trim(),
-                account.passwordImap(),
+                sanitizePassword(account.passwordImap()),
                 account.incomingLabel()
         );
     }
@@ -35,7 +35,7 @@ public record IncomingMailbox(
                 properties.getReceptionPort(),
                 protocol,
                 properties.getReceptionUsername(),
-                properties.getReceptionPassword(),
+                sanitizePassword(properties.getReceptionPassword()),
                 "buzón global (" + properties.getReceptionHost() + ":" + properties.getReceptionPort() + ")"
         );
     }
@@ -45,8 +45,11 @@ public record IncomingMailbox(
         props.put("mail.store.protocol", protocol);
         props.put("mail." + protocol + ".host", host);
         props.put("mail." + protocol + ".port", String.valueOf(port));
-        props.put("mail." + protocol + ".connectiontimeout", "15000");
-        props.put("mail." + protocol + ".timeout", "20000");
+        props.put("mail." + protocol + ".connectiontimeout", "12000");
+        props.put("mail." + protocol + ".timeout", "25000");
+        props.put("mail." + protocol + ".writetimeout", "25000");
+        props.put("mail." + protocol + ".partialfetch", "false");
+        props.put("mail." + protocol + ".fetchsize", "1048576");
         if (protocol.endsWith("s")) {
             props.put("mail." + protocol + ".ssl.enable", "true");
             props.put("mail." + protocol + ".ssl.trust", "*");
@@ -80,6 +83,13 @@ public record IncomingMailbox(
             return port != null && port == 993 ? "imaps" : "imap";
         }
         return defaultProtocol(fallback);
+    }
+
+    private static String sanitizePassword(String password) {
+        if (!StringUtils.hasText(password)) {
+            return "";
+        }
+        return password.replace(" ", "").trim();
     }
 
     private static String defaultProtocol(String protocol) {

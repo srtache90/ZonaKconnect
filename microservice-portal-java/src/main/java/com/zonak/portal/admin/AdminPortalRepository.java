@@ -156,6 +156,18 @@ public class AdminPortalRepository {
         syncCompanyDianAmbiente(id, normalizeDianAmbiente(dianAmbiente));
     }
 
+    public void updateImapPassword(UUID sociedadId, String passwordImapEnc) {
+        jdbcTemplate.update(
+                """
+                        UPDATE sociedades
+                        SET password_imap_enc = ?
+                        WHERE id = ?
+                        """,
+                passwordImapEnc,
+                sociedadId
+        );
+    }
+
     @Transactional
     public Optional<String> deleteSociedad(UUID id) {
         if (PROTECTED_SOCIEDAD_ID.equals(id)) {

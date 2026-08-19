@@ -1,19 +1,24 @@
 package com.zonak.portal.admin;
 
+import com.zonak.portal.mail.MailReceptionSyncService;
 import com.zonak.portal.security.SensitiveDataCryptoService;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -22,13 +27,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminPortalController {
     private final AdminPortalRepository adminPortalRepository;
     private final SensitiveDataCryptoService cryptoService;
+    private final MailReceptionSyncService mailReceptionSyncService;
 
     public AdminPortalController(
             AdminPortalRepository adminPortalRepository,
-            SensitiveDataCryptoService cryptoService
+            SensitiveDataCryptoService cryptoService,
+            MailReceptionSyncService mailReceptionSyncService
     ) {
         this.adminPortalRepository = adminPortalRepository;
         this.cryptoService = cryptoService;
+        this.mailReceptionSyncService = mailReceptionSyncService;
     }
 
     @GetMapping("/portal/admin/sociedades")
@@ -88,6 +96,16 @@ public class AdminPortalController {
 
         redirectAttributes.addFlashAttribute("success", "Sociedad guardada correctamente");
         return "redirect:/portal/admin/sociedades";
+    }
+
+    @PostMapping(value = "/portal/admin/sociedades/{id}/probar-conexion", produces = MediaType.TEXT_PLAIN_VALUE)
+    @ResponseBody
+    public ResponseEntity<String> probarConexionImap(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(mailReceptionSyncService.testIncomingConnection(id));
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
     }
 
     @PostMapping("/portal/admin/sociedades/eliminar")

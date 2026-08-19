@@ -56,6 +56,18 @@
                     <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
                     <button class="btn btn-outline-dark rounded-pill px-4" type="submit">Sincronizar correo</button>
                 </form>
+                <form class="d-flex gap-2 align-items-center"
+                      enctype="multipart/form-data"
+                      method="post"
+                      th:action="@{/portal/recepcion/importar-xml}">
+                    <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+                    <input accept=".xml,.zip,application/xml,application/zip"
+                           class="form-control form-control-sm"
+                           name="archivo"
+                           required
+                           type="file">
+                    <button class="btn btn-zk rounded-pill px-4" type="submit">Importar XML</button>
+                </form>
             </div>
 
             <div class="table-responsive">
@@ -75,7 +87,11 @@
                     <tbody>
                     <tr th:if="${#lists.isEmpty(invoices)}">
                         <td colspan="8" class="text-center text-muted py-5">
-                            Aún no hay facturas recibidas. Sincronice el buzón de recepción cuando lleguen XML válidos por correo.
+                            No hay facturas recibidas para
+                            <span class="fw-semibold" th:text="${selectedSociedadNombre}">esta empresa</span>.
+                            Esta bandeja solo muestra XML de proveedores (no las facturas emitidas).
+                            Sincronice el correo IMAP o importe un XML/ZIP. Si usa Gmail, la clave debe ser una
+                            contraseña de aplicación.
                         </td>
                     </tr>
                     <tr th:each="invoice : ${invoices}">

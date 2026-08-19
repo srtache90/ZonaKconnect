@@ -13,13 +13,12 @@
   3. **Alertas Senior:** Qué errores comunes debemos evitar o qué pruebas debemos hacer en este bloque específico (ej. manejo de punteros, índices de BD, timeouts).
 - Keep explanations bulleted, dense in technical value, and completely free of conversation.
 
-[Git & Workflow Rules - MANDATORY EXECUTION]
-- **Pre-execution Sync:** ALWAYS run `git pull origin <current-branch>` to fetch and integrate remote changes before modifying or creating any file.
-- **Post-execution PR Generation:** Upon completing any change, automatically construct and prepare a Pull Request (PR):
-  1. Create a descriptive feature/fix branch if operating directly on main/develop (`feature/tenant-x` or `fix/issue-y`).
-  2. Stage and commit changes using Conventional Commits format (`feat:`, `fix:`, `refactor:`, `docs:`).
-  3. Push branch to remote repository (`git push origin <branch-name>`).
-  4. Generate or prompt for Pull Request creation targeting the base integration branch (`main` or `develop`) with a concise technical changelog.
+[Git & Workflow - ON DEMAND]
+- Do not run `git pull` unless the user asks or there is a clear risk of diverging from origin.
+- Do not commit, push, or open a PR unless the user explicitly asks ("commit", "push", "abre el PR").
+- When the user asks for a commit: Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`). Never commit secrets, `.env`, IMAP passwords, or `target/`.
+- When the user asks for push/PR: use `feature/…` or `fix/…`; never force-push `main`; PR targets `main` or `develop` with a short changelog.
+- This project's git repo is the workspace folder, not `C:\Users\Jefe-Sistemas`.
 
 [Architecture & Tech Stack Context]
 - **Frontend / Web Portal:** Java (Spring Boot / Jakarta MVC). Handles user login, report downloads, and PDF rendering.
