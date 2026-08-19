@@ -1,35 +1,506 @@
-<!doctype html>
-<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Login | DIAN Connect')}"></th:block>
+<!DOCTYPE html>
+<html lang="es">
+<head >
+    <style>
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zona K</title>
+    <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
 </head>
-<body class="dc-login-body">
-<main class="dc-login-card">
-    <div class="dc-login-brand">
-        <div class="dc-login-brand-mark">
-            <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-        </div>
-        <div>
-            <h1>DIAN Connect</h1>
-            <p>Portal de facturación electrónica Zona K</p>
-        </div>
+<body>
+    <main style="
+        display: flex;
+        width: 100%;
+        height: 100%;
+        min-height: 600px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+">
+
+    <section style="
+    position: relative;
+    width: 100%;
+    min-width: 100%;
+    height: 100vh;
+    min-height: 600px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: #081a2e;
+">
+        <div class="my-slide active"
+    style="
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        z-index: 1;
+    "
+>
+
+    <img
+        th:src="@{/imagen/img0.png}"
+        src="/imagen/img0.png"
+        alt="Imagen 1"
+        class="slide-image"
+        style="
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            z-index: 0;
+        "
+    >
+
+    <div
+        style="
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 35%;
+            background: linear-gradient(
+                to top,
+                rgba(0, 0, 0, 0.65),
+                rgba(0, 0, 0, 0)
+            );
+            z-index: 1;
+        "
+    ></div>
+
+    <div
+        style="
+            position: absolute;
+            z-index: 2;
+            left: 70%;
+            bottom: 40px;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 15%;
+            text-align: center;
+            color: white;
+
+        "
+    >
+
+        <h2
+            class="mm"
+            style="
+                display: block;
+                margin: 0 0 4px 0;
+                padding: 0;
+                font-size: 20px;
+                font-weight: bold;
+                font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            "
+        >
+            Bienvenido a Zona K
+        </h2>
+
+        <p
+            class="nn"
+            style="
+                display: block;
+                margin: 0 20px 0 20px;
+                padding: 0;
+                font-size: 0.95rem;
+                opacity: 0.9;
+                font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            "
+        >
+            Tu portal de facturación electrónica confiable y seguro.
+        </p>
+
     </div>
 
-    <div class="alert alert-danger" role="alert" th:if="${error != null}" th:text="${error}">
-        Usuario o contraseña inválidos
-    </div>
+</div>
+        <div
+            class="cc"
+            style="
+        position: absolute;
+        left: 4%;
+        top: 46%;
+        transform: translateY(-50%);
+        z-index: 5;
 
-    <form th:action="@{/login}" method="post" class="vstack gap-3">
-        <div>
-            <label for="username" class="form-label">Usuario</label>
-            <input id="username" name="username" type="text" class="form-control" value="admin" required autofocus>
+        box-sizing: border-box;
+
+        width: min(380px, 30vw);
+        min-width: 330px;
+        max-height: calc(100vh - 35px);
+
+        margin: 0;
+        padding: 32px 38px;
+
+        border-radius: 28px;
+
+        background: rgba(245, 246, 248, 0.441);
+
+        box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.427);
+
+        border: 1px solid rgba(255, 255, 255, 0.582);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-family: Cambria, Georgia, serif;
+        font-size: 20px;
+        color: #172033;
+
+        overflow: hidden;
+    ">
+
+            <div style="
+                width: 100%;
+                max-width: 360px;
+                position: relative;
+                margin: 0 auto;
+            ">
+
+
+                <div style="
+                    width: 100%;
+                    text-align: center;
+                    justify-content: center;
+                    margin: -90px 30px 22px 0;
+                ">
+
+                   <img th:src="@{/imagen/zonak.png}" 
+                      src="/imagen/zonak.png" 
+                      alt="zonak" 
+                     class="img-fluid" 
+                      style="width: 250px;
+                       height: auto;
+                       display: block;
+                       margin: 90px 0 40px 30px;"
+                       >
+
+                </div>
+
+
+                <div style="
+                    text-align: center;
+                    margin: 0 0 4px 0;
+                ">
+
+                    <h1 style="
+                        margin: -100px 0 7px 0;
+                        padding: 0;
+                        font-family:tahoma, Geneva, Verdana, sans-serif;
+                        font-size: 20px;
+                        line-height: 1.15;
+                        font-weight: 700;
+                        color: #172033;
+                    ">
+                        Bienvenido
+                    </h1>
+
+                    <p style="
+                        margin: 0;
+                        padding: 0;
+                        font-family:'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                        font-size: 15px;
+                        line-height: 1.4;
+                        color: #404654e6;
+                    ">
+                        Ingresa al portal de facturación electrónica
+                    </p>
+
+                </div>
+
+
+                <div
+                    class="alert alert-danger"
+                    role="alert"
+                    th:if="${error != null}"
+                    style="
+                        padding: 10px 12px;
+                        font-family:'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                        font-size: 16px;
+                        margin: 0 0 16px 0;
+                        text-align: left;
+                        border-radius: 8px;
+                        color: #6a1820;
+                    "
+                >
+                    <span th:text="${error}">
+                        Usuario o Contraseña Inválidos
+                    </span>
+                </div>
+
+
+                <form
+                    th:action="@{/login}"
+                    method="post"
+                    style="
+                        display: flex;
+                        flex-direction: column;
+                        gap: 17px;
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                    "
+                >
+
+
+                    <div style="
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        font-family:'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                    ">
+
+                        <label
+                            for="username"
+                            class="form-label text-white"
+                            style="
+                                display: block;
+                                margin: 0 0 7px 0;
+                                padding: 0;
+                                color: #25344d !important;
+                                font-size: 14px;
+                                line-height: 1.2;
+                                font-weight: 600;
+                            "
+                        >
+                            Usuario
+                        </label>
+
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            autocomplete="username"
+                            class="form-control form-control-lg"
+                            value="admin"
+                            required
+                            autofocus
+                            style="
+                                box-sizing: border-box;
+                                width: 100%;
+                                height: 40px;
+                                margin: 0;
+                                padding: 0 15px;
+
+                                background-color: #f8fafc;
+
+                                border: 1px solid #d7dee8;
+                                border-radius: 10px;
+
+                                font-family: 'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                                font-size: 16px;
+                                color: #172033;
+
+                                outline: none;
+                            "
+                        >
+
+                    </div>
+
+
+                    <div style="
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                    ">
+
+                        <label
+                            for="password"
+                            class="form-label text-white"
+                            style="
+                                display: block;
+                                margin: 0 0 7px 0;
+                                padding: 0;
+                                color: #25344d !important;
+                                font-size: 14px;
+                                line-height: 1.2;
+                                font-weight: 600;
+                            "
+                        >
+                            Contraseña
+                        </label>
+
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autocomplete="current-password"
+                            class="form-control form-control-lg"
+                            value="admin"
+                            required
+                            style="
+                                box-sizing: border-box;
+                                width: 100%;
+                                height: 40px;
+                                margin: 0;
+                                padding: 0 15px;
+
+                                background-color: #f8fafc;
+
+                                border: 1px solid #d7dee8;
+                                border-radius: 10px;
+
+                                font-family: 'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                                font-size: 16px;
+                                color: #172033;
+
+                                outline: none;
+                            "
+                        >
+
+                    </div>
+
+
+                    <div style="
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                    ">
+
+                        <label style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            margin: 0;
+                            padding: 0;
+                            font-size: 13px;
+                            color: #071529e4;
+                            cursor: pointer;
+                        ">
+
+                            <input
+                                type="checkbox"
+                                style="
+                                    width: 18px;
+                                    height: 18px;
+                                    margin: 0;
+                                    cursor: pointer;
+                                "
+                            >
+
+                            <span>
+                                Mantener sesión
+                            </span>
+
+                        </label>
+
+
+                        <span style="
+                            font-size: 13px;
+                            color: #3b4c66;
+                        ">
+                            Acceso seguro
+                        </span>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="btn text-white btn-lg"
+                        style="
+                            box-sizing: border-box;
+
+                            width: 100%;
+                            height: 52px;
+
+                            margin: 2px 0 0 0;
+                            padding: 0;
+
+                            background: linear-gradient(
+                                135deg,
+                                #103a65,
+                                #0668d784
+                            );
+
+                            border: none;
+                            border-radius: 10px;
+
+                            color: #ffffff !important;
+
+                            font-family:'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                            font-size: 16px;
+                            font-weight: 700;
+
+                            box-shadow:
+                                0 8px 20px rgba(8, 127, 245, 0.25);
+
+                            cursor: pointer;
+                        "
+                    >
+                        Ingresar
+                    </button>
+
+            
+
+                    <div style="
+                        text-align: center;
+                        margin: 0;
+                        padding: 0;
+                        font-family:'Arial Narrow', 'Arial Narrow', Arial, sans-serif;
+                    ">
+
+                        <div style="
+                            margin: 0 0 18px 0;
+                            padding: 0;
+                            font-size: 12px;
+                            color: #415168;
+                        ">
+                            🔒 &nbsp;Acceso protegido al sistema
+                        </div>
+
+                        <div style="
+                            width: 100%;
+                            height: 1px;
+                            background: #dce2e9;
+                            margin: 0 0 15px 0;
+                        "></div>
+
+                        <div style="
+                            margin: 0;
+                            padding: 0;
+                            font-size: 11px;
+                            color: #2e3c50;
+                        ">
+                            Zona K · Facturación Electrónica
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+         
         </div>
-        <div>
-            <label for="password" class="form-label">Contraseña</label>
-            <input id="password" name="password" type="password" class="form-control" value="admin" required>
-        </div>
-        <button type="submit" class="btn btn-primary w-100 py-2">Ingresar</button>
-    </form>
+
+    </section>
+
 </main>
-</body>
-</html>
