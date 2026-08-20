@@ -1,5 +1,6 @@
 package com.zonak.portal.mail;
 
+import com.zonak.portal.recepcion.RecepcionCufeValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.mail.AuthenticationFailedException;
@@ -356,6 +357,10 @@ public class MailReceptionSyncService {
 
     private boolean insertReceivedInvoice(UUID companyId, String xml, String source, byte[] pdf) {
         ParsedXml parsed = parseXml(xml);
+        List<String> cufeIssues = RecepcionCufeValidator.validateCufe(parsed.cufe());
+        if (!cufeIssues.isEmpty()) {
+            log.warn("XML de recepción con CUFE inválido ({}): {}", parsed.cufe(), String.join("; ", cufeIssues));
+        }
         if (StringUtils.hasText(parsed.cufe()) && alreadyImported(companyId, parsed.cufe())) {
             if (pdf != null && pdf.length > 0) {
                 attachPdfIfMissing(companyId, parsed.cufe(), pdf);
@@ -363,6 +368,19 @@ public class MailReceptionSyncService {
             log.info("XML de recepción omitido: CUFE duplicado {}", parsed.cufe());
             return false;
         }
+
+        String sociedadNit = loadSociedadNit(companyId);
+        boolean receptorMismatch = StringUtils.hasText(sociedadNit)
+                && StringUtils.hasText(parsed.receptorNit())
+                && !RecepcionCufeValidator.sameNit(sociedadNit, parsed.receptorNit());
+        if (receptorMismatch) {
+            log.warn(
+                    "XML importado con NIT receptor distinto: xml={} sociedad={}",
+                    parsed.receptorNit(),
+                    sociedadNit
+            );
+        }
+
         long numero = nextReceivedNumber(companyId);
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("role", "RECIBIDA");
@@ -372,9 +390,18 @@ public class MailReceptionSyncService {
         payload.put("cufe", parsed.cufe());
         payload.put("fecha_emision", parsed.fechaEmision());
         payload.put("total", parsed.total());
+        payload.put("receptor_nit", parsed.receptorNit());
+        ObjectNode receptor = payload.putObject("receptor");
+        receptor.put("nit", parsed.receptorNit());
         ObjectNode proveedor = payload.putObject("proveedor");
         proveedor.put("razon_social", parsed.proveedorNombre());
         proveedor.put("nit", parsed.proveedorNit());
+        if (!cufeIssues.isEmpty()) {
+            payload.put("cufe_validation", String.join("; ", cufeIssues));
+        }
+        if (receptorMismatch) {
+            payload.put("receptor_nit_mismatch", true);
+        }
         if (pdf != null && pdf.length > 4 && pdf[0] == 0x25 && pdf[1] == 0x50) {
             payload.put("pdf_base", Base64.getEncoder().encodeToString(pdf));
         }
@@ -405,9 +432,30 @@ public class MailReceptionSyncService {
                     json
             );
             return rows > 0;
+        } catch (org.springframework.dao.DuplicateKeyException ex) {
+            log.info("XML de recepción omitido por restricción UNIQUE (CUFE/número): {}", ex.getMessage());
+            return false;
         } catch (Exception ex) {
             log.warn("No se importó XML de recepción: {}", ex.getMessage());
             return false;
+        }
+    }
+
+    private String loadSociedadNit(UUID companyId) {
+        try {
+            List<String> nits = jdbcTemplate.query(
+                    """
+                            SELECT COALESCE(NULLIF(s.nit, ''), NULLIF(c.nit, ''), '') AS nit
+                            FROM (SELECT ?::uuid AS id) x
+                            LEFT JOIN sociedades s ON s.id = x.id
+                            LEFT JOIN companies c ON c.id = x.id
+                            """,
+                    (rs, rowNum) -> rs.getString("nit"),
+                    companyId
+            );
+            return nits.stream().filter(StringUtils::hasText).findFirst().orElse("");
+        } catch (Exception ex) {
+            return "";
         }
     }
 
@@ -434,11 +482,15 @@ public class MailReceptionSyncService {
                             SELECT 1
                             FROM invoices
                             WHERE company_id = ?
-                              AND uuid_cude = ?
+                              AND (
+                                    uuid_cude = ?
+                                    OR COALESCE(raw_dian_payload_jsonb->>'cufe', '') = ?
+                              )
                         )
                         """,
                 Boolean.class,
                 companyId,
+                cufe,
                 cufe
         );
         return Boolean.TRUE.equals(exists);
@@ -668,12 +720,21 @@ public class MailReceptionSyncService {
             }
         }
 
-        String nombre = firstNonBlank(
+        String proveedorNombre = firstNonBlank(
+                partyField(source, "AccountingSupplierParty", "RegistrationName"),
+                partyField(source, "AccountingSupplierParty", "Name"),
                 firstTag(source, "RegistrationName"),
-                firstTag(source, "Name"),
                 "Proveedor"
         );
-        String nit = firstNonBlank(firstTag(source, "CompanyID"), "—");
+        String proveedorNit = firstNonBlank(
+                partyField(source, "AccountingSupplierParty", "CompanyID"),
+                firstTag(source, "CompanyID"),
+                "—"
+        );
+        String receptorNit = firstNonBlank(
+                partyField(source, "AccountingCustomerParty", "CompanyID"),
+                ""
+        );
         String cufe = firstNonBlank(
                 taggedUuid(source, "CUFE-SHA384"),
                 taggedUuid(xml, "CUFE-SHA384"),
@@ -682,7 +743,19 @@ public class MailReceptionSyncService {
         String fechaEmision = firstNonBlank(firstTag(source, "IssueDate"));
         String total = firstNonBlank(firstTag(source, "PayableAmount"), firstTag(source, "TaxInclusiveAmount"), "0");
         String invoiceNumber = StringUtils.hasText(id) ? id.trim() : prefijo;
-        return new ParsedXml(prefijo, invoiceNumber, nombre, nit, cufe, fechaEmision, total);
+        return new ParsedXml(prefijo, invoiceNumber, proveedorNombre, proveedorNit, receptorNit, cufe, fechaEmision, total);
+    }
+
+    private String partyField(String xml, String partyTag, String fieldTag) {
+        Matcher party = Pattern.compile(
+                "<(?:[A-Za-z0-9]+:)?" + Pattern.quote(partyTag) + "\\b[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9]+:)?"
+                        + Pattern.quote(partyTag) + ">",
+                Pattern.CASE_INSENSITIVE
+        ).matcher(xml);
+        if (!party.find()) {
+            return "";
+        }
+        return firstTag(party.group(1), fieldTag);
     }
 
     private String extractEmbeddedInvoice(String xml) {
@@ -767,6 +840,7 @@ public class MailReceptionSyncService {
             String invoiceNumber,
             String proveedorNombre,
             String proveedorNit,
+            String receptorNit,
             String cufe,
             String fechaEmision,
             String total

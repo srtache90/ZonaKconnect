@@ -3,11 +3,17 @@ package com.zonak.portal.controller;
 import com.zonak.portal.admin.Sociedad;
 import com.zonak.portal.mail.InvoiceMailDispatchService;
 import com.zonak.portal.mail.MailReceptionSyncService;
+import com.zonak.portal.recepcion.ReceivedInvoiceDetail;
+import com.zonak.portal.recepcion.ReceivedInvoiceFilter;
 import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
+import com.zonak.portal.recepcion.RecepcionEstadoDian;
+import com.zonak.portal.recepcion.RecepcionTacitAcceptanceService;
 import com.zonak.portal.service.InvoiceOrchestratorService;
 import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,19 +38,22 @@ public class RecepcionPortalController {
     private final InvoiceOrchestratorService invoiceOrchestratorService;
     private final MailReceptionSyncService mailReceptionSyncService;
     private final InvoiceMailDispatchService invoiceMailDispatchService;
+    private final RecepcionTacitAcceptanceService recepcionTacitAcceptanceService;
 
     public RecepcionPortalController(
             PortalSessionService portalSessionService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
             InvoiceOrchestratorService invoiceOrchestratorService,
             MailReceptionSyncService mailReceptionSyncService,
-            InvoiceMailDispatchService invoiceMailDispatchService
+            InvoiceMailDispatchService invoiceMailDispatchService,
+            RecepcionTacitAcceptanceService recepcionTacitAcceptanceService
     ) {
         this.portalSessionService = portalSessionService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
         this.invoiceOrchestratorService = invoiceOrchestratorService;
         this.mailReceptionSyncService = mailReceptionSyncService;
         this.invoiceMailDispatchService = invoiceMailDispatchService;
+        this.recepcionTacitAcceptanceService = recepcionTacitAcceptanceService;
     }
 
     @GetMapping("/portal/recepcion")
@@ -54,36 +64,110 @@ public class RecepcionPortalController {
     @GetMapping("/portal/recepcion/bandeja")
     public String bandeja(
             @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String estadoDian,
+            @RequestParam(required = false) String proveedor,
+            @RequestParam(required = false) String cufe,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
             HttpSession session,
             Model model
     ) {
+        return renderList(
+                "portal/recepcion_bandeja",
+                "bandeja",
+                true,
+                sociedadId,
+                estadoDian,
+                proveedor,
+                cufe,
+                fromDate,
+                toDate,
+                null,
+                null,
+                session,
+                model
+        );
+    }
+
+    @GetMapping("/portal/recepcion/historico")
+    public String historico(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String estadoDian,
+            @RequestParam(required = false) String proveedor,
+            @RequestParam(required = false) String cufe,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String minTotal,
+            @RequestParam(required = false) String maxTotal,
+            HttpSession session,
+            Model model
+    ) {
+        return renderList(
+                "portal/recepcion/historico",
+                "historico",
+                false,
+                sociedadId,
+                estadoDian,
+                proveedor,
+                cufe,
+                fromDate,
+                toDate,
+                minTotal,
+                maxTotal,
+                session,
+                model
+        );
+    }
+
+    @GetMapping("/portal/recepcion/{id}/detalle")
+    public String detalle(
+            @PathVariable UUID id,
+            HttpSession session,
+            Model model
+    ) {
+        UUID tenantId = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+        ReceivedInvoiceDetail detail = receivedInvoiceRepository.findDetail(tenantId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+
         List<Sociedad> sociedades = portalSessionService.resolveSociedades(session);
-        if (sociedades.isEmpty()) {
-            model.addAttribute("sociedades", sociedades);
-            model.addAttribute("invoices", List.of());
-            model.addAttribute("selectedSociedadId", "");
-            model.addAttribute("selectedSociedadNombre", "Sin sociedad");
-            model.addAttribute("navModule", "recepcion");
-            model.addAttribute("navActive", "bandeja");
-            return "portal/recepcion_bandeja";
-        }
-
-        String selectedSociedadId = resolveSociedadId(sociedadId, session, sociedades);
-        UUID tenantUuid = UUID.fromString(selectedSociedadId);
-        Sociedad selectedSociedad = sociedades.stream()
-                .filter(s -> s.id().equals(tenantUuid))
+        Sociedad selected = sociedades.stream()
+                .filter(s -> s.id().equals(tenantId))
                 .findFirst()
-                .orElse(sociedades.getFirst());
+                .orElse(null);
 
-        List<ReceivedInvoiceRow> invoices = receivedInvoiceRepository.findBySociedad(tenantUuid);
-
+        model.addAttribute("detail", detail);
         model.addAttribute("sociedades", sociedades);
-        model.addAttribute("invoices", invoices);
-        model.addAttribute("selectedSociedadId", selectedSociedadId);
-        model.addAttribute("selectedSociedadNombre", selectedSociedad.razonSocial());
+        model.addAttribute("selectedSociedadId", tenantId.toString());
+        model.addAttribute("selectedSociedadNombre", selected == null ? "Sociedad" : selected.razonSocial());
         model.addAttribute("navModule", "recepcion");
         model.addAttribute("navActive", "bandeja");
-        return "portal/recepcion_bandeja";
+        return "portal/recepcion/detalle";
+    }
+
+    @PostMapping("/portal/recepcion/aplicar-aceptacion-tacita")
+    public String aplicarAceptacionTacita(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false, defaultValue = "bandeja") String returnTo,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
+        try {
+            RecepcionTacitAcceptanceService.TacitResult result =
+                    recepcionTacitAcceptanceService.applyDue(UUID.fromString(tenantId));
+            redirectAttributes.addFlashAttribute("success", result.summary());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "No fue posible aplicar aceptación tácita: " + ex.getMessage()
+            );
+        }
+        if ("historico".equalsIgnoreCase(returnTo)) {
+            return "redirect:/portal/recepcion/historico?sociedadId=" + tenantId;
+        }
+        return bandejaRedirect(tenantId);
     }
 
     @PostMapping("/portal/recepcion/sincronizar-correo")
@@ -201,7 +285,75 @@ public class RecepcionPortalController {
                     "No fue posible reenviar el correo: " + ex.getMessage()
             );
         }
-        return bandejaRedirect(tenantId);
+        return "redirect:/portal/recepcion/" + id + "/detalle";
+    }
+
+    private String renderList(
+            String view,
+            String navActive,
+            boolean openOnly,
+            String sociedadId,
+            String estadoDian,
+            String proveedor,
+            String cufe,
+            String fromDate,
+            String toDate,
+            String minTotal,
+            String maxTotal,
+            HttpSession session,
+            Model model
+    ) {
+        List<Sociedad> sociedades = portalSessionService.resolveSociedades(session);
+        if (sociedades.isEmpty()) {
+            model.addAttribute("sociedades", sociedades);
+            model.addAttribute("invoices", List.of());
+            model.addAttribute("selectedSociedadId", "");
+            model.addAttribute("selectedSociedadNombre", "Sin sociedad");
+            model.addAttribute("estados", RecepcionEstadoDian.values());
+            model.addAttribute("alerts", new RecepcionTacitAcceptanceService.AlertsSummary(0, 0, 0));
+            model.addAttribute("navModule", "recepcion");
+            model.addAttribute("navActive", navActive);
+            return view;
+        }
+
+        String selectedSociedadId = resolveSociedadId(sociedadId, session, sociedades);
+        UUID tenantUuid = UUID.fromString(selectedSociedadId);
+        Sociedad selectedSociedad = sociedades.stream()
+                .filter(s -> s.id().equals(tenantUuid))
+                .findFirst()
+                .orElse(sociedades.getFirst());
+
+        ReceivedInvoiceFilter filter = new ReceivedInvoiceFilter(
+                tenantUuid,
+                parseDate(fromDate),
+                parseDate(toDate),
+                blankToNull(estadoDian),
+                blankToNull(proveedor),
+                blankToNull(cufe),
+                parseDecimal(minTotal),
+                parseDecimal(maxTotal),
+                openOnly ? Boolean.TRUE : null
+        );
+        List<ReceivedInvoiceRow> invoices = receivedInvoiceRepository.findReceived(filter);
+        RecepcionTacitAcceptanceService.AlertsSummary alerts =
+                recepcionTacitAcceptanceService.summarizeAlerts(invoices);
+
+        model.addAttribute("sociedades", sociedades);
+        model.addAttribute("invoices", invoices);
+        model.addAttribute("selectedSociedadId", selectedSociedadId);
+        model.addAttribute("selectedSociedadNombre", selectedSociedad.razonSocial());
+        model.addAttribute("estadoDian", estadoDian);
+        model.addAttribute("proveedor", proveedor);
+        model.addAttribute("cufe", cufe);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
+        model.addAttribute("minTotal", minTotal);
+        model.addAttribute("maxTotal", maxTotal);
+        model.addAttribute("estados", RecepcionEstadoDian.values());
+        model.addAttribute("alerts", alerts);
+        model.addAttribute("navModule", "recepcion");
+        model.addAttribute("navActive", navActive);
+        return view;
     }
 
     private String bandejaRedirect(String sociedadId) {
@@ -225,5 +377,31 @@ public class RecepcionPortalController {
             }
         }
         return portalSessionService.resolveSelectedSociedadId(session, sociedades);
+    }
+
+    private static LocalDate parseDate(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static BigDecimal parseDecimal(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim().replace(",", "."));
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

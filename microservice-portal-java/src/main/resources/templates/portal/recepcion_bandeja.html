@@ -2,6 +2,12 @@
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción RADIAN | DIAN Connect')}"></th:block>
+    <style>
+        .badge-tacita { background: #e8f5e9; color: #1b5e20; }
+        .plazo-vencido { color: #b71c1c; font-weight: 600; }
+        .plazo-por-vencer { color: #e65100; font-weight: 600; }
+        .cufe-warn { color: #b71c1c; }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -11,35 +17,67 @@
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
         <h1 class="dc-page-title">Recepción de proveedores</h1>
-        <p class="dc-page-subtitle">Bandeja fiscal para acuse, recibo de bienes, aceptación expresa y reclamo.</p>
+        <p class="dc-page-subtitle">Bandeja abierta: validación CUFE/NIT, plazos de aceptación tácita y secuencia 085 → 086 → 087/088.</p>
     </div>
 
     <div class="alert alert-success rounded-4" id="flashSuccess" role="alert" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" id="flashError" role="alert" th:if="${error != null}" th:text="${error}"></div>
     <div class="alert d-none rounded-4" id="eventAlert" role="alert"></div>
 
+    <section class="alert alert-warning rounded-4 mb-4" th:if="${alerts != null and alerts.hasAlerts()}">
+        <div class="fw-semibold mb-1">Alertas de recepción</div>
+        <ul class="mb-2 small">
+            <li th:if="${alerts.vencidos() > 0}" th:text="'Plazo tácito vencido: ' + ${alerts.vencidos()} + ' factura(s) en 086 sin 087/088.'"></li>
+            <li th:if="${alerts.porVencer() > 0}" th:text="'Por vencer (≤1 día hábil): ' + ${alerts.porVencer()} + ' factura(s).'"></li>
+            <li th:if="${alerts.conValidacion() > 0}" th:text="'Con observaciones de CUFE/NIT: ' + ${alerts.conValidacion()} + ' factura(s).'"></li>
+        </ul>
+        <form class="d-inline" method="post" th:action="@{/portal/recepcion/aplicar-aceptacion-tacita}" th:if="${alerts.vencidos() > 0}">
+            <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+            <input type="hidden" name="returnTo" value="bandeja">
+            <button class="btn btn-sm btn-outline-dark rounded-pill px-3" type="submit">Aplicar aceptaciones tácitas vencidas</button>
+        </form>
+    </section>
+
     <section class="zk-filter-card p-4 mb-4">
-        <form class="row g-3 align-items-end" id="sociedadFilterForm" method="get" th:action="@{/portal/recepcion/bandeja}">
-            <div class="col-md-8">
+        <form class="row g-3 align-items-end" method="get" th:action="@{/portal/recepcion/bandeja}">
+            <div class="col-md-4">
                 <label class="form-label text-muted small" for="sociedadId">Empresa receptora</label>
-                <select class="form-select rounded-3"
-                        id="sociedadId"
-                        name="sociedadId"
-                        onchange="this.form.submit()"
-                        required>
+                <select class="form-select rounded-3" id="sociedadId" name="sociedadId" required>
                     <option th:each="sociedad : ${sociedades}"
                             th:selected="${#strings.equals(sociedad.id.toString(), selectedSociedadId)}"
                             th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}"
-                            th:value="${sociedad.id}">
-                        Empresa
-                    </option>
+                            th:value="${sociedad.id}">Empresa</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <div class="small text-muted">
-                    Mostrando facturas recibidas donde la empresa receptora es
-                    <span class="fw-semibold" th:text="${selectedSociedadNombre}">Empresa</span>.
-                </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="estadoDian">Estado</label>
+                <select class="form-select rounded-3" id="estadoDian" name="estadoDian">
+                    <option value="">Todos abiertos</option>
+                    <option th:each="estado : ${estados}"
+                            th:if="${!estado.terminal}"
+                            th:value="${estado.name()}"
+                            th:selected="${estado.name() == estadoDian}"
+                            th:text="${estado.name()}">PENDIENTE</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="proveedor">Proveedor</label>
+                <input class="form-control rounded-3" id="proveedor" name="proveedor" th:value="${proveedor}" placeholder="Nombre o NIT">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="cufe">CUFE</label>
+                <input class="form-control rounded-3" id="cufe" name="cufe" th:value="${cufe}" placeholder="Fragmento CUFE">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-zk rounded-pill w-100" type="submit">Filtrar</button>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small" for="fromDate">Desde</label>
+                <input class="form-control rounded-3" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small" for="toDate">Hasta</label>
+                <input class="form-control rounded-3" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
         </form>
     </section>
@@ -48,8 +86,8 @@
         <div class="card-body p-0">
             <div class="d-flex justify-content-between align-items-center px-4 py-4 gap-3 flex-wrap">
                 <div>
-                    <h2 class="h3 mb-1">Facturas recibidas</h2>
-                    <p class="text-muted mb-0">Secuencia legal estricta: 085 → 086 → 087/088.</p>
+                    <h2 class="h3 mb-1">Facturas recibidas (abiertas)</h2>
+                    <p class="text-muted mb-0">Secuencia legal: 085 → 086 → 087/088. Tras 086, 3 días hábiles → tácita.</p>
                 </div>
                 <span class="badge rounded-pill text-bg-light border zk-data" th:text="'Total: ' + ${#lists.size(invoices)}">Total: 0</span>
                 <form method="post" th:action="@{/portal/recepcion/sincronizar-correo}">
@@ -57,9 +95,9 @@
                     <button class="btn btn-outline-dark rounded-pill px-4" type="submit">Sincronizar correo</button>
                 </form>
                 <a class="btn btn-outline-primary rounded-pill px-4"
-                   th:href="@{/portal/recepcion/reportes(sociedadId=${selectedSociedadId})}">
-                    Ver reporte de recepción
-                </a>
+                   th:href="@{/portal/recepcion/historico(sociedadId=${selectedSociedadId})}">Histórico</a>
+                <a class="btn btn-outline-primary rounded-pill px-4"
+                   th:href="@{/portal/recepcion/reportes(sociedadId=${selectedSociedadId})}">Reportes</a>
                 <form class="d-flex gap-2 align-items-center"
                       enctype="multipart/form-data"
                       method="post"
@@ -84,32 +122,41 @@
                         <th class="text-end">Total</th>
                         <th>Emisión</th>
                         <th>Estado</th>
+                        <th>Plazo tácito</th>
                         <th class="text-end">Documentos</th>
                         <th class="text-end">Eventos</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:if="${#lists.isEmpty(invoices)}">
-                        <td colspan="8" class="text-center text-muted py-5">
-                            No hay facturas recibidas para
+                        <td colspan="9" class="text-center text-muted py-5">
+                            No hay facturas abiertas para
                             <span class="fw-semibold" th:text="${selectedSociedadNombre}">esta empresa</span>.
-                            Esta bandeja solo muestra XML de proveedores (no las facturas emitidas).
-                            Sincronice el correo IMAP o importe un XML/ZIP. Si usa Gmail, la clave debe ser una
-                            contraseña de aplicación.
+                            Sincronice IMAP, importe XML o revise el histórico.
                         </td>
                     </tr>
                     <tr th:each="invoice : ${invoices}">
                         <td>
-                            <div class="fw-semibold" th:text="${invoice.proveedorName}">Proveedor</div>
+                            <a class="fw-semibold text-decoration-none"
+                               th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
+                               th:text="${invoice.proveedorName}">Proveedor</a>
                             <div class="text-muted small zk-data" th:text="${invoice.proveedorNit}">900000000</div>
+                            <div class="small text-danger" th:if="${!#lists.isEmpty(invoice.validationIssues)}"
+                                 th:text="${#strings.listJoin(invoice.validationIssues, ' · ')}">Validación</div>
                         </td>
-                        <td class="zk-data" th:text="${invoice.invoiceNumber}">FE123</td>
+                        <td>
+                            <a class="zk-data text-decoration-none"
+                               th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
+                               th:text="${invoice.invoiceNumber}">FE123</a>
+                        </td>
                         <td class="small zk-data">
-                            <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 16}"
-                                  th:text="${#strings.substring(invoice.cufe, 0, 16) + '...'}">CUFE...</span>
-                            <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 0 and #strings.length(invoice.cufe) <= 16}"
-                                  th:text="${invoice.cufe}">CUFE</span>
-                            <span th:if="${invoice.cufe == null or #strings.isEmpty(invoice.cufe)}">—</span>
+                            <span th:classappend="${!invoice.cufeValid} ? ' cufe-warn'">
+                                <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 16}"
+                                      th:text="${#strings.substring(invoice.cufe, 0, 16) + '...'}">CUFE...</span>
+                                <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 0 and #strings.length(invoice.cufe) <= 16}"
+                                      th:text="${invoice.cufe}">CUFE</span>
+                                <span th:if="${invoice.cufe == null or #strings.isEmpty(invoice.cufe)}">—</span>
+                            </span>
                         </td>
                         <td class="text-end zk-data" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
                         <td class="zk-data" th:text="${invoice.fechaEmision}">2026-06-12</td>
@@ -118,13 +165,20 @@
                                   th:classappend="${invoice.estadoDian.name() == 'PENDIENTE'} ? ' badge-pendiente' :
                                                   (${invoice.estadoDian.name() == 'ACUSADA_085'} ? ' badge-085' :
                                                   (${invoice.estadoDian.name() == 'RECIBIDA_086'} ? ' badge-086' :
-                                                  (${invoice.estadoDian.name() == 'ACEPTADA_087'} ? ' badge-087' : ' badge-088')))"
+                                                  (${invoice.estadoDian.name() == 'ACEPTADA_087'} ? ' badge-087' :
+                                                  (${invoice.estadoDian.name() == 'ACEPTADA_TACITA'} ? ' badge-tacita' : ' badge-088'))))"
                                   th:text="${invoice.estadoDian}">
                                 PENDIENTE
                             </span>
                         </td>
+                        <td class="small"
+                            th:classappend="${invoice.plazoStatus.name() == 'VENCIDO'} ? ' plazo-vencido' :
+                                             (${invoice.plazoStatus.name() == 'POR_VENCER'} ? ' plazo-por-vencer' : '')"
+                            th:text="${invoice.plazoLabel}">Plazo</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm" role="group">
+                                <a class="btn btn-outline-dark"
+                                   th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}">Detalle</a>
                                 <button type="button"
                                         class="btn btn-outline-dark"
                                         title="Ver representación gráfica"
@@ -132,7 +186,7 @@
                                         th:data-invoice-number="${invoice.invoiceNumber}"
                                         th:data-pdf-url="@{/portal/recepcion/{id}/representacion-grafica(id=${invoice.id})}"
                                         th:disabled="${!invoice.documentsAvailable}">
-                                    Ver PDF
+                                    PDF
                                 </button>
                                 <a class="btn btn-outline-dark"
                                    title="Descargar XML"
@@ -140,49 +194,39 @@
                                    th:classappend="${!invoice.documentsAvailable} ? ' disabled'">
                                     XML
                                 </a>
-                                <button type="button"
-                                        class="btn btn-outline-dark"
-                                        title="Reenviar por correo"
-                                        data-action="open-resend-received-mail"
-                                        th:attr="data-invoice-number=${invoice.invoiceNumber},
-                                                 data-proveedor=${invoice.proveedorName},
-                                                 data-send-url=@{/portal/recepcion/{id}/reenviar-correo(id=${invoice.id})}"
-                                        th:disabled="${!invoice.documentsAvailable}">
-                                    Correo
-                                </button>
                             </div>
                         </td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm" role="group">
                                 <button type="button"
                                         class="btn btn-outline-dark"
-                                        th:disabled="${invoice.estadoDian.name() != 'PENDIENTE'}"
+                                        th:disabled="${invoice.estadoDian.name() != 'PENDIENTE' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/acuse-085(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    085 Acuse
+                                    085
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-dark"
-                                        th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085'}"
+                                        th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})}"
                                         onclick="postEvent(this, {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'})">
-                                    086 Recibo
+                                    086
                                 </button>
                                 <button type="button"
                                         class="btn btn-zk"
-                                        th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086'}"
+                                        th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    087 Aceptar
+                                    087
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-danger"
-                                        th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086'}"
+                                        th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086' or !invoice.cufeValid}"
                                         th:attr="data-id=${invoice.id},data-number=${invoice.invoiceNumber}"
                                         data-bs-toggle="modal"
                                         data-bs-target="#rejectModal"
                                         onclick="prepareReject(this)">
-                                    088 Rechazar
+                                    088
                                 </button>
                             </div>
                         </td>
@@ -211,52 +255,9 @@
                         title="Representación gráfica de factura recibida"></iframe>
             </div>
             <div class="modal-footer border-0">
-                <a class="btn btn-outline-dark rounded-pill px-4"
-                   href="#"
-                   id="receivedPdfOpenTab"
-                   rel="noopener"
-                   target="_blank">
-                    Abrir en pestaña
-                </a>
+                <a class="btn btn-outline-dark rounded-pill px-4" href="#" id="receivedPdfOpenTab" rel="noopener" target="_blank">Abrir en pestaña</a>
                 <button type="button" class="btn btn-zk rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="resendReceivedMailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <form id="resendReceivedMailForm" method="post">
-                <div class="modal-header border-0 pb-0">
-                    <div>
-                        <p class="dc-page-subtitle mb-1">Reenvío</p>
-                        <h2 class="modal-title h3">Reenviar factura por correo</h2>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="p-3 mb-3 rounded-4 border bg-light">
-                        <div class="small text-muted">Factura</div>
-                        <div class="fw-semibold zk-data" id="resendReceivedInvoiceNumber">FE-00000</div>
-                        <div class="text-muted small" id="resendReceivedProveedor">Proveedor</div>
-                    </div>
-                    <p class="text-muted">
-                        Se adjuntará la representación gráfica PDF y el XML de la factura recibida, cuando estén disponibles.
-                    </p>
-                    <label class="form-label" for="resendReceivedRecipientEmail">Correo destino</label>
-                    <input class="form-control"
-                           id="resendReceivedRecipientEmail"
-                           name="recipientEmail"
-                           placeholder="destinatario@empresa.com"
-                           required
-                           type="email">
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-zk rounded-pill px-4">Reenviar por correo</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -293,8 +294,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const alertBox = document.getElementById('eventAlert');
-    const resendReceivedMailModal = document.getElementById('resendReceivedMailModal');
-    const resendReceivedMailForm = document.getElementById('resendReceivedMailForm');
     const receivedPdfModal = document.getElementById('receivedPdfModal');
     const receivedPdfFrame = document.getElementById('receivedPdfFrame');
     const receivedPdfLoading = document.getElementById('receivedPdfLoading');
@@ -311,7 +310,7 @@
     async function postEvent(button, body) {
         const originalLabel = button.textContent;
         button.disabled = true;
-        button.textContent = 'Enviando…';
+        button.textContent = '…';
         try {
             const response = await fetch(button.dataset.url, {
                 method: 'POST',
@@ -329,7 +328,6 @@
             }
         } catch (error) {
             showAlert('No fue posible transmitir el evento RADIAN: ' + error.message, false);
-            alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             button.disabled = false;
             button.textContent = originalLabel;
         }
@@ -355,20 +353,14 @@
 
     async function openReceivedPdfModal(button) {
         const pdfUrl = button.dataset.pdfUrl;
-        if (!pdfUrl) {
-            return;
-        }
-
+        if (!pdfUrl) return;
         receivedPdfTitle.textContent = 'Factura ' + (button.dataset.invoiceNumber || 'recibida');
         receivedPdfOpenTab.href = pdfUrl;
         clearReceivedPdfViewer();
         bootstrap.Modal.getOrCreateInstance(receivedPdfModal).show();
-
         try {
             const response = await fetch(pdfUrl, {credentials: 'same-origin'});
-            if (!response.ok) {
-                throw new Error('No fue posible cargar el PDF');
-            }
+            if (!response.ok) throw new Error('No fue posible cargar el PDF');
             const blob = await response.blob();
             receivedPdfBlobUrl = URL.createObjectURL(blob);
             receivedPdfFrame.src = receivedPdfBlobUrl;
@@ -381,21 +373,8 @@
     }
 
     receivedPdfModal.addEventListener('hidden.bs.modal', clearReceivedPdfViewer);
-
     document.querySelectorAll('[data-action="open-received-pdf"]').forEach(button => {
         button.addEventListener('click', () => openReceivedPdfModal(button));
-    });
-
-    function openResendReceivedMailModal(button) {
-        resendReceivedMailForm.action = button.dataset.sendUrl;
-        document.getElementById('resendReceivedInvoiceNumber').textContent = button.dataset.invoiceNumber || 'Factura';
-        document.getElementById('resendReceivedProveedor').textContent = button.dataset.proveedor || 'Proveedor';
-        document.getElementById('resendReceivedRecipientEmail').value = '';
-        bootstrap.Modal.getOrCreateInstance(resendReceivedMailModal).show();
-    }
-
-    document.querySelectorAll('[data-action="open-resend-received-mail"]').forEach(button => {
-        button.addEventListener('click', () => openResendReceivedMailModal(button));
     });
 
     async function submitReject() {
