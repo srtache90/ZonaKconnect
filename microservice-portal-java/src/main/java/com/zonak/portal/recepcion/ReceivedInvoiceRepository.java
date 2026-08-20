@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -55,123 +54,90 @@ public class ReceivedInvoiceRepository {
         }
         String sociedadNit = loadSociedadNit(filter.sociedadId());
         StringBuilder sql = new StringBuilder("""
-                SELECT i.id,
-                       i.prefijo,
-                       i.numero,
-                       i.uuid_cude,
-                       i.estado_dian,
-                       i.pdf_s3_url,
-                       i.xml_s3_url,
-                       i.created_at,
-                       i.updated_at,
-                       i.raw_dian_payload_jsonb::text AS raw_payload,
-                       i.dian_response_jsonb::text AS dian_response,
-                       i.totals_jsonb::text AS totals_payload
-                FROM invoices i
-                WHERE i.company_id = ?
-                  AND (
-                        i.emission_point_id IS NULL
-                        OR COALESCE(i.raw_dian_payload_jsonb->>'role', '') = 'RECIBIDA'
-                        OR COALESCE(i.raw_dian_payload_jsonb->>'source', '') = 'MAIL_INBOX'
-                  )
+                SELECT r.id,
+                       r.supplier_name,
+                       r.supplier_nit,
+                       r.invoice_number,
+                       r.cufe,
+                       r.issue_date,
+                       r.total_amount,
+                       r.estado_dian,
+                       r.pdf_s3_url,
+                       r.xml_s3_url,
+                       r.created_at,
+                       r.updated_at,
+                       r.raw_payload_jsonb::text AS raw_payload,
+                       r.dian_response_jsonb::text AS dian_response,
+                       r.source
+                FROM received_invoices r
+                WHERE r.company_id = ?
                 """);
         List<Object> params = new ArrayList<>();
         params.add(filter.sociedadId());
 
         if (filter.fromDate() != null) {
-            sql.append(" AND i.created_at::date >= ?");
+            sql.append(" AND r.created_at::date >= ?");
             params.add(filter.fromDate());
         }
         if (filter.toDate() != null) {
-            sql.append(" AND i.created_at::date <= ?");
+            sql.append(" AND r.created_at::date <= ?");
             params.add(filter.toDate());
         }
         if (StringUtils.hasText(filter.estadoDian())) {
-            sql.append(" AND UPPER(i.estado_dian) = ?");
+            sql.append(" AND UPPER(r.estado_dian) = ?");
             params.add(filter.estadoDian().trim().toUpperCase(Locale.ROOT));
         }
         if (StringUtils.hasText(filter.proveedor())) {
-            sql.append("""
-                     AND (
-                        COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'razon_social', '') ILIKE ?
-                        OR COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') ILIKE ?
-                     )
-                    """);
+            sql.append(" AND (r.supplier_name ILIKE ? OR r.supplier_nit ILIKE ?)");
             String like = "%" + filter.proveedor().trim() + "%";
             params.add(like);
             params.add(like);
         }
         if (StringUtils.hasText(filter.cufe())) {
-            sql.append("""
-                     AND (
-                        COALESCE(i.uuid_cude, '') ILIKE ?
-                        OR COALESCE(i.raw_dian_payload_jsonb->>'cufe', '') ILIKE ?
-                     )
-                    """);
-            String like = "%" + filter.cufe().trim() + "%";
-            params.add(like);
-            params.add(like);
+            sql.append(" AND COALESCE(r.cufe, '') ILIKE ?");
+            params.add("%" + filter.cufe().trim() + "%");
         }
         if (filter.minTotal() != null) {
-            sql.append("""
-                     AND COALESCE(
-                        NULLIF(i.totals_jsonb->>'total', '')::numeric,
-                        NULLIF(i.raw_dian_payload_jsonb->>'total', '')::numeric,
-                        0
-                     ) >= ?
-                    """);
+            sql.append(" AND r.total_amount >= ?");
             params.add(filter.minTotal());
         }
         if (filter.maxTotal() != null) {
-            sql.append("""
-                     AND COALESCE(
-                        NULLIF(i.totals_jsonb->>'total', '')::numeric,
-                        NULLIF(i.raw_dian_payload_jsonb->>'total', '')::numeric,
-                        0
-                     ) <= ?
-                    """);
+            sql.append(" AND r.total_amount <= ?");
             params.add(filter.maxTotal());
         }
         if (Boolean.TRUE.equals(filter.openOnly())) {
             sql.append("""
-                     AND UPPER(COALESCE(i.estado_dian, 'PENDIENTE')) NOT IN (
+                     AND UPPER(COALESCE(r.estado_dian, 'PENDIENTE')) NOT IN (
                         'ACEPTADA_087', 'ACEPTADA_TACITA', 'RECHAZADA_088', '087', '088', 'RECHAZADO'
                      )
                     """);
         }
-        sql.append(" ORDER BY i.created_at DESC LIMIT 500");
+        sql.append(" ORDER BY r.created_at DESC LIMIT 500");
 
-        return jdbcTemplate.query(
-                sql.toString(),
-                (rs, rowNum) -> mapRow(rs, sociedadNit),
-                params.toArray()
-        );
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapRow(rs, sociedadNit), params.toArray());
     }
 
     public Optional<ReceivedInvoiceDetail> findDetail(UUID sociedadId, UUID invoiceId) {
         String sociedadNit = loadSociedadNit(sociedadId);
         List<ReceivedInvoiceDetail> rows = jdbcTemplate.query(
                 """
-                        SELECT i.id,
-                               i.prefijo,
-                               i.numero,
-                               i.uuid_cude,
-                               i.estado_dian,
-                               i.pdf_s3_url,
-                               i.xml_s3_url,
-                               i.created_at,
-                               i.updated_at,
-                               i.raw_dian_payload_jsonb::text AS raw_payload,
-                               i.dian_response_jsonb::text AS dian_response,
-                               i.totals_jsonb::text AS totals_payload
-                        FROM invoices i
-                        WHERE i.company_id = ?
-                          AND i.id = ?
-                          AND (
-                                i.emission_point_id IS NULL
-                                OR COALESCE(i.raw_dian_payload_jsonb->>'role', '') = 'RECIBIDA'
-                                OR COALESCE(i.raw_dian_payload_jsonb->>'source', '') = 'MAIL_INBOX'
-                          )
+                        SELECT r.id,
+                               r.supplier_name,
+                               r.supplier_nit,
+                               r.invoice_number,
+                               r.cufe,
+                               r.issue_date,
+                               r.total_amount,
+                               r.estado_dian,
+                               r.pdf_s3_url,
+                               r.xml_s3_url,
+                               r.created_at,
+                               r.updated_at,
+                               r.raw_payload_jsonb::text AS raw_payload,
+                               r.dian_response_jsonb::text AS dian_response,
+                               r.source
+                        FROM received_invoices r
+                        WHERE r.company_id = ? AND r.id = ?
                         """,
                 (rs, rowNum) -> mapDetail(rs, sociedadId, sociedadNit),
                 sociedadId,
@@ -187,18 +153,14 @@ public class ReceivedInvoiceRepository {
         List<UUID> ids = jdbcTemplate.query(
                 """
                         SELECT id
-                        FROM invoices
+                        FROM received_invoices
                         WHERE company_id = ?
-                          AND (
-                                uuid_cude = ?
-                                OR COALESCE(raw_dian_payload_jsonb->>'cufe', '') = ?
-                          )
+                          AND cufe = ?
                           AND (?::uuid IS NULL OR id <> ?)
                         LIMIT 1
                         """,
                 (rs, rowNum) -> rs.getObject("id", UUID.class),
                 sociedadId,
-                cufe,
                 cufe,
                 excludeId,
                 excludeId
@@ -207,22 +169,20 @@ public class ReceivedInvoiceRepository {
     }
 
     public List<ReceivedInvoiceRow> findEligibleForTacitAcceptance(UUID sociedadId) {
-        ReceivedInvoiceFilter filter = new ReceivedInvoiceFilter(
+        return findReceived(new ReceivedInvoiceFilter(
                 sociedadId, null, null, "RECIBIDA_086", null, null, null, null, null
-        );
-        return findReceived(filter);
+        ));
     }
 
     public int markTacitAcceptance(UUID sociedadId, UUID invoiceId, String timelineJsonPatch) {
         return jdbcTemplate.update(
                 """
-                        UPDATE invoices
+                        UPDATE received_invoices
                         SET estado_dian = 'ACEPTADA_TACITA',
                             dian_response_jsonb = COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb,
                             updated_at = now()
                         WHERE id = ?
                           AND company_id = ?
-                          AND emission_point_id IS NULL
                           AND UPPER(estado_dian) IN ('RECIBIDA_086', '086')
                         """,
                 timelineJsonPatch,
@@ -234,10 +194,9 @@ public class ReceivedInvoiceRepository {
     public Optional<String> findXmlBase(UUID sociedadId, UUID invoiceId) {
         List<String> xmls = jdbcTemplate.query(
                 """
-                        SELECT COALESCE(i.raw_dian_payload_jsonb->>'xml_base', '') AS xml_content
-                        FROM invoices i
-                        WHERE i.company_id = ?
-                          AND i.id = ?
+                        SELECT COALESCE(r.raw_payload_jsonb->>'xml_base', '') AS xml_content
+                        FROM received_invoices r
+                        WHERE r.company_id = ? AND r.id = ?
                         """,
                 (rs, rowNum) -> rs.getString("xml_content"),
                 sociedadId,
@@ -257,7 +216,7 @@ public class ReceivedInvoiceRepository {
         List<UUID> ids = jdbcTemplate.query(
                 """
                         SELECT company_id
-                        FROM invoices
+                        FROM received_invoices
                         WHERE id = ?
                           AND company_id IN (""" + placeholders + ")",
                 (rs, rowNum) -> rs.getObject("company_id", UUID.class),
@@ -269,10 +228,9 @@ public class ReceivedInvoiceRepository {
     public Optional<byte[]> findPdfBase(UUID sociedadId, UUID invoiceId) {
         List<String> encoded = jdbcTemplate.query(
                 """
-                        SELECT COALESCE(i.raw_dian_payload_jsonb->>'pdf_base', '') AS pdf_content
-                        FROM invoices i
-                        WHERE i.company_id = ?
-                          AND i.id = ?
+                        SELECT COALESCE(r.raw_payload_jsonb->>'pdf_base', '') AS pdf_content
+                        FROM received_invoices r
+                        WHERE r.company_id = ? AND r.id = ?
                         """,
                 (rs, rowNum) -> rs.getString("pdf_content"),
                 sociedadId,
@@ -295,11 +253,7 @@ public class ReceivedInvoiceRepository {
         try {
             List<String> nits = jdbcTemplate.query(
                     """
-                            SELECT COALESCE(
-                                NULLIF(s.nit, ''),
-                                NULLIF(c.nit, ''),
-                                ''
-                            ) AS nit
+                            SELECT COALESCE(NULLIF(s.nit, ''), NULLIF(c.nit, ''), '') AS nit
                             FROM (SELECT ?::uuid AS id) x
                             LEFT JOIN sociedades s ON s.id = x.id
                             LEFT JOIN companies c ON c.id = x.id
@@ -316,30 +270,32 @@ public class ReceivedInvoiceRepository {
     private ReceivedInvoiceRow mapRow(ResultSet rs, String sociedadNit) throws SQLException {
         JsonNode rawPayload = readTree(rs.getString("raw_payload"));
         JsonNode dianResponse = readTree(rs.getString("dian_response"));
-        JsonNode totalsPayload = readTree(rs.getString("totals_payload"));
-        String prefijo = safe(rs.getString("prefijo"));
-        long numero = rs.getLong("numero");
         OffsetDateTime createdAt = rs.getObject("created_at", OffsetDateTime.class);
         String pdfS3Url = safe(rs.getString("pdf_s3_url"));
         String xmlS3Url = safe(rs.getString("xml_s3_url"));
         String xmlBase = text(rawPayload, "xml_base", "");
         boolean documentsAvailable = !pdfS3Url.isBlank() || !xmlS3Url.isBlank() || !xmlBase.isBlank();
-        String cufe = firstText(safe(rs.getString("uuid_cude")), text(rawPayload, "cufe", ""));
-        String fecha = firstText(text(rawPayload, "fecha_emision", ""));
+        String cufe = firstText(safe(rs.getString("cufe")), text(rawPayload, "cufe", ""));
+        LocalDate issueDate = rs.getObject("issue_date", LocalDate.class);
+        String fecha = issueDate != null ? issueDate.format(DATE_FORMAT) : text(rawPayload, "fecha_emision", "");
         if (fecha.isBlank() && createdAt != null) {
             fecha = createdAt.toLocalDate().format(DATE_FORMAT);
         }
         RecepcionEstadoDian estado = RecepcionEstadoDian.fromDb(rs.getString("estado_dian"));
         List<String> issues = buildValidationIssues(cufe, rawPayload, sociedadNit);
         PlazoInfo plazo = resolvePlazo(estado, dianResponse, createdAt);
+        BigDecimal total = rs.getBigDecimal("total_amount");
+        if (total == null) {
+            total = BigDecimal.ZERO;
+        }
 
         return new ReceivedInvoiceRow(
                 rs.getObject("id", UUID.class),
-                resolveProveedorName(rawPayload),
-                resolveProveedorNit(rawPayload),
-                firstText(text(rawPayload, "invoice_number", ""), prefijo + numero),
+                firstText(rs.getString("supplier_name"), "Proveedor"),
+                firstText(rs.getString("supplier_nit"), "—"),
+                firstText(rs.getString("invoice_number"), "SIN-NUMERO"),
                 cufe,
-                resolveTotal(totalsPayload, rawPayload),
+                total.setScale(2, RoundingMode.HALF_UP),
                 fecha,
                 estado,
                 pdfS3Url,
@@ -368,11 +324,7 @@ public class ReceivedInvoiceRepository {
                 || !StringUtils.hasText(receptorNit)
                 || RecepcionCufeValidator.sameNit(sociedadNit, receptorNit);
         List<RecepcionEventTimelineItem> timeline = buildTimeline(
-                sociedadId,
-                row.id(),
-                rawPayload,
-                dianResponse,
-                row.createdAt()
+                sociedadId, row.id(), rawPayload, dianResponse, row.createdAt(), safe(rs.getString("source"))
         );
         LocalDate recibo086 = parseDate(text(dianResponse, "recibo_086_at", ""));
         String xml = text(rawPayload, "xml_base", "");
@@ -402,7 +354,7 @@ public class ReceivedInvoiceRepository {
                 plazo.limite(),
                 recibo086,
                 timeline,
-                text(rawPayload, "source", ""),
+                firstText(rs.getString("source"), text(rawPayload, "source", "")),
                 preview
         );
     }
@@ -412,18 +364,18 @@ public class ReceivedInvoiceRepository {
             UUID invoiceId,
             JsonNode rawPayload,
             JsonNode dianResponse,
-            OffsetDateTime createdAt
+            OffsetDateTime createdAt,
+            String source
     ) {
         List<RecepcionEventTimelineItem> items = new ArrayList<>();
-        OffsetDateTime receivedAt = createdAt != null ? createdAt : OffsetDateTime.now(ZoneOffset.UTC);
         items.add(new RecepcionEventTimelineItem(
                 "RCV",
                 "RECIBIDA",
                 "Documento recibido en bandeja",
-                receivedAt,
+                createdAt,
                 "",
                 "",
-                "Fuente: " + firstText(text(rawPayload, "source", ""), "N/D"),
+                "Fuente: " + firstText(source, text(rawPayload, "source", ""), "N/D"),
                 "import"
         ));
 
@@ -450,7 +402,7 @@ public class ReceivedInvoiceRepository {
                                 SELECT action, payload::text AS payload, created_at
                                 FROM audit_events
                                 WHERE company_id = ?
-                                  AND entity_type = 'invoice'
+                                  AND entity_type IN ('received_invoice', 'invoice')
                                   AND entity_id = ?
                                 ORDER BY created_at ASC
                                 """,
@@ -471,35 +423,16 @@ public class ReceivedInvoiceRepository {
                         sociedadId,
                         invoiceId
                 );
-                for (RecepcionEventTimelineItem auditItem : auditItems) {
-                    boolean exists = items.stream().anyMatch(existing ->
-                            existing.action().equalsIgnoreCase(auditItem.action())
-                                    && existing.at() != null
-                                    && auditItem.at() != null
-                                    && existing.at().toInstant().equals(auditItem.at().toInstant())
-                    );
-                    if (!exists) {
-                        items.add(auditItem);
-                    }
-                }
+                items.addAll(auditItems);
             } catch (Exception ignored) {
-                // timeline parcial sin audit
+                // timeline parcial
             }
         }
-
         items.sort((a, b) -> {
-            OffsetDateTime left = a.at();
-            OffsetDateTime right = b.at();
-            if (left == null && right == null) {
-                return 0;
-            }
-            if (left == null) {
-                return 1;
-            }
-            if (right == null) {
-                return -1;
-            }
-            return left.compareTo(right);
+            if (a.at() == null && b.at() == null) return 0;
+            if (a.at() == null) return 1;
+            if (b.at() == null) return -1;
+            return a.at().compareTo(b.at());
         });
         return items;
     }
@@ -534,8 +467,7 @@ public class ReceivedInvoiceRepository {
             return new PlazoInfo(RecepcionPlazoStatus.NO_APLICA, "Sin fecha 086", null, null);
         }
         LocalDate limite = RecepcionBusinessDays.addBusinessDays(
-                reciboDate,
-                RecepcionBusinessDays.TACIT_ACCEPTANCE_BUSINESS_DAYS
+                reciboDate, RecepcionBusinessDays.TACIT_ACCEPTANCE_BUSINESS_DAYS
         );
         LocalDate today = RecepcionBusinessDays.todayBogota();
         if (today.isAfter(limite)) {
@@ -565,31 +497,17 @@ public class ReceivedInvoiceRepository {
     }
 
     private String extractCode(String action) {
-        if (!StringUtils.hasText(action)) {
-            return "";
-        }
-        if (action.contains("085")) {
-            return "085";
-        }
-        if (action.contains("086")) {
-            return "086";
-        }
-        if (action.contains("087")) {
-            return "087";
-        }
-        if (action.contains("088")) {
-            return "088";
-        }
-        if (action.toUpperCase(Locale.ROOT).contains("TACITA")) {
-            return "TAC";
-        }
+        if (!StringUtils.hasText(action)) return "";
+        if (action.contains("085")) return "085";
+        if (action.contains("086")) return "086";
+        if (action.contains("087")) return "087";
+        if (action.contains("088")) return "088";
+        if (action.toUpperCase(Locale.ROOT).contains("TACITA")) return "TAC";
         return "";
     }
 
     private String labelForAction(String action) {
-        if (!StringUtils.hasText(action)) {
-            return "Evento";
-        }
+        if (!StringUtils.hasText(action)) return "Evento";
         return switch (action.toUpperCase(Locale.ROOT)) {
             case "ACUSE_085" -> "Acuse de recibo 085";
             case "RECIBO_BIENES_086" -> "Recibo de bienes/servicios 086";
@@ -601,17 +519,13 @@ public class ReceivedInvoiceRepository {
     }
 
     private String compactJson(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isEmpty()) {
-            return "";
-        }
+        if (node == null || node.isMissingNode() || node.isEmpty()) return "";
         String value = node.toString();
         return value.length() > 180 ? value.substring(0, 180) + "…" : value;
     }
 
     private OffsetDateTime parseOffset(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
+        if (!StringUtils.hasText(value)) return null;
         try {
             return OffsetDateTime.parse(value);
         } catch (DateTimeParseException ex) {
@@ -625,13 +539,9 @@ public class ReceivedInvoiceRepository {
     }
 
     private LocalDate parseDate(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
+        if (!StringUtils.hasText(value)) return null;
         try {
-            if (value.length() >= 10) {
-                return LocalDate.parse(value.substring(0, 10));
-            }
+            if (value.length() >= 10) return LocalDate.parse(value.substring(0, 10));
             return LocalDate.parse(value);
         } catch (Exception ex) {
             try {
@@ -647,8 +557,7 @@ public class ReceivedInvoiceRepository {
             return jdbcTemplate.queryForObject(
                     """
                             SELECT EXISTS (
-                                SELECT 1
-                                FROM information_schema.tables
+                                SELECT 1 FROM information_schema.tables
                                 WHERE table_schema = 'public' AND table_name = 'audit_events'
                             )
                             """,
@@ -661,105 +570,37 @@ public class ReceivedInvoiceRepository {
 
     private JsonNode readTree(String value) {
         try {
-            if (value == null || value.isBlank()) {
-                return objectMapper.createObjectNode();
-            }
+            if (value == null || value.isBlank()) return objectMapper.createObjectNode();
             return objectMapper.readTree(value);
         } catch (Exception ex) {
             return objectMapper.createObjectNode();
         }
     }
 
-    private String resolveProveedorName(JsonNode rawPayload) {
-        return firstText(
-                nestedText(rawPayload, "proveedor", "razon_social"),
-                nestedText(rawPayload, "proveedor", "nombre"),
-                nestedText(rawPayload, "supplier", "razon_social"),
-                nestedText(rawPayload, "cliente", "razon_social"),
-                "Proveedor"
-        );
-    }
-
-    private String resolveProveedorNit(JsonNode rawPayload) {
-        return firstText(
-                nestedText(rawPayload, "proveedor", "nit"),
-                nestedText(rawPayload, "proveedor", "numero_identificacion"),
-                nestedText(rawPayload, "supplier", "nit"),
-                nestedText(rawPayload, "cliente", "numero_identificacion"),
-                "—"
-        );
-    }
-
-    private BigDecimal resolveTotal(JsonNode totalsPayload, JsonNode rawPayload) {
-        BigDecimal total = decimal(totalsPayload, "total");
-        if (total.compareTo(BigDecimal.ZERO) > 0) {
-            return total;
-        }
-        total = decimal(totalsPayload, "totalAmount");
-        if (total.compareTo(BigDecimal.ZERO) > 0) {
-            return total;
-        }
-        total = decimal(rawPayload, "total");
-        if (total.compareTo(BigDecimal.ZERO) > 0) {
-            return total;
-        }
-        return decimal(rawPayload.path("totals_jsonb"), "total");
-    }
-
     private String text(JsonNode node, String field, String fallback) {
         JsonNode value = node.path(field);
-        if (value.isMissingNode() || value.isNull() || value.asText().isBlank()) {
-            return fallback;
-        }
+        if (value.isMissingNode() || value.isNull() || value.asText().isBlank()) return fallback;
         return value.asText();
     }
 
     private String nestedText(JsonNode parent, String objectField, String field) {
         JsonNode node = parent.path(objectField);
-        if (node.isMissingNode() || node.isNull()) {
-            return "";
-        }
+        if (node.isMissingNode() || node.isNull()) return "";
         JsonNode value = node.path(field);
         return value.isMissingNode() || value.isNull() ? "" : value.asText();
     }
 
     private String firstText(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
+            if (value != null && !value.isBlank()) return value;
         }
         return "";
-    }
-
-    private BigDecimal decimal(JsonNode node, String field) {
-        JsonNode value = node.path(field);
-        if (value.isMissingNode() || value.isNull()) {
-            return BigDecimal.ZERO;
-        }
-        try {
-            if (value.isNumber()) {
-                return value.decimalValue().setScale(2, RoundingMode.HALF_UP);
-            }
-            String raw = value.asText("").trim().replace(",", ".");
-            if (!StringUtils.hasText(raw)) {
-                return BigDecimal.ZERO;
-            }
-            return new BigDecimal(raw).setScale(2, RoundingMode.HALF_UP);
-        } catch (Exception ex) {
-            return BigDecimal.ZERO;
-        }
     }
 
     private String safe(String value) {
         return value == null ? "" : value;
     }
 
-    record PlazoInfo(
-            RecepcionPlazoStatus status,
-            String label,
-            Integer diasRestantes,
-            LocalDate limite
-    ) {
+    record PlazoInfo(RecepcionPlazoStatus status, String label, Integer diasRestantes, LocalDate limite) {
     }
 }

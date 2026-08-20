@@ -210,7 +210,7 @@ public class RecepcionEventService {
         String mergePatch = buildDianPayload(eventCode, dianResponse, payload);
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE invoices
+                        UPDATE received_invoices
                         SET estado_dian = ?,
                             dian_response_jsonb = (
                                 COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb
@@ -219,7 +219,7 @@ public class RecepcionEventService {
                                 COALESCE(dian_response_jsonb->'radian_events', '[]'::jsonb) || ?::jsonb
                             ),
                             updated_at = now()
-                        WHERE id = ? AND company_id = ? AND emission_point_id IS NULL
+                        WHERE id = ? AND company_id = ?
                         """,
                 targetState,
                 mergePatch,
@@ -289,19 +289,19 @@ public class RecepcionEventService {
             return jdbcTemplate.queryForObject(
                     """
                             SELECT i.estado_dian,
-                                   COALESCE(i.uuid_cude, i.raw_dian_payload_jsonb->>'cufe', '') AS cufe,
+                                   COALESCE(i.cufe, i.raw_payload_jsonb->>'cufe', '') AS cufe,
                                    COALESCE(
-                                       NULLIF(i.raw_dian_payload_jsonb->>'invoice_number', ''),
-                                       NULLIF(i.prefijo, '') || i.numero::text,
+                                       NULLIF(i.invoice_number, ''),
+                                       NULLIF(i.raw_payload_jsonb->>'invoice_number', ''),
                                        ''
                                    ) AS invoice_number,
                                    COALESCE(c.razon_social, s.razon_social, '') AS sender_name,
                                    COALESCE(c.nit, s.nit, '') AS sender_nit,
-                                   COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
-                                   COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
+                                   COALESCE(i.supplier_name, i.raw_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
+                                   COALESCE(i.supplier_nit, i.raw_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
                                    COALESCE(
-                                       NULLIF(i.raw_dian_payload_jsonb->>'receptor_nit', ''),
-                                       NULLIF(i.raw_dian_payload_jsonb->'receptor'->>'nit', ''),
+                                       NULLIF(i.raw_payload_jsonb->>'receptor_nit', ''),
+                                       NULLIF(i.raw_payload_jsonb->'receptor'->>'nit', ''),
                                        ''
                                    ) AS receptor_nit,
                                    COALESCE(NULLIF(s.nit, ''), NULLIF(c.nit, ''), '') AS sociedad_nit,
@@ -313,14 +313,15 @@ public class RecepcionEventService {
                                    COALESCE(c.dian_config->>'software_id', '') AS software_id,
                                    COALESCE(c.dian_config->>'pin', '') AS software_pin,
                                    COALESCE(
-                                       NULLIF(i.raw_dian_payload_jsonb->>'fecha_emision', ''),
+                                       NULLIF(to_char(i.issue_date, 'YYYY-MM-DD'), ''),
+                                       NULLIF(i.raw_payload_jsonb->>'fecha_emision', ''),
                                        to_char((i.created_at AT TIME ZONE 'America/Bogota')::date, 'YYYY-MM-DD'),
                                        ''
                                    ) AS invoice_issue_date
-                            FROM invoices i
+                            FROM received_invoices i
                             LEFT JOIN companies c ON c.id = i.company_id
                             LEFT JOIN sociedades s ON s.id = i.company_id
-                            WHERE i.id = ? AND i.company_id = ? AND i.emission_point_id IS NULL
+                            WHERE i.id = ? AND i.company_id = ?
                             """,
                     (rs, rowNum) -> new ReceivedInvoiceContext(
                             rs.getString("estado_dian"),
@@ -354,7 +355,7 @@ public class RecepcionEventService {
             jdbcTemplate.update(
                     """
                             INSERT INTO audit_events (company_id, entity_type, entity_id, action, payload)
-                            VALUES (?, 'invoice', ?, ?, ?::jsonb)
+                            VALUES (?, 'received_invoice', ?, ?, ?::jsonb)
                             """,
                     companyId,
                     invoiceId,

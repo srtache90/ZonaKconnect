@@ -75,33 +75,88 @@ public class InvoiceMailDispatchService {
 
             byte[] attachmentBytes = downloadAttachmentQuietly(invoiceId, tenantId, emissionPointId);
 
-            MimeMessage mimeMessage = sender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(toEmail.trim());
-            helper.setSubject("Documentos electrónicos Zona K - " + invoiceId);
-            helper.setText(
-                    "Adjunto encontrará los documentos electrónicos de la factura " + invoiceId + ".",
-                    false
-            );
-
-            if (pdfBytes != null && pdfBytes.length > 0) {
-                helper.addAttachment("factura-" + invoiceId + ".pdf", new ByteArrayResource(pdfBytes));
-            }
-            if (attachmentBytes != null && attachmentBytes.length > 0) {
-                helper.addAttachment("dian-attachment-" + invoiceId + ".zip", new ByteArrayResource(attachmentBytes));
-            }
-
-            sender.send(mimeMessage);
-            String message = "Documentos enviados a " + toEmail.trim();
-            log.info("mail.dispatch ok invoice_id={} to={}", invoiceId, toEmail);
-            return message;
+            return dispatch(sender, from, toEmail, invoiceId.toString(), pdfBytes, attachmentBytes, null);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
             log.warn("mail.dispatch failed invoice_id={} to={}: {}", invoiceId, toEmail, ex.getMessage());
             throw new IllegalStateException("No fue posible enviar el correo: " + ex.getMessage(), ex);
         }
+    }
+
+    /** Reenvío de documentos de recepción (tabla received_invoices, sin tocar emisión). */
+    public String sendReceivedDocuments(
+            String tenantId,
+            UUID receivedId,
+            String invoiceNumber,
+            String toEmail,
+            byte[] pdfBytes,
+            byte[] xmlBytes
+    ) {
+        if (!StringUtils.hasText(toEmail)) {
+            throw new IllegalArgumentException("El correo destinatario es obligatorio");
+        }
+        SociedadMailAccount account = null;
+        if (StringUtils.hasText(tenantId)) {
+            account = sociedadMailAccountRepository.findBySociedadId(UUID.fromString(tenantId)).orElse(null);
+        }
+        JavaMailSender sender;
+        String from;
+        if (account != null && account.hasOutgoingMail()) {
+            sender = createSender(account);
+            from = firstNonBlank(account.correoEmision(), account.usuarioSmtp(), mailProperties.getFrom());
+        } else if (mailProperties.isDispatchEnabled()) {
+            sender = fallbackMailSender;
+            from = mailProperties.getFrom();
+        } else {
+            throw new IllegalStateException(
+                    "El correo saliente de la sociedad no está configurado."
+            );
+        }
+        try {
+            return dispatch(
+                    sender,
+                    from,
+                    toEmail,
+                    StringUtils.hasText(invoiceNumber) ? invoiceNumber : receivedId.toString(),
+                    pdfBytes,
+                    null,
+                    xmlBytes
+            );
+        } catch (Exception ex) {
+            throw new IllegalStateException("No fue posible enviar el correo: " + ex.getMessage(), ex);
+        }
+    }
+
+    private String dispatch(
+            JavaMailSender sender,
+            String from,
+            String toEmail,
+            String label,
+            byte[] pdfBytes,
+            byte[] zipBytes,
+            byte[] xmlBytes
+    ) throws Exception {
+        MimeMessage mimeMessage = sender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+        helper.setFrom(from);
+        helper.setTo(toEmail.trim());
+        helper.setSubject("Documentos electrónicos Zona K - " + label);
+        helper.setText(
+                "Adjunto encontrará los documentos electrónicos de la factura " + label + ".",
+                false
+        );
+        if (pdfBytes != null && pdfBytes.length > 0) {
+            helper.addAttachment("factura-" + label + ".pdf", new ByteArrayResource(pdfBytes));
+        }
+        if (zipBytes != null && zipBytes.length > 0) {
+            helper.addAttachment("dian-attachment-" + label + ".zip", new ByteArrayResource(zipBytes));
+        }
+        if (xmlBytes != null && xmlBytes.length > 0) {
+            helper.addAttachment("factura-" + label + ".xml", new ByteArrayResource(xmlBytes));
+        }
+        sender.send(mimeMessage);
+        return "Documentos enviados a " + toEmail.trim();
     }
 
     private JavaMailSender createSender(SociedadMailAccount account) {

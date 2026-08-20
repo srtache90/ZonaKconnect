@@ -1034,12 +1034,18 @@ func (a *app) handleDashboardKpis(w http.ResponseWriter, r *http.Request) {
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND date_trunc('month', created_at) = date_trunc('month', now())),
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND estado_dian IN ('ENVIADO', 'Documento Validado Exitosamente')),
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND estado_dian IN ('RECHAZADO_DIAN', 'ERROR_DIAN_NET', 'RECHAZADO')),
-		  COUNT(*) FILTER (WHERE emission_point_id IS NULL AND estado_dian IN ('PENDIENTE', 'RECIBIDO_PND', 'ACUSADA_085', 'RECIBIDA_086')),
 		  COUNT(*) FILTER (WHERE COALESCE(document_kind, 'INVOICE') = 'SUPPORT'),
 		  COUNT(*) FILTER (WHERE COALESCE(document_kind, 'INVOICE') = 'PAYROLL')
 		FROM invoices
 		WHERE company_id = $1
-	`, tenantID).Scan(&emittedToday, &emittedMonth, &accepted, &rejected, &pendingReception, &supportCount, &payrollCount)
+	`, tenantID).Scan(&emittedToday, &emittedMonth, &accepted, &rejected, &supportCount, &payrollCount)
+
+	_ = a.db.QueryRow(r.Context(), `
+		SELECT COUNT(*)
+		FROM received_invoices
+		WHERE company_id = $1
+		  AND estado_dian IN ('PENDIENTE', 'ACUSADA_085', 'RECIBIDA_086')
+	`, tenantID).Scan(&pendingReception)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"emitted_today":       emittedToday,

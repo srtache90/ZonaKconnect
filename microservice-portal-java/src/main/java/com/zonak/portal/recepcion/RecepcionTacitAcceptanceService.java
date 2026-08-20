@@ -43,7 +43,7 @@ public class RecepcionTacitAcceptanceService {
                 );
                 int updated = jdbcTemplate.update(
                         """
-                                UPDATE invoices
+                                UPDATE received_invoices
                                 SET estado_dian = 'ACEPTADA_TACITA',
                                     dian_response_jsonb = jsonb_set(
                                         jsonb_set(
@@ -62,7 +62,6 @@ public class RecepcionTacitAcceptanceService {
                                     updated_at = now()
                                 WHERE id = ?
                                   AND company_id = ?
-                                  AND emission_point_id IS NULL
                                   AND UPPER(estado_dian) IN ('RECIBIDA_086', '086')
                                 """,
                         eventJson,
@@ -106,7 +105,7 @@ public class RecepcionTacitAcceptanceService {
             jdbcTemplate.update(
                     """
                             INSERT INTO audit_events (company_id, entity_type, entity_id, action, payload)
-                            VALUES (?, 'invoice', ?, 'ACEPTACION_TACITA', '{}'::jsonb)
+                            VALUES (?, 'received_invoice', ?, 'ACEPTACION_TACITA', '{}'::jsonb)
                             """,
                     companyId,
                     invoiceId

@@ -9,7 +9,6 @@ import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
 import com.zonak.portal.recepcion.RecepcionEstadoDian;
 import com.zonak.portal.recepcion.RecepcionTacitAcceptanceService;
-import com.zonak.portal.service.InvoiceOrchestratorService;
 import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
@@ -35,7 +34,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class RecepcionPortalController {
     private final PortalSessionService portalSessionService;
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
-    private final InvoiceOrchestratorService invoiceOrchestratorService;
     private final MailReceptionSyncService mailReceptionSyncService;
     private final InvoiceMailDispatchService invoiceMailDispatchService;
     private final RecepcionTacitAcceptanceService recepcionTacitAcceptanceService;
@@ -43,14 +41,12 @@ public class RecepcionPortalController {
     public RecepcionPortalController(
             PortalSessionService portalSessionService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
-            InvoiceOrchestratorService invoiceOrchestratorService,
             MailReceptionSyncService mailReceptionSyncService,
             InvoiceMailDispatchService invoiceMailDispatchService,
             RecepcionTacitAcceptanceService recepcionTacitAcceptanceService
     ) {
         this.portalSessionService = portalSessionService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
-        this.invoiceOrchestratorService = invoiceOrchestratorService;
         this.mailReceptionSyncService = mailReceptionSyncService;
         this.invoiceMailDispatchService = invoiceMailDispatchService;
         this.recepcionTacitAcceptanceService = recepcionTacitAcceptanceService;
@@ -229,26 +225,17 @@ public class RecepcionPortalController {
                 .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
         byte[] storedPdf = receivedInvoiceRepository.findPdfBase(tenantId, id).orElse(null);
-        byte[] pdfBytes = storedPdf;
-        if (pdfBytes == null || pdfBytes.length == 0) {
-            try {
-                pdfBytes = invoiceOrchestratorService.downloadOrGeneratePdf(tenantId, id).block();
-            } catch (Exception ex) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "PDF no disponible. Vuelva a sincronizar el correo o importe el ZIP con la representación gráfica. "
-                                + ex.getMessage()
-                );
-            }
-        }
-        if (pdfBytes == null || pdfBytes.length == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PDF no disponible para la factura recibida");
+        if (storedPdf == null || storedPdf.length == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "PDF no disponible. Vuelva a sincronizar el correo o importe el ZIP con la representación gráfica."
+            );
         }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"factura-recibida-" + id + ".pdf\"")
-                .body(pdfBytes);
+                .body(storedPdf);
     }
 
     @GetMapping("/portal/recepcion/{id}/xml")
@@ -275,9 +262,25 @@ public class RecepcionPortalController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        String tenantId = portalSessionService.resolveTenantId(session);
+        UUID tenantUuid = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
         try {
-            String message = invoiceMailDispatchService.sendInvoiceDocuments(tenantId, id, recipientEmail);
+            var detail = receivedInvoiceRepository.findDetail(tenantUuid, id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+            byte[] pdf = receivedInvoiceRepository.findPdfBase(tenantUuid, id).orElse(null);
+            String xml = receivedInvoiceRepository.findXmlBase(tenantUuid, id).orElse(null);
+            byte[] xmlBytes = StringUtils.hasText(xml)
+                    ? xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                    : null;
+            String message = invoiceMailDispatchService.sendReceivedDocuments(
+                    tenantUuid.toString(),
+                    id,
+                    detail.invoiceNumber(),
+                    recipientEmail,
+                    pdf,
+                    xmlBytes
+            );
             redirectAttributes.addFlashAttribute("success", message);
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
