@@ -25,18 +25,21 @@ public class RecepcionEventService {
     private final ObjectMapper objectMapper;
     private final RadianDianClient radianDianClient;
     private final SensitiveDataCryptoService cryptoService;
+    private final ReceivedInvoiceRepository receivedInvoiceRepository;
     private final Boolean auditTableExists;
 
     public RecepcionEventService(
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
             RadianDianClient radianDianClient,
-            SensitiveDataCryptoService cryptoService
+            SensitiveDataCryptoService cryptoService,
+            ReceivedInvoiceRepository receivedInvoiceRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.radianDianClient = radianDianClient;
         this.cryptoService = cryptoService;
+        this.receivedInvoiceRepository = receivedInvoiceRepository;
         this.auditTableExists = detectAuditTable();
     }
 
@@ -117,11 +120,24 @@ public class RecepcionEventService {
         if (!allowedFrom.contains(normalized)) {
             throw new IllegalStateException(invalidTransitionMessage(normalized, targetState));
         }
-        if (!StringUtils.hasText(current.cufe()) || !StringUtils.hasText(current.invoiceNumber())) {
+        if (!StringUtils.hasText(current.invoiceNumber())) {
             throw new IllegalStateException(
-                    "La factura recibida no tiene CUFE o número de documento; no se puede enviar el evento a la DIAN."
+                    "La factura recibida no tiene número de documento; no se puede enviar el evento a la DIAN."
             );
         }
+        RecepcionCufeValidator.requireValidCufeOrThrow(current.cufe());
+        if (StringUtils.hasText(current.sociedadNit()) && StringUtils.hasText(current.receptorNit())
+                && !RecepcionCufeValidator.sameNit(current.sociedadNit(), current.receptorNit())) {
+            throw new IllegalStateException(
+                    "NIT receptor del XML (" + current.receptorNit() + ") no coincide con la sociedad ("
+                            + current.sociedadNit() + "). Corrija el documento antes de transmitir RADIAN."
+            );
+        }
+        receivedInvoiceRepository.findDuplicateByCufe(companyId, current.cufe(), invoiceId).ifPresent(dup -> {
+            throw new IllegalStateException(
+                    "CUFE duplicado en otra factura recibida (" + dup + "). No se transmite el evento."
+            );
+        });
 
         Map<String, Object> request = new HashMap<>();
         request.put("ambiente", current.ambiente());
@@ -190,16 +206,24 @@ public class RecepcionEventService {
             );
         }
 
+        String eventJson = buildTimelineEventJson(eventCode, action, successLabel, dianResponse, payload);
+        String mergePatch = buildDianPayload(eventCode, dianResponse, payload);
         int updated = jdbcTemplate.update(
                 """
                         UPDATE invoices
                         SET estado_dian = ?,
-                            dian_response_jsonb = COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb,
+                            dian_response_jsonb = (
+                                COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb
+                            ) || jsonb_build_object(
+                                'radian_events',
+                                COALESCE(dian_response_jsonb->'radian_events', '[]'::jsonb) || ?::jsonb
+                            ),
                             updated_at = now()
                         WHERE id = ? AND company_id = ? AND emission_point_id IS NULL
                         """,
                 targetState,
-                buildDianPayload(eventCode, dianResponse, payload),
+                mergePatch,
+                eventJson,
                 invoiceId,
                 companyId
         );
@@ -224,9 +248,39 @@ public class RecepcionEventService {
             if (localPayload != null) {
                 root.set("radian_request", objectMapper.valueToTree(localPayload));
             }
+            if ("086".equals(eventCode)) {
+                root.put(
+                        "recibo_086_at",
+                        java.time.LocalDate.now(RecepcionBusinessDays.BOGOTA).toString()
+                );
+            }
             return objectMapper.writeValueAsString(root);
         } catch (Exception ex) {
             return "{}";
+        }
+    }
+
+    private String buildTimelineEventJson(
+            String eventCode,
+            String action,
+            String label,
+            JsonNode dianResponse,
+            Object localPayload
+    ) {
+        try {
+            ObjectNode event = objectMapper.createObjectNode();
+            event.put("code", eventCode);
+            event.put("action", action);
+            event.put("label", label);
+            event.put("at", java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString());
+            event.put("trackId", text(dianResponse, "trackID", text(dianResponse, "trackId", "")));
+            event.put("cude", text(dianResponse, "cune", text(dianResponse, "cufeCune", "")));
+            if (localPayload != null) {
+                event.set("request", objectMapper.valueToTree(localPayload));
+            }
+            return "[" + objectMapper.writeValueAsString(event) + "]";
+        } catch (Exception ex) {
+            return "[]";
         }
     }
 
@@ -245,6 +299,12 @@ public class RecepcionEventService {
                                    COALESCE(c.nit, s.nit, '') AS sender_nit,
                                    COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
                                    COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
+                                   COALESCE(
+                                       NULLIF(i.raw_dian_payload_jsonb->>'receptor_nit', ''),
+                                       NULLIF(i.raw_dian_payload_jsonb->'receptor'->>'nit', ''),
+                                       ''
+                                   ) AS receptor_nit,
+                                   COALESCE(NULLIF(s.nit, ''), NULLIF(c.nit, ''), '') AS sociedad_nit,
                                    COALESCE(
                                        NULLIF(c.dian_config->>'ambiente', ''),
                                        NULLIF(s.dian_ambiente, ''),
@@ -270,6 +330,8 @@ public class RecepcionEventService {
                             rs.getString("sender_nit"),
                             rs.getString("receiver_name"),
                             rs.getString("receiver_nit"),
+                            rs.getString("receptor_nit"),
+                            rs.getString("sociedad_nit"),
                             rs.getString("ambiente"),
                             rs.getString("software_id"),
                             rs.getString("software_pin"),
@@ -364,6 +426,7 @@ public class RecepcionEventService {
             case "086" -> "RECIBIDA_086";
             case "087" -> "ACEPTADA_087";
             case "088", "RECHAZADO" -> "RECHAZADA_088";
+            case "TACITA", "ACEPTACION_TACITA" -> "ACEPTADA_TACITA";
             default -> value;
         };
     }
@@ -388,6 +451,8 @@ public class RecepcionEventService {
             String senderNit,
             String receiverName,
             String receiverNit,
+            String receptorNit,
+            String sociedadNit,
             String ambiente,
             String softwareId,
             String softwarePin,

@@ -62,7 +62,7 @@
                         <span class="material-symbols-outlined">inbox</span>
                         <span>Bandeja de recepción</span>
                     </a>
-                    <a th:href="@{/portal/recepcion/bandeja}"
+                    <a th:href="@{/portal/recepcion/historico}"
                        th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'historico' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined">history</span>
                         <span>Histórico recibidas</span>
@@ -236,6 +236,11 @@
                th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'bandeja' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
                 <span class="material-symbols-outlined">inbox</span>
                 <span class="font-label-sm text-label-sm mt-1">Bandeja</span>
+            </a>
+            <a th:href="@{/portal/recepcion/historico}"
+               th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'historico' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
+                <span class="material-symbols-outlined">history</span>
+                <span class="font-label-sm text-label-sm mt-1">Histórico</span>
             </a>
             <a th:href="@{/portal/recepcion/reportes}"
                th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'reportes' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">

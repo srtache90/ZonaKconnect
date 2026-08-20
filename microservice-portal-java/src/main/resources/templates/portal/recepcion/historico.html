@@ -1,0 +1,150 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Histórico recepción | DIAN Connect')}"></th:block>
+    <style>
+        .badge-tacita { background: #e8f5e9; color: #1b5e20; }
+        .plazo-vencido { color: #b71c1c; font-weight: 600; }
+        .plazo-por-vencer { color: #e65100; font-weight: 600; }
+        .cufe-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
+        <h1 class="dc-page-title">Histórico de facturas recibidas</h1>
+        <p class="dc-page-subtitle">Consulta completa con filtros por estado, proveedor, CUFE, fechas y monto.</p>
+    </div>
+
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
+
+    <section class="alert alert-warning rounded-4 mb-4" th:if="${alerts != null and alerts.hasAlerts()}">
+        <div class="fw-semibold mb-1">Alertas en el resultado filtrado</div>
+        <ul class="mb-2 small">
+            <li th:if="${alerts.vencidos() > 0}" th:text="'Plazo tácito vencido: ' + ${alerts.vencidos()}"></li>
+            <li th:if="${alerts.porVencer() > 0}" th:text="'Por vencer: ' + ${alerts.porVencer()}"></li>
+            <li th:if="${alerts.conValidacion() > 0}" th:text="'Con observaciones CUFE/NIT: ' + ${alerts.conValidacion()}"></li>
+        </ul>
+        <form class="d-inline" method="post" th:action="@{/portal/recepcion/aplicar-aceptacion-tacita}" th:if="${alerts.vencidos() > 0}">
+            <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+            <input type="hidden" name="returnTo" value="historico">
+            <button class="btn btn-sm btn-outline-dark rounded-pill px-3" type="submit">Aplicar aceptaciones tácitas vencidas</button>
+        </form>
+    </section>
+
+    <section class="zk-filter-card p-4 mb-4">
+        <form class="row g-3 align-items-end" method="get" th:action="@{/portal/recepcion/historico}">
+            <div class="col-md-4">
+                <label class="form-label text-muted small" for="sociedadId">Sociedad</label>
+                <select class="form-select rounded-3" id="sociedadId" name="sociedadId">
+                    <option th:each="sociedad : ${sociedades}"
+                            th:value="${sociedad.id}"
+                            th:selected="${#strings.equals(sociedad.id.toString(), selectedSociedadId)}"
+                            th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="estadoDian">Estado</label>
+                <select class="form-select rounded-3" id="estadoDian" name="estadoDian">
+                    <option value="">Todos</option>
+                    <option th:each="estado : ${estados}"
+                            th:value="${estado.name()}"
+                            th:selected="${estado.name() == estadoDian}"
+                            th:text="${estado.name()}">PENDIENTE</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small" for="proveedor">Proveedor</label>
+                <input class="form-control rounded-3" id="proveedor" name="proveedor" th:value="${proveedor}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small" for="cufe">CUFE</label>
+                <input class="form-control rounded-3" id="cufe" name="cufe" th:value="${cufe}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="fromDate">Desde</label>
+                <input class="form-control rounded-3" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="toDate">Hasta</label>
+                <input class="form-control rounded-3" type="date" id="toDate" name="toDate" th:value="${toDate}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="minTotal">Monto mín.</label>
+                <input class="form-control rounded-3" id="minTotal" name="minTotal" th:value="${minTotal}" inputmode="decimal">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="maxTotal">Monto máx.</label>
+                <input class="form-control rounded-3" id="maxTotal" name="maxTotal" th:value="${maxTotal}" inputmode="decimal">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button class="btn btn-zk rounded-pill px-4" type="submit">Consultar</button>
+                <a class="btn btn-outline-dark rounded-pill px-4"
+                   th:href="@{/portal/recepcion/bandeja(sociedadId=${selectedSociedadId})}">Bandeja</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="card zk-card">
+        <div class="card-body p-0">
+            <div class="d-flex justify-content-between align-items-center px-4 py-4">
+                <h2 class="h3 mb-0">Resultados</h2>
+                <span class="badge rounded-pill text-bg-light border" th:text="'Registros: ' + ${#lists.size(invoices)}">0</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                    <tr class="text-muted small text-uppercase">
+                        <th>Proveedor</th>
+                        <th>Factura</th>
+                        <th>CUFE</th>
+                        <th class="text-end">Total</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Plazo</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(invoices)}">
+                        <td colspan="8" class="text-center text-muted py-5">Sin resultados para los filtros aplicados.</td>
+                    </tr>
+                    <tr th:each="invoice : ${invoices}">
+                        <td>
+                            <div class="fw-semibold" th:text="${invoice.proveedorName}">Proveedor</div>
+                            <div class="text-muted small" th:text="${invoice.proveedorNit}">NIT</div>
+                        </td>
+                        <td class="zk-data" th:text="${invoice.invoiceNumber}">FE</td>
+                        <td class="small cufe-cell zk-data" th:text="${invoice.cufe}">CUFE</td>
+                        <td class="text-end zk-data" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0</td>
+                        <td class="zk-data" th:text="${invoice.fechaEmision}">2026-01-01</td>
+                        <td>
+                            <span class="badge badge-soft rounded-pill px-3 py-2"
+                                  th:classappend="${invoice.estadoDian.name() == 'ACEPTADA_TACITA'} ? ' badge-tacita' : ''"
+                                  th:text="${invoice.estadoDian}">ESTADO</span>
+                        </td>
+                        <td class="small"
+                            th:classappend="${invoice.plazoStatus.name() == 'VENCIDO'} ? ' plazo-vencido' :
+                                             (${invoice.plazoStatus.name() == 'POR_VENCER'} ? ' plazo-por-vencer' : '')"
+                            th:text="${invoice.plazoLabel}">—</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-dark rounded-pill"
+                               th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}">Detalle</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>
