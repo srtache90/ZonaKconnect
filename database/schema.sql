@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS sociedades (
     usuario_imap VARCHAR(255),
     password_imap_enc TEXT,
     dian_ambiente VARCHAR(20) NOT NULL DEFAULT 'Habilitacion'
-        CHECK (dian_ambiente IN ('Habilitacion', 'Produccion')),
+        CHECK (dian_ambiente IN ('Habilitacion', 'Produccion', 'Mock')),
     creado_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -208,7 +208,7 @@ VALUES (
     993,
     'imap-local',
     'LOCAL_ENCRYPTED_PLACEHOLDER',
-    'Habilitacion'
+    'Mock'
 )
 ON CONFLICT (id) DO UPDATE SET
     razon_social = EXCLUDED.razon_social,

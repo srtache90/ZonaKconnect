@@ -13,5 +13,6 @@ namespace DIAN_NET.Services
         ConsultarEmpresaDIANResponse ConsultarEmpresaDIAN(string nit);
         DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente);
         DianResponse EnviarNomina(byte[] zipData, string ambiente);
+        DianResponse EnviarEvento(byte[] zipData, string ambiente);
     }
 }

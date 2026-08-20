@@ -19,18 +19,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class RecepcionRadianApiController {
     private final PortalSessionService portalSessionService;
     private final RecepcionEventService recepcionEventService;
+    private final ReceivedInvoiceRepository receivedInvoiceRepository;
 
     public RecepcionRadianApiController(
             PortalSessionService portalSessionService,
-            RecepcionEventService recepcionEventService
+            RecepcionEventService recepcionEventService,
+            ReceivedInvoiceRepository receivedInvoiceRepository
     ) {
         this.portalSessionService = portalSessionService;
         this.recepcionEventService = recepcionEventService;
+        this.receivedInvoiceRepository = receivedInvoiceRepository;
+    }
+
+    private UUID tenantId(HttpSession session, UUID invoiceId) {
+        return receivedInvoiceRepository
+                .findOwnedCompanyId(invoiceId, portalSessionService.resolveSociedadIds(session))
+                .orElseGet(() -> UUID.fromString(portalSessionService.resolveTenantId(session)));
     }
 
     @PostMapping(value = "/{id}/acuse-085", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> acuse085(@PathVariable UUID id, HttpSession session) {
-        UUID companyId = tenantId(session);
+        UUID companyId = tenantId(session, id);
         return execute(() -> recepcionEventService.registrarAcuse085(companyId, id));
     }
 
@@ -40,7 +49,7 @@ public class RecepcionRadianApiController {
             @RequestBody(required = false) Map<String, String> body,
             HttpSession session
     ) {
-        UUID companyId = tenantId(session);
+        UUID companyId = tenantId(session, id);
         String recibidoPor = body != null ? body.get("recibidoPor") : null;
         String documentoRecibidor = body != null ? body.get("documentoRecibidor") : null;
         return execute(() -> recepcionEventService.registrarReciboBienes086(
@@ -50,7 +59,7 @@ public class RecepcionRadianApiController {
 
     @PostMapping(value = "/{id}/aceptacion-087", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> aceptacion087(@PathVariable UUID id, HttpSession session) {
-        UUID companyId = tenantId(session);
+        UUID companyId = tenantId(session, id);
         return execute(() -> recepcionEventService.registrarAceptacion087(companyId, id));
     }
 
@@ -60,12 +69,8 @@ public class RecepcionRadianApiController {
             @RequestParam(name = "motivo_rechazo") String motivoRechazo,
             HttpSession session
     ) {
-        UUID companyId = tenantId(session);
+        UUID companyId = tenantId(session, id);
         return execute(() -> recepcionEventService.registrarRechazo088(companyId, id, motivoRechazo));
-    }
-
-    private UUID tenantId(HttpSession session) {
-        return UUID.fromString(portalSessionService.resolveTenantId(session));
     }
 
     private ResponseEntity<String> execute(EventAction action) {

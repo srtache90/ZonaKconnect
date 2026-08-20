@@ -309,7 +309,9 @@
     }
 
     async function postEvent(button, body) {
+        const originalLabel = button.textContent;
         button.disabled = true;
+        button.textContent = 'Enviando…';
         try {
             const response = await fetch(button.dataset.url, {
                 method: 'POST',
@@ -318,14 +320,18 @@
             });
             const text = await response.text();
             showAlert(text, response.ok);
+            alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             if (response.ok) {
                 window.setTimeout(() => window.location.reload(), 900);
             } else {
                 button.disabled = false;
+                button.textContent = originalLabel;
             }
         } catch (error) {
             showAlert('No fue posible transmitir el evento RADIAN: ' + error.message, false);
+            alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             button.disabled = false;
+            button.textContent = originalLabel;
         }
     }
 

@@ -1,78 +1,108 @@
 using System;
-using System.Security.Cryptography;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
-using System.Security.Cryptography.Xml;
 using System.Text;
-using System.Xml;
+using FirmaXadesNetCore;
+using FirmaXadesNetCore.Crypto;
+using FirmaXadesNetCore.Signature.Parameters;
 
 namespace DIAN_NET.Services
 {
     /// <summary>
-    /// Servicio para firmar XML con XAdES-EPES según especificaciones DIAN
+    /// Firma XAdES-EPES alineada a política DIAN (SigningTime, SigningCertificate, SignaturePolicy).
     /// </summary>
     public class XadesSignService : IXadesSignService
     {
+        private const string DianPolicyUri = "https://facturaelectronica.dian.gov.co/politicadefirma/v2/politicadefirmav2.pdf";
+        // Digest SHA-1 del PDF de política v2 (anexo técnico DIAN).
+        private const string DianPolicyHashSha1 = "dMoMvtcG5aIzgYo0tIsSQeVJBDnUnfSOfBpxXrmor0Y=";
+
         public string FirmarXml(string xmlSinFirma, X509Certificate2 certificado, string cufe)
         {
-            if (certificado == null)
-                throw new ArgumentNullException(nameof(certificado));
+            return FirmarXml(xmlSinFirma, certificado, cufe, DateTimeOffset.Now);
+        }
 
-            if (!certificado.HasPrivateKey)
-                throw new InvalidOperationException("El certificado no tiene clave privada");
-
-            var xmlDoc = new XmlDocument();
-            xmlDoc.PreserveWhitespace = true;
-            xmlDoc.LoadXml(xmlSinFirma);
-
-            // Crear el objeto SignedXml
-            var signedXml = new SignedXml(xmlDoc);
-            signedXml.SigningKey = certificado.GetRSAPrivateKey();
-
-            // Referencia al documento completo
-            var reference = new Reference("");
-            reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
-            reference.AddTransform(new XmlDsigC14NTransform());
-            reference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
-            signedXml.AddReference(reference);
-
-            // Referencia a KeyInfo
-            var keyInfo = new KeyInfo();
-            keyInfo.AddClause(new KeyInfoX509Data(certificado));
-            signedXml.KeyInfo = keyInfo;
-
-            // Configurar el método de firma
-            signedXml.SignedInfo.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
-            signedXml.SignedInfo.CanonicalizationMethod = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
-
-            // Calcular la firma
-            signedXml.ComputeSignature();
-
-            // Obtener el elemento de firma
-            var xmlDigitalSignature = signedXml.GetXml();
-
-            // Insertar la firma en el XML (en la segunda UBLExtension)
-            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
-            nsmgr.AddNamespace("ext", "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2");
-            nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
-
-            var extensions = xmlDoc.SelectSingleNode("//ext:UBLExtensions", nsmgr);
-            if (extensions != null)
+        public string FirmarXml(string xmlSinFirma, X509Certificate2 certificado, string cufe, DateTimeOffset signingTime)
+        {
+            if (string.IsNullOrWhiteSpace(xmlSinFirma))
             {
-                var extensionNodes = extensions.SelectNodes("ext:UBLExtension", nsmgr);
-                if (extensionNodes != null && extensionNodes.Count >= 2)
-                {
-                    var secondExtension = extensionNodes[1];
-                    var extensionContent = secondExtension.SelectSingleNode("ext:ExtensionContent", nsmgr);
-                    if (extensionContent != null)
-                    {
-                        // Importar el nodo de firma
-                        var importedNode = xmlDoc.ImportNode(xmlDigitalSignature, true);
-                        extensionContent.AppendChild(importedNode);
-                    }
-                }
+                throw new ArgumentException("XML vacío", nameof(xmlSinFirma));
+            }
+            if (certificado == null)
+            {
+                throw new ArgumentNullException(nameof(certificado));
+            }
+            if (!certificado.HasPrivateKey)
+            {
+                throw new InvalidOperationException("El certificado no tiene clave privada");
             }
 
-            return xmlDoc.OuterXml;
+            var parameters = new SignatureParameters
+            {
+                SignatureMethod = SignatureMethod.RSAwithSHA256,
+                DigestMethod = DigestMethod.SHA256,
+                SigningDate = new DateTime(
+                    signingTime.Year,
+                    signingTime.Month,
+                    signingTime.Day,
+                    signingTime.Hour,
+                    signingTime.Minute,
+                    signingTime.Second,
+                    DateTimeKind.Unspecified),
+                SignaturePackaging = SignaturePackaging.ENVELOPED,
+                Signer = new Signer(certificado),
+                SignaturePolicyInfo = new SignaturePolicyInfo
+                {
+                    PolicyIdentifier = DianPolicyUri,
+                    PolicyHash = DianPolicyHashSha1,
+                    PolicyDigestAlgorithm = DigestMethod.SHA1
+                },
+                SignatureDestination = BuildDestination(xmlSinFirma)
+            };
+
+            parameters.SignerRole = new SignerRole();
+            parameters.SignerRole.ClaimedRoles.Add("supplier");
+
+            var xadesService = new XadesService();
+            using var input = new MemoryStream(Encoding.UTF8.GetBytes(xmlSinFirma));
+            var signed = xadesService.Sign(input, parameters);
+
+            using var output = new MemoryStream();
+            signed.Save(output);
+            return Encoding.UTF8.GetString(output.ToArray());
+        }
+
+        private static SignatureXPathExpression BuildDestination(string xmlSinFirma)
+        {
+            var destination = new SignatureXPathExpression();
+            destination.Namespaces.Add("ext", "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2");
+            destination.Namespaces.Add("cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
+            destination.Namespaces.Add("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
+            destination.Namespaces.Add("sts", "dian:gov:co:facturaelectronica:Structures-2-1");
+
+            if (xmlSinFirma.Contains("ApplicationResponse", StringComparison.Ordinal))
+            {
+                destination.XPathExpression =
+                    "/*[local-name()='ApplicationResponse']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
+            }
+            else if (xmlSinFirma.Contains("<Invoice", StringComparison.Ordinal)
+                     || xmlSinFirma.Contains(":Invoice", StringComparison.Ordinal))
+            {
+                destination.XPathExpression =
+                    "/*[local-name()='Invoice']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
+            }
+            else if (xmlSinFirma.Contains("CreditNote", StringComparison.Ordinal))
+            {
+                destination.XPathExpression =
+                    "/*[local-name()='CreditNote']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
+            }
+            else
+            {
+                destination.XPathExpression =
+                    "//ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
+            }
+
+            return destination;
         }
     }
 }

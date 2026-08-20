@@ -8,5 +8,7 @@ namespace DIAN_NET.Services
     public interface IXadesSignService
     {
         string FirmarXml(string xmlSinFirma, X509Certificate2 certificado, string cufe);
+
+        string FirmarXml(string xmlSinFirma, X509Certificate2 certificado, string cufe, DateTimeOffset signingTime);
     }
 }

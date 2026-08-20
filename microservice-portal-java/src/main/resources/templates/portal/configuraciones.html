@@ -19,7 +19,8 @@
         <div class="px-6 py-4 border-b border-surface-container-highest bg-surface-container-low">
             <h3 class="font-headline-md text-headline-md text-primary mb-1">Web Service DIAN por sociedad</h3>
             <p class="font-body-md text-on-surface-variant mb-0">
-                Seleccione si cada sociedad apunta al ambiente de pruebas/habilitación o al de producción DIAN.
+                Seleccione por sociedad: Mock (sin DIAN real), Habilitación o Producción.
+                El mock solo aplica a la sociedad marcada como Mock.
             </p>
         </div>
         <div class="overflow-x-auto">
@@ -40,6 +41,7 @@
                         <form th:id="'dianForm-' + ${sociedad.id}" th:action="@{/portal/configuraciones/dian-ambiente}" method="post">
                             <input type="hidden" name="sociedadId" th:value="${sociedad.id}">
                             <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" name="dianAmbiente">
+                                <option value="Mock" th:selected="${sociedad.dianAmbiente == 'Mock'}">Mock (local / sin DIAN)</option>
                                 <option value="Habilitacion" th:selected="${sociedad.dianAmbiente == 'Habilitacion'}">Pruebas / Habilitación</option>
                                 <option value="Produccion" th:selected="${sociedad.dianAmbiente == 'Produccion'}">Producción</option>
                             </select>

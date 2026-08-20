@@ -487,6 +487,16 @@ public class AdminPortalRepository {
     }
 
     private String normalizeDianAmbiente(String value) {
-        return "Produccion".equalsIgnoreCase(value) ? "Produccion" : "Habilitacion";
+        if (value == null || value.isBlank()) {
+            return "Habilitacion";
+        }
+        String trimmed = value.trim();
+        if ("Produccion".equalsIgnoreCase(trimmed) || "Producción".equalsIgnoreCase(trimmed)) {
+            return "Produccion";
+        }
+        if ("Mock".equalsIgnoreCase(trimmed)) {
+            return "Mock";
+        }
+        return "Habilitacion";
     }
 }

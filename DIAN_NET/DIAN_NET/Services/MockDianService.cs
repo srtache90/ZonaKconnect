@@ -32,6 +32,11 @@ namespace DIAN_NET.Services
             return BuildSuccessfulResponse($"nomina-{Guid.NewGuid():N}.zip");
         }
 
+        public DianResponse EnviarEvento(byte[] zipData, string ambiente)
+        {
+            return BuildSuccessfulResponse($"evento-{Guid.NewGuid():N}.zip");
+        }
+
         private static DianResponse BuildSuccessfulResponse(string documentKey)
         {
             var applicationResponseXml = """

@@ -39,17 +39,20 @@ namespace DIAN_NET
             });
 
             // Registrar servicios de DIAN
-            var configuredCertificatePath = builder.Configuration["DianConfig:Certificado:RutaPfx"];
+            var configuredCertificatePath = builder.Configuration["DianConfig:Certificado:RutaPfx"]
+                ?? builder.Configuration["DianConfig:Certificado:Path"];
             var certificatePath = string.IsNullOrWhiteSpace(configuredCertificatePath)
                 ? Path.Combine(AppContext.BaseDirectory, "Certificado.pfx")
                 : configuredCertificatePath;
-            var dianMockEnabled = builder.Configuration.GetValue<bool>("DianConfig:Mock:Enabled");
+            // Mock:Enabled solo permite bootstrap de certificado local; el mock DIAN
+            // se activa por request cuando la sociedad envía ambiente=Mock.
+            var allowMockCertBootstrap = builder.Configuration.GetValue<bool>("DianConfig:Mock:Enabled");
             var certificatePassword = builder.Configuration["DianConfig:Certificado:Password"] ?? string.Empty;
-            if (dianMockEnabled && string.IsNullOrWhiteSpace(certificatePassword))
+            if (allowMockCertBootstrap && string.IsNullOrWhiteSpace(certificatePassword))
             {
                 certificatePassword = "local-mock-certificate-password";
             }
-            if (dianMockEnabled && !File.Exists(certificatePath))
+            if (allowMockCertBootstrap && !File.Exists(certificatePath))
             {
                 CreateLocalMockCertificate(certificatePath, certificatePassword);
             }
@@ -60,17 +63,13 @@ namespace DIAN_NET
             builder.Services.AddSingleton<IXadesSignService, XadesSignService>();
             builder.Services.AddSingleton<IDianXmlDebugStore, DianXmlDebugStore>();
 
-            // Servicio DIAN (scoped para manejar conexiones WCF correctamente)
+            // Mock vs DIAN real se decide por ambiente de la sociedad en cada request.
+            builder.Services.AddSingleton<MockDianService>();
+            builder.Services.AddScoped(_ => new DianManager(certificatePath, certificatePassword));
             builder.Services.AddScoped<IDianService>(provider =>
-            {
-                if (dianMockEnabled)
-                {
-                    return new MockDianService();
-                }
-
-                // DianManager ahora tiene constructor que acepta solo certificado
-                return new DianManager(certificatePath, certificatePassword);
-            });
+                new AmbienteRoutingDianService(
+                    provider.GetRequiredService<MockDianService>(),
+                    provider.GetRequiredService<DianManager>()));
 
             // Servicio de orquestación
             builder.Services.AddScoped<IFacturacionService>(provider =>
@@ -91,6 +90,20 @@ namespace DIAN_NET
                     certificatePassword);
             });
             builder.Services.AddScoped<IEmissionService, EmissionService>();
+            builder.Services.AddScoped<IRadianEventService>(provider =>
+            {
+                var cufeQr = provider.GetRequiredService<ICufeQrService>();
+                var xadesSign = provider.GetRequiredService<IXadesSignService>();
+                var dianService = provider.GetRequiredService<IDianService>();
+                var configuration = provider.GetRequiredService<IConfiguration>();
+                return new RadianEventService(
+                    cufeQr,
+                    xadesSign,
+                    dianService,
+                    configuration,
+                    certificatePath,
+                    certificatePassword);
+            });
 
             var app = builder.Build();
 

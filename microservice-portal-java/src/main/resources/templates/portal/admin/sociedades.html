@@ -83,6 +83,7 @@
                 <div class="col-md-4">
                     <label class="form-label" for="dianAmbiente">Web Service DIAN</label>
                     <select class="form-select" id="dianAmbiente" name="dianAmbiente">
+                        <option value="Mock">Mock (local / sin DIAN)</option>
                         <option value="Habilitacion">Pruebas / Habilitación</option>
                         <option value="Produccion">Producción</option>
                     </select>
@@ -132,8 +133,8 @@
                     </td>
                     <td>
                         <span class="badge"
-                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : ' text-bg-info'"
-                              th:text="${sociedad.dianAmbiente == 'Produccion'} ? 'Producción' : 'Pruebas'">
+                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : (${sociedad.dianAmbiente == 'Mock'} ? ' text-bg-warning' : ' text-bg-info')"
+                              th:text="${sociedad.dianAmbiente == 'Produccion'} ? 'Producción' : (${sociedad.dianAmbiente == 'Mock'} ? 'Mock' : 'Pruebas')">
                             Pruebas
                         </span>
                     </td>

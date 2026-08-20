@@ -39,3 +39,5 @@
 - **Go:** Use idiomatic Go (with pgx for PostgreSQL). Ensure `tenant_id` is passed via context or middleware.
 - **Java:** Follow standard enterprise design patterns. Keep memory footprint low.
 - **.NET:** Treat as an isolated black box for cryptography/DIAN communication. Any integration from Go/Java to .NET must pass the `tenant_id` to select the correct digital certificate from S3/Secrets Manager.
+
+in case needs settings about DIAN first use files in that route C:\Users\Jefe-Sistemas\Documents\Caja-de-herramientas-FE_V19_v2026 after brouwses in internet. 

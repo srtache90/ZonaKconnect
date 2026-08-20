@@ -5,7 +5,7 @@ services:
   core-go:
     base-url: ${SERVICES_CORE_GO_BASE_URL:http://localhost:8081}
   dian-net:
-    # DIAN_API_URL apunta al motor DIAN_NET; DIAN_NET decide si usa mock local o DIAN real.
+    # DIAN_API_URL apunta al motor DIAN_NET; el mock solo aplica si la sociedad tiene ambiente=Mock.
     base-url: ${DIAN_API_URL:http://localhost:8090}
 
 spring:

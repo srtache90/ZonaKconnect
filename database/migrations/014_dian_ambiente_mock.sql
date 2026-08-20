@@ -1,18 +1,16 @@
-ALTER TABLE sociedades
-    ADD COLUMN IF NOT EXISTS dian_ambiente VARCHAR(20) NOT NULL DEFAULT 'Habilitacion';
-
+-- Permite ambiente Mock por sociedad (sin forzar mock global en DIAN_NET).
 ALTER TABLE sociedades
     DROP CONSTRAINT IF EXISTS chk_sociedades_dian_ambiente;
-
--- Normalizar valores inválidos antes de recrear el CHECK (idempotente en re-runs).
-UPDATE sociedades
-SET dian_ambiente = 'Habilitacion'
-WHERE dian_ambiente IS NULL
-   OR dian_ambiente NOT IN ('Habilitacion', 'Produccion', 'Mock');
 
 ALTER TABLE sociedades
     ADD CONSTRAINT chk_sociedades_dian_ambiente
         CHECK (dian_ambiente IN ('Habilitacion', 'Produccion', 'Mock'));
+
+-- Sociedad local de desarrollo: mock; el resto no se toca.
+UPDATE sociedades
+SET dian_ambiente = 'Mock'
+WHERE id = '00000000-0000-0000-0000-000000000001'
+  AND dian_ambiente IS DISTINCT FROM 'Produccion';
 
 UPDATE companies c
 SET dian_config = jsonb_set(

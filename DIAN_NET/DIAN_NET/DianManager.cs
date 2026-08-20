@@ -23,6 +23,7 @@ namespace DIAN_NET
     {
         private readonly string _certificatePath;
         private readonly string _certificatePassword;
+        private readonly X509Certificate2? _certificate;
         private string? _currentAmbiente;
         private string? _defaultAmbiente;
         private WcfDianCustomerServicesClient? _client;
@@ -32,6 +33,7 @@ namespace DIAN_NET
             // serviceUrl se mantiene para compatibilidad pero ahora se determina desde el ambiente
             _certificatePath = certificatePath ?? throw new ArgumentNullException(nameof(certificatePath));
             _certificatePassword = certificatePassword ?? throw new ArgumentNullException(nameof(certificatePassword));
+            _certificate = null;
 
             // Usamos serviceUrl como "fuente" del ambiente solo para consultas sin parámetro ambiente.
             if (!string.IsNullOrWhiteSpace(serviceUrl))
@@ -51,6 +53,32 @@ namespace DIAN_NET
         public DianManager(string certificatePath, string certificatePassword)
             : this("", certificatePath, certificatePassword)
         {
+        }
+
+        /// <summary>Usa un certificado en memoria (p. ej. por sociedad / tenant).</summary>
+        public DianManager(X509Certificate2 certificate)
+        {
+            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+            _certificatePath = string.Empty;
+            _certificatePassword = string.Empty;
+        }
+
+        private X509Certificate2 ResolveCertificate()
+        {
+            if (_certificate != null)
+            {
+                return _certificate;
+            }
+
+            if (!File.Exists(_certificatePath))
+            {
+                throw new FileNotFoundException($"No se encontró el certificado en la ruta: {_certificatePath}");
+            }
+
+            return new X509Certificate2(
+                _certificatePath,
+                _certificatePassword,
+                X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
         }
 
         private Binding CreateBinding()
@@ -128,15 +156,7 @@ namespace DIAN_NET
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-                if (!File.Exists(_certificatePath))
-                {
-                    throw new FileNotFoundException($"No se encontró el certificado en la ruta: {_certificatePath}");
-                }
-
-                var certificate = new X509Certificate2(
-                    _certificatePath,
-                    _certificatePassword,
-                    X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+                var certificate = ResolveCertificate();
 
                 var binding = CreateBinding();
                 var endpointAddress = new EndpointAddress(new Uri(serviceUrl));
@@ -574,6 +594,39 @@ namespace DIAN_NET
             catch (Exception ex)
             {
                 throw new Exception($"Error al enviar nómina electrónica a la DIAN: {ex.Message}", ex);
+            }
+        }
+
+        public DianResponse EnviarEvento(byte[] zipData, string ambiente)
+        {
+            if (zipData == null || zipData.Length == 0)
+            {
+                throw new ArgumentException("El archivo ZIP del evento no puede ser nulo o vacío", nameof(zipData));
+            }
+
+            if (string.IsNullOrWhiteSpace(ambiente))
+            {
+                throw new ArgumentException("El ambiente no puede ser nulo o vacío", nameof(ambiente));
+            }
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            try
+            {
+                var client = GetClient(ambiente);
+                Debug.WriteLine($"=== DEBUG: Enviando evento RADIAN ambiente={ambiente} bytes={zipData.Length} ===");
+                return client.SendEventUpdateStatus(zipData);
+            }
+            catch (FaultException<DianResponse> ex)
+            {
+                var detalle = ex.Detail == null
+                    ? "sin detalle"
+                    : $"{ex.Detail.StatusCode} {ex.Detail.StatusDescription} [{string.Join("; ", ex.Detail.ErrorMessage ?? Array.Empty<string>())}]";
+                throw new Exception($"DIAN rechazó el evento RADIAN: {detalle}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error al enviar evento RADIAN a la DIAN: {ex.Message}", ex);
             }
         }
 

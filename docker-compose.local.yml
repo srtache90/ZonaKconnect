@@ -105,6 +105,8 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+      # Solo bootstrap de certificado local si falta .pfx.
+      # El mock DIAN se activa por sociedad (dian_ambiente=Mock), no globalmente.
       DianConfig__Mock__Enabled: "true"
     ports:
       - "8090:8080"

@@ -103,6 +103,68 @@ namespace DIAN_NET.Services
             return Sha384(cadena);
         }
 
+        public string CalcularCUDEEvento(
+            string eventId,
+            DateTimeOffset issueDateTime,
+            string senderNit,
+            string receiverNit,
+            string responseCode,
+            string documentReferenceId,
+            string documentTypeCode,
+            string softwarePin)
+        {
+            // Anexo RADIAN 11.1.1:
+            // NumDE + FecEmi + HorEmi + NitFE + DocAdq + ResponseCode + ID + DocumentTypeCode + PIN
+            var colombia = TimeZoneInfo.FindSystemTimeZoneById(
+                OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Bogota");
+            var local = TimeZoneInfo.ConvertTime(issueDateTime, colombia);
+            var cadena = string.Concat(
+                eventId?.Trim() ?? string.Empty,
+                local.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                local.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                "-05:00",
+                DigitsOnly(senderNit),
+                DigitsOnly(receiverNit),
+                responseCode?.Trim() ?? string.Empty,
+                documentReferenceId?.Trim() ?? string.Empty,
+                documentTypeCode?.Trim() ?? "01",
+                softwarePin?.Trim() ?? string.Empty);
+            return Sha384(cadena);
+        }
+
+        /// <summary>Compatibilidad: interpreta DateTime como hora de Colombia (sin convertir de nuevo).</summary>
+        public string CalcularCUDEEvento(
+            string eventId,
+            DateTime issueDateTime,
+            string senderNit,
+            string receiverNit,
+            string responseCode,
+            string documentReferenceId,
+            string documentTypeCode,
+            string softwarePin)
+        {
+            var offset = new DateTimeOffset(
+                DateTime.SpecifyKind(issueDateTime, DateTimeKind.Unspecified),
+                TimeSpan.FromHours(-5));
+            return CalcularCUDEEvento(
+                eventId,
+                offset,
+                senderNit,
+                receiverNit,
+                responseCode,
+                documentReferenceId,
+                documentTypeCode,
+                softwarePin);
+        }
+
+        public string CalcularSoftwareSecurityCode(string softwareId, string softwarePin, string documentId)
+        {
+            return Sha384(string.Concat(
+                softwareId?.Trim() ?? string.Empty,
+                softwarePin?.Trim() ?? string.Empty,
+                documentId?.Trim() ?? string.Empty));
+        }
+
         public string GenerarQRCode(string cufe, string nitEmisor, string numeroDocumento, decimal total, DateTime fechaEmision)
         {
             // Formato QR según DIAN: https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey={CUFE}

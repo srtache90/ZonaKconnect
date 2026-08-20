@@ -1,8 +1,7 @@
-using System;
 using System.Threading.Tasks;
 using DIAN_NET.Models;
+using DIAN_NET.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace DIAN_NET.Controllers
 {
@@ -10,49 +9,33 @@ namespace DIAN_NET.Controllers
     [Route("api/v1/events")]
     public class RadianEventsController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly IRadianEventService _radianEventService;
 
-        public RadianEventsController(IConfiguration configuration)
+        public RadianEventsController(IRadianEventService radianEventService)
         {
-            _configuration = configuration;
-        }
-
-        public class RadianEventRequest
-        {
-            public string? InvoiceId { get; set; }
-            public string? EventCode { get; set; }
-            public string? Motivo { get; set; }
-            public string? RecibidoPor { get; set; }
-            public string? DocumentoRecibidor { get; set; }
-            public string? Cufe { get; set; }
+            _radianEventService = radianEventService;
         }
 
         [HttpPost("radian")]
         [ProducesResponseType(typeof(EmitDocumentResponse), 200)]
-        public Task<ActionResult<EmitDocumentResponse>> SendRadianEvent([FromBody] RadianEventRequest request)
+        public async Task<ActionResult<EmitDocumentResponse>> SendRadianEvent([FromBody] RadianEventRequest request)
         {
-            var mockEnabled = _configuration.GetValue<bool>("DianConfig:Mock:Enabled");
-            if (string.IsNullOrWhiteSpace(request?.EventCode))
+            if (request == null)
             {
-                return Task.FromResult<ActionResult<EmitDocumentResponse>>(BadRequest(new EmitDocumentResponse
+                return BadRequest(new EmitDocumentResponse
                 {
                     Status = "Fallido",
                     Exitoso = false,
-                    Errores = new[] { "EventCode es requerido (085, 086, 087, 088)." }
-                }));
+                    Errores = new[] { "Body requerido." }
+                });
             }
 
-            // Local/mock: acepta el evento sin llamar WCF DIAN real.
-            var response = new EmitDocumentResponse
+            var response = await _radianEventService.EnviarEventoAsync(request);
+            if (!response.Exitoso)
             {
-                Status = mockEnabled ? "Evento RADIAN mock aceptado" : "Evento RADIAN registrado",
-                Exitoso = true,
-                StatusCode = "00",
-                StatusDescription = $"Evento {request.EventCode} procesado",
-                TrackID = $"RADIAN-{request.EventCode}-{Guid.NewGuid():N}".Substring(0, 32),
-                UUID = request.InvoiceId
-            };
-            return Task.FromResult<ActionResult<EmitDocumentResponse>>(Ok(response));
+                return BadRequest(response);
+            }
+            return Ok(response);
         }
     }
 }
