@@ -201,4 +201,40 @@ public class InvoiceMailDispatchService {
         }
         return "no-reply@zonak.local";
     }
+
+    /** Notificación textual al proveedor tras evento RADIAN. */
+    public String sendPlainText(String tenantId, String toEmail, String subject, String body) {
+        if (!StringUtils.hasText(toEmail)) {
+            throw new IllegalArgumentException("El correo destinatario es obligatorio");
+        }
+        SociedadMailAccount account = null;
+        if (StringUtils.hasText(tenantId)) {
+            account = sociedadMailAccountRepository.findBySociedadId(UUID.fromString(tenantId)).orElse(null);
+        }
+        JavaMailSender sender;
+        String from;
+        if (account != null && account.hasOutgoingMail()) {
+            sender = createSender(account);
+            from = firstNonBlank(account.correoEmision(), account.usuarioSmtp(), mailProperties.getFrom());
+        } else if (mailProperties.isDispatchEnabled()) {
+            sender = fallbackMailSender;
+            from = mailProperties.getFrom();
+        } else {
+            throw new IllegalStateException(
+                    "El correo saliente de la sociedad no está configurado."
+            );
+        }
+        try {
+            MimeMessage mimeMessage = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(toEmail.trim());
+            helper.setSubject(subject);
+            helper.setText(body == null ? "" : body, false);
+            sender.send(mimeMessage);
+            return "Notificación enviada a " + toEmail.trim();
+        } catch (Exception ex) {
+            throw new IllegalStateException("No fue posible notificar al proveedor: " + ex.getMessage(), ex);
+        }
+    }
 }

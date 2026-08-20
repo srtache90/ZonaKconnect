@@ -26,6 +26,8 @@ public class RecepcionEventService {
     private final RadianDianClient radianDianClient;
     private final SensitiveDataCryptoService cryptoService;
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
+    private final RadianEventRepository radianEventRepository;
+    private final RadianSupplierNotifyService radianSupplierNotifyService;
     private final Boolean auditTableExists;
 
     public RecepcionEventService(
@@ -33,13 +35,17 @@ public class RecepcionEventService {
             ObjectMapper objectMapper,
             RadianDianClient radianDianClient,
             SensitiveDataCryptoService cryptoService,
-            ReceivedInvoiceRepository receivedInvoiceRepository
+            ReceivedInvoiceRepository receivedInvoiceRepository,
+            RadianEventRepository radianEventRepository,
+            RadianSupplierNotifyService radianSupplierNotifyService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.radianDianClient = radianDianClient;
         this.cryptoService = cryptoService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
+        this.radianEventRepository = radianEventRepository;
+        this.radianSupplierNotifyService = radianSupplierNotifyService;
         this.auditTableExists = detectAuditTable();
     }
 
@@ -234,6 +240,43 @@ public class RecepcionEventService {
         insertAudit(companyId, invoiceId, action, dianResponse);
         String track = text(dianResponse, "trackID", text(dianResponse, "trackId", ""));
         String cude = text(dianResponse, "cune", text(dianResponse, "cufeCune", ""));
+
+        String dianJson;
+        try {
+            dianJson = objectMapper.writeValueAsString(dianResponse == null ? Map.of() : dianResponse);
+        } catch (Exception ex) {
+            dianJson = "{}";
+        }
+        UUID eventId = radianEventRepository.insert(
+                companyId,
+                invoiceId,
+                eventCode,
+                action,
+                successLabel,
+                current.cufe(),
+                current.invoiceNumber(),
+                current.supplierName(),
+                current.supplierNit(),
+                current.supplierEmail(),
+                "ENVIADO",
+                track,
+                cude,
+                current.ambiente(),
+                dianJson
+        );
+        radianSupplierNotifyService.notifyIfPossible(
+                companyId.toString(),
+                companyId,
+                eventId,
+                current.supplierEmail(),
+                successLabel,
+                eventCode,
+                current.invoiceNumber(),
+                current.cufe(),
+                track,
+                "ENVIADO"
+        );
+
         return successLabel + " enviado a DIAN (" + current.ambiente() + "). TrackID="
                 + (StringUtils.hasText(track) ? track : "n/d")
                 + (StringUtils.hasText(cude) ? (" CUDE=" + cude.substring(0, Math.min(16, cude.length())) + "…") : "")
@@ -300,6 +343,11 @@ public class RecepcionEventService {
                                    COALESCE(i.supplier_name, i.raw_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
                                    COALESCE(i.supplier_nit, i.raw_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
                                    COALESCE(
+                                       NULLIF(i.supplier_email, ''),
+                                       NULLIF(i.raw_payload_jsonb->'proveedor'->>'email', ''),
+                                       ''
+                                   ) AS supplier_email,
+                                   COALESCE(
                                        NULLIF(i.raw_payload_jsonb->>'receptor_nit', ''),
                                        NULLIF(i.raw_payload_jsonb->'receptor'->>'nit', ''),
                                        ''
@@ -331,6 +379,7 @@ public class RecepcionEventService {
                             rs.getString("sender_nit"),
                             rs.getString("receiver_name"),
                             rs.getString("receiver_nit"),
+                            rs.getString("supplier_email"),
                             rs.getString("receptor_nit"),
                             rs.getString("sociedad_nit"),
                             rs.getString("ambiente"),
@@ -452,6 +501,7 @@ public class RecepcionEventService {
             String senderNit,
             String receiverName,
             String receiverNit,
+            String supplierEmail,
             String receptorNit,
             String sociedadNit,
             String ambiente,
@@ -459,6 +509,13 @@ public class RecepcionEventService {
             String softwarePin,
             String invoiceIssueDate
     ) {
+        String supplierName() {
+            return receiverName;
+        }
+
+        String supplierNit() {
+            return receiverNit;
+        }
     }
 
     private record SociedadCertificate(String pfxBase64, String password) {

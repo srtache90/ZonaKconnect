@@ -13,14 +13,17 @@ public class RecepcionTacitAcceptanceService {
     private static final Logger log = LoggerFactory.getLogger(RecepcionTacitAcceptanceService.class);
 
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
+    private final RadianEventRepository radianEventRepository;
     private final JdbcTemplate jdbcTemplate;
     private final Boolean auditTableExists;
 
     public RecepcionTacitAcceptanceService(
             ReceivedInvoiceRepository receivedInvoiceRepository,
+            RadianEventRepository radianEventRepository,
             JdbcTemplate jdbcTemplate
     ) {
         this.receivedInvoiceRepository = receivedInvoiceRepository;
+        this.radianEventRepository = radianEventRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.auditTableExists = detectAuditTable();
     }
@@ -72,6 +75,27 @@ public class RecepcionTacitAcceptanceService {
                     applied++;
                     insertAudit(companyId, row.id());
                     details.add(row.invoiceNumber());
+                    try {
+                        radianEventRepository.insert(
+                                companyId,
+                                row.id(),
+                                "TAC",
+                                "ACEPTACION_TACITA",
+                                "Aceptación tácita (3 días hábiles sin 087/088)",
+                                row.cufe() == null ? "" : row.cufe(),
+                                row.invoiceNumber(),
+                                row.proveedorName(),
+                                row.proveedorNit(),
+                                null,
+                                "REGISTRADO_LOCAL",
+                                "",
+                                "",
+                                "Local",
+                                "{}"
+                        );
+                    } catch (Exception ex) {
+                        log.warn("No se registró evento tácito en radian_events: {}", ex.getMessage());
+                    }
                 }
             } catch (Exception ex) {
                 log.warn("No se aplicó aceptación tácita a {}: {}", row.id(), ex.getMessage());

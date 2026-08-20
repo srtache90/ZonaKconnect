@@ -104,6 +104,7 @@ func (s *Store) InsertReceivedInvoice(
 		"proveedor": map[string]any{
 			"razon_social": parsed.ProveedorNombre,
 			"nit":          parsed.ProveedorNIT,
+			"email":        parsed.ProveedorEmail,
 		},
 	}
 	if len(issues) > 0 {
@@ -131,10 +132,10 @@ func (s *Store) InsertReceivedInvoice(
 
 	_, err = s.DB.Exec(ctx, `
 		INSERT INTO received_invoices (
-			company_id, supplier_name, supplier_nit, invoice_number, cufe,
+			company_id, supplier_name, supplier_nit, supplier_email, invoice_number, cufe,
 			issue_date, total_amount, estado_dian, source, raw_payload_jsonb
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDIENTE', $8, $9::jsonb)
-	`, companyID, parsed.ProveedorNombre, parsed.ProveedorNIT, parsed.InvoiceNumber,
+		) VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, 'PENDIENTE', $9, $10::jsonb)
+	`, companyID, parsed.ProveedorNombre, parsed.ProveedorNIT, parsed.ProveedorEmail, parsed.InvoiceNumber,
 		cufeArg, issueDate, totalFloat, source, string(rawJSON))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "unique") {

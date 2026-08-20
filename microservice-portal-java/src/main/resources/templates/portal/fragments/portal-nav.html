@@ -62,15 +62,15 @@
                         <span class="material-symbols-outlined">inbox</span>
                         <span>Bandeja de recepción</span>
                     </a>
-                    <a th:href="@{/portal/recepcion/historico}"
+                    <a th:href="@{/portal/recepcion/reportes}"
                        th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'historico' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined">history</span>
-                        <span>Histórico recibidas</span>
+                        <span>Histórico eventos</span>
                     </a>
                     <a th:href="@{/portal/recepcion/reportes}"
                        th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined">summarize</span>
-                        <span>Reportes</span>
+                        <span>Eventos RADIAN</span>
                     </a>
                 </th:block>
 

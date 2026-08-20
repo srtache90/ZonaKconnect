@@ -88,31 +88,16 @@ public class RecepcionPortalController {
     @GetMapping("/portal/recepcion/historico")
     public String historico(
             @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String eventCode,
             @RequestParam(required = false) String estadoDian,
-            @RequestParam(required = false) String proveedor,
-            @RequestParam(required = false) String cufe,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
-            @RequestParam(required = false) String minTotal,
-            @RequestParam(required = false) String maxTotal,
             HttpSession session,
             Model model
     ) {
-        return renderList(
-                "portal/recepcion/historico",
-                "historico",
-                false,
-                sociedadId,
-                estadoDian,
-                proveedor,
-                cufe,
-                fromDate,
-                toDate,
-                minTotal,
-                maxTotal,
-                session,
-                model
-        );
+        // Histórico = misma vista unificada de eventos RADIAN enviados
+        return "redirect:/portal/recepcion/reportes"
+                + (sociedadId != null ? "?sociedadId=" + sociedadId : "");
     }
 
     @GetMapping("/portal/recepcion/{id}/detalle")

@@ -25,6 +25,7 @@ type ParsedXML struct {
 	InvoiceNumber   string
 	ProveedorNombre string
 	ProveedorNIT    string
+	ProveedorEmail  string
 	ReceptorNIT     string
 	CUFE            string
 	FechaEmision    string
@@ -122,6 +123,10 @@ func ParseInvoiceXML(xml string) (ParsedXML, error) {
 		firstTag(source, "CompanyID"),
 		"—",
 	)
+	proveedorEmail := firstNonBlank(
+		partyField(source, "AccountingSupplierParty", "ElectronicMail"),
+		"",
+	)
 	receptorNIT := partyField(source, "AccountingCustomerParty", "CompanyID")
 	cufe := firstNonBlank(taggedUUID(source), taggedUUID(xml), firstTag(source, "UUID"))
 	fecha := firstTag(source, "IssueDate")
@@ -135,6 +140,7 @@ func ParseInvoiceXML(xml string) (ParsedXML, error) {
 		InvoiceNumber:   invoiceNumber,
 		ProveedorNombre: proveedorNombre,
 		ProveedorNIT:    proveedorNIT,
+		ProveedorEmail:  proveedorEmail,
 		ReceptorNIT:     receptorNIT,
 		CUFE:            strings.TrimSpace(cufe),
 		FechaEmision:    strings.TrimSpace(fecha),
