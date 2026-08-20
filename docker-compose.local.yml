@@ -141,6 +141,14 @@ services:
       DATABASE_URL: postgres://zona_k_app:zona_k_app_local_password@postgres:5432/zona_k_facturacion?sslmode=disable
       # Core siempre apunta al motor DIAN_NET; DIAN_NET decide si usa mock local o DIAN real.
       DIAN_API_URL: http://dian-net:8080
+      # Mismo secreto que portal: descifrado de password_imap_enc / certificados.
+      JWT_SECRET: local-dev-secret-change-before-production-32-bytes-minimum
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      RECEPTION_S3_BUCKET: zona-k-reception
+      S3_BUCKET: zona-k-reception
     ports:
       - "8081:8080"
     depends_on:
