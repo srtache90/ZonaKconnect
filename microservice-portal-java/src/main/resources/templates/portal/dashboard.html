@@ -1,136 +1,1500 @@
 <!doctype html>
-<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('DIAN Connect | Panel de módulos')}"></th:block>
-</head>
-<body class="zkm-body" data-theme="light">
-<header class="zkm-topbar">
-    <a class="zkm-brand" th:href="@{/portal}">
-        <span class="zkm-brand-icon">
-            <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-        </span>
-        <span>DIAN Connect</span>
-    </a>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-    <div class="zkm-top-actions">
-        <a class="zkm-icon-btn" th:href="@{/portal/search}" aria-label="Buscar" title="Buscar">
-            <span class="material-symbols-outlined text-[20px]">search</span>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Connect | Zona K</title>
+
+    <link rel="icon"
+          type="image/png"
+          th:href="@{/imagen/zonak.png}"
+          href="/imagen/zonak.png">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+          rel="stylesheet">
+
+    <link th:href="@{/css/zonak-portal.css}" rel="stylesheet">
+</head>
+
+<body style="
+    margin:0;
+    padding:0;
+    background:#eeeae2;
+    color:#202020;
+    font-family:Arial, Helvetica, sans-serif;
+"
+data-theme="light">
+
+<header style="
+    height:68px;
+    width:100%;
+    background:#080808;
+    color:#ffffff;
+    display:flex;
+    align-items:center;
+    padding:0 24px;
+    gap:18px;
+    box-sizing:border-box;
+    border-bottom:1px solid #292929;
+">
+    <button type="button"
+            aria-label="Menú"
+            style="
+                width:34px;
+                height:34px;
+                border:0;
+                background:transparent;
+                color:#d7d7d7;
+                font-size:23px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                cursor:pointer;
+                padding:0;
+            ">
+
+        <i class="bi bi-list"></i>
+
+    </button>
+
+    <a th:href="@{/portal}"
+       style="
+           display:flex;
+           align-items:center;
+           gap:9px;
+           text-decoration:none;
+           color:#ffffff;
+           min-width:145px;
+       ">
+
+       <img th:src="@{/imagen/Zonak1.png}"
+        src="/imagen/Zonak1.png"
+        alt="Imagen"
+        class="slide-ZonaK" 
+         style="
+             width: 100px; 
+             height: 100px; 
+             object-fit: contain;
+         " />
+
+        <span style="
+            font-size:15px;
+            font-weight:700;
+            letter-spacing:.5px;
+
+        ">
+         <span  style="
+         color:#dccea9; 
+         width: 10px; 
+         height: 10px;
+         font-size: 10px;
+         padding: 2px 6px;
+         display: flex;
+         justify-content: flex-end;
+         position: relative;
+         top: 15px;" >
+         CONNECT</span>
+
+    </a> 
+
+    <nav style="
+        height:100%;
+        display:flex;
+        align-items:center;
+        gap:3px;
+    ">
+
+        <a th:href="@{/portal}"
+           style="
+               height:100%;
+               padding:0 16px;
+               display:flex;
+               align-items:center;
+               text-decoration:none;
+               color:#ffffff;
+               background:#967117;
+               font-size:13px;
+               font-weight:600;
+               box-sizing:border-box;
+           ">
+            Dashboard
         </a>
-        <button class="zkm-theme-btn" type="button" data-theme-toggle>Oscuro</button>
-        <div class="zkm-user" th:text="${username != null ? #strings.substring(username,0,1).toUpperCase() : 'ZK'}">ZK</div>
+
+        <a href="#"
+           style="
+               height:100%;
+               padding:0 16px;
+               display:flex;
+               align-items:center;
+               text-decoration:none;
+               color:#bdbdbd;
+               font-size:13px;
+               font-weight:600;
+           ">
+            Operaciones
+        </a>
+
+        <a href="#"
+           style="
+               height:100%;
+               padding:0 16px;
+               display:flex;
+               align-items:center;
+               text-decoration:none;
+               color:#bdbdbd;
+               font-size:13px;
+               font-weight:600;
+           ">
+            Reportes
+        </a>
+
+        <a th:href="@{/portal/configuraciones}"
+           style="
+               height:100%;
+               padding:0 16px;
+               display:flex;
+               align-items:center;
+               text-decoration:none;
+               color:#bdbdbd;
+               font-size:13px;
+               font-weight:600;
+           ">
+            Configuración
+        </a>
+
+    </nav>
+
+
+    <div style="flex:1;"></div>
+
+
+    <!-- BUSCADOR -->
+
+    <div style="
+        width:245px;
+        height:34px;
+        border:1px solid #383838;
+        border-radius:4px;
+        background:#171717;
+        color:#777777;
+        display:flex;
+        align-items:center;
+        padding:0 11px;
+        box-sizing:border-box;
+        font-size:12px;
+    ">
+
+        <i class="bi bi-search"
+           style="
+               color:#bd911e;
+               margin-right:9px;
+               font-size:14px;
+           ">
+        </i>
+
+        <span>
+            Buscar transacción o NIT...
+        </span>
+
     </div>
+
+
+    <!-- NOTIFICACIONES -->
+
+    <button type="button"
+            aria-label="Notificaciones"
+            style="
+                width:32px;
+                height:32px;
+                border:0;
+                background:transparent;
+                color:#bdbdbd;
+                font-size:17px;
+                cursor:pointer;
+            ">
+
+        <i class="bi bi-bell"></i>
+
+    </button>
+
+
+    <!-- USUARIO -->
+
+    <div style="
+        display:flex;
+        align-items:center;
+        gap:9px;
+        margin-left:2px;
+    ">
+
+        <div style="
+            text-align:right;
+            line-height:1.25;
+        ">
+
+            <strong style="
+                display:block;
+                color:#ffffff;
+                font-size:11px;
+                font-weight:600;
+            "
+            th:text="${username != null ? username : 'Administrador'}">
+                Administrador
+            </strong>
+
+            <small style="
+                display:block;
+                color:#c99b25;
+                font-size:9px;
+            "
+            th:text="${tenantId != null ? 'NIT: ' + tenantId : 'Zona K'}">
+                Zona K
+            </small>
+
+        </div>
+
+
+        <div style="
+            width:32px;
+            height:32px;
+            border-radius:50%;
+            background:#9a7418;
+            color:#ffffff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:11px;
+            font-weight:bold;
+        ">
+            ZK
+        </div>
+
+    </div>
+
 </header>
 
-<main class="zkm-stage">
-    <section class="zkm-module-panel" aria-labelledby="modules-title">
-        <p class="zkm-kicker">Selecciona un módulo</p>
-        <h1 id="modules-title">Operación electrónica corporativa</h1>
-        <p class="zkm-copy">
-            Accede a los flujos principales de emisión, recepción y cumplimiento fiscal de Zona K.
-        </p>
 
-        <div class="zkm-kpi-grid" aria-label="Indicadores del día">
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Emitidas hoy</span>
-                <strong class="zkm-kpi-value" th:text="${kpiEmittedToday}">0</strong>
+<!-- =========================================================
+     CONTENIDO PRINCIPAL
+========================================================= -->
+
+<main class="zk-dashboard-main" style="
+    width:100%;
+    min-height:calc(100vh - 68px);
+    padding:15px;
+    box-sizing:border-box;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) 310px;
+    gap:15px;
+">
+
+
+    <!-- =====================================================
+         COLUMNA PRINCIPAL
+    ====================================================== -->
+
+    <section style="
+        min-width:0;
+    ">
+
+
+        <!-- ENCABEZADO -->
+
+        <div style="
+            background:#ffffff;
+            border:1px solid #d6d0c5;
+            border-radius:4px;
+            min-height:96px;
+            padding:20px;
+            box-sizing:border-box;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:20px;
+        ">
+
+            <div>
+
+                <h1 style="
+                    margin:0 0 7px 0;
+                    font-family:Arial, Helvetica, sans-serif;
+                    font-size:24px;
+                    line-height:1.2;
+                    font-weight:700;
+                    color:#171d24;
+                ">
+                    Operación Electrónica Corporativa
+                </h1>
+
+                <p style="
+                    margin:0;
+                    font-size:13px;
+                    color:#555555;
+                ">
+                    Gestión de flujos de emisión, recepción y cumplimiento fiscal.
+                </p>
+
             </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Emitidas mes</span>
-                <strong class="zkm-kpi-value" th:text="${kpiEmittedMonth}">0</strong>
+
+
+            <!-- BOTONES -->
+
+            <div class="zk-module-grid" style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+                flex-shrink:0;
+            ">
+
+                <button type="button"
+                        style="
+                            height:36px;
+                            padding:0 14px;
+                            background:#ffffff;
+                            border:1px solid #d2ccc1;
+                            border-radius:3px;
+                            color:#333333;
+                            font-size:12px;
+                            display:flex;
+                            align-items:center;
+                            gap:7px;
+                            cursor:pointer;
+                        ">
+
+                    <i class="bi bi-download"></i>
+
+                    Exportar
+
+                </button>
+
+
+                <a th:href="@{/portal/facturacion/manual}"
+                   style="
+                       height:36px;
+                       padding:0 14px;
+                       background:#966f0e;
+                       border:1px solid #966f0e;
+                       border-radius:3px;
+                       color:#ffffff;
+                       font-size:12px;
+                       font-weight:600;
+                       text-decoration:none;
+                       display:flex;
+                       align-items:center;
+                       gap:7px;
+                       box-sizing:border-box;
+                   ">
+
+                    <i class="bi bi-plus-lg"></i>
+
+                    Nueva Operación
+
+                </a>
+
             </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Aceptadas DIAN</span>
-                <strong class="zkm-kpi-value" th:text="${kpiAccepted}">0</strong>
-            </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Rechazadas</span>
-                <strong class="zkm-kpi-value" th:text="${kpiRejected}">0</strong>
-            </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Recepción pendiente</span>
-                <strong class="zkm-kpi-value" th:text="${kpiPendingReception}">0</strong>
-            </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Documento soporte</span>
-                <strong class="zkm-kpi-value" th:text="${kpiSupport}">0</strong>
-            </div>
-            <div class="zkm-kpi-card">
-                <span class="zkm-kpi-label">Nómina</span>
-                <strong class="zkm-kpi-value" th:text="${kpiPayroll}">0</strong>
-            </div>
+
         </div>
 
-        <div class="zkm-module-grid">
-            <a class="zkm-module-card" th:href="@{/portal/invoices}">
-                <span class="zkm-module-icon">01</span>
-                <div>
-                    <strong>Emisión de Facturación</strong>
-                    <small>Facturas electrónicas, documentos DIAN y representación gráfica.</small>
-                </div>
-            </a>
 
-            <a class="zkm-module-card" th:href="@{/portal/emision/reportes}">
-                <span class="zkm-module-icon">R1</span>
-                <div>
-                    <strong>Reportes de Emisión</strong>
-                    <small>Ventas detalladas, exportación CSV y medios magnéticos DIAN.</small>
-                </div>
-            </a>
+        <!-- =================================================
+             MÓDULOS
+        ================================================== -->
 
-            <a class="zkm-module-card" th:href="@{/portal/recepcion}">
-                <span class="zkm-module-icon">02</span>
-                <div>
-                    <strong>Recepción de Facturas</strong>
-                    <small>Gestión de proveedores, XML recibidos y trazabilidad documental.</small>
-                </div>
-            </a>
+        <section style="
+            margin-top:15px;
+            background:#ffffff;
+            border:1px solid #d6d0c5;
+            border-radius:4px;
+            padding:20px;
+            box-sizing:border-box;
+        ">
 
-            <a class="zkm-module-card" th:href="@{/portal/documento-soporte}">
-                <span class="zkm-module-icon">03</span>
-                <div>
-                    <strong>Emisión de Documento Soporte</strong>
-                    <small>Documentos soporte para adquisiciones a no obligados a facturar.</small>
-                </div>
-            </a>
+            <div style="
+                display:flex;
+                align-items:center;
+                border-bottom:1px solid #ddd7cd;
+                padding-bottom:12px;
+                margin-bottom:16px;
+            ">
 
-            <a class="zkm-module-card" th:href="@{/portal/nomina-electronica}">
-                <span class="zkm-module-icon">04</span>
-                <div>
-                    <strong>Nómina Electrónica</strong>
-                    <small>Generación, consulta y transmisión de nómina electrónica.</small>
-                </div>
-            </a>
+                <h2 style="
+                    margin:0;
+                    font-size:12px;
+                    font-weight:800;
+                    letter-spacing:1.5px;
+                    color:#1b1b1b;
+                ">
+                    MÓDULOS DE OPERACIÓN
+                </h2>
 
-            <a class="zkm-module-card" th:href="@{/portal/configuraciones}">
-                <span class="zkm-module-icon">05</span>
-                <div>
-                    <strong>Configuración</strong>
-                    <small>Sociedades, puntos de emisión, certificados digitales y parámetros operativos.</small>
-                </div>
-            </a>
-        </div>
+            </div>
+
+
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(3, minmax(0, 1fr));
+                gap:14px;
+            ">
+
+
+                <!-- EMISIÓN -->
+
+                <a class="zk-module-card" th:href="@{/portal/invoices}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                01
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Emisión de Facturación
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#effbf3;
+                            border:1px solid #bde4ca;
+                            color:#168046;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                            white-space:nowrap;
+                        ">
+                            ACTIVO
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Facturas electrónicas, documentos DIAN y representación gráfica.
+                    </p>
+
+
+                    <!-- DATO REAL -->
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                        gap:10px;
+                    ">
+
+                        <span th:if="${actividadReciente != null and !#lists.isEmpty(actividadReciente)}"
+                              th:text="${'Último doc: ' + actividadReciente[0].documentNumber()}">
+                            Último doc: -
+                        </span>
+
+                        <span th:if="${actividadReciente == null or #lists.isEmpty(actividadReciente)}">
+                            Sin documentos
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                            white-space:nowrap;
+                        ">
+                            Acceder →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <!-- REPORTES -->
+
+                <a class="zk-module-card" th:href="@{/portal/emision/reportes}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                R1
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Reportes de Emisión
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#effbf3;
+                            border:1px solid #bde4ca;
+                            color:#168046;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                        ">
+                            ACTIVO
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Ventas detalladas, exportación CSV y medios magnéticos DIAN.
+                    </p>
+
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                    ">
+
+                        <span>
+                            Consulta de información
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                        ">
+                            Acceder →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <!-- RECEPCIÓN -->
+
+                <a class="zk-module-card" th:href="@{/portal/recepcion}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                02
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Recepción de Facturas
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#fff8e5;
+                            border:1px solid #e6d69e;
+                            color:#8c6a15;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                            white-space:nowrap;
+                        ">
+                            PENDIENTES
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Gestión de proveedores, XML recibidos y trazabilidad documental.
+                    </p>
+
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                    ">
+
+                        <span>
+                            Consulta de recepción
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                        ">
+                            Acceder →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <!-- DOCUMENTO SOPORTE -->
+
+                <a class="zk-module-card" th:href="@{/portal/documento-soporte}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                03
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Documento Soporte
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#effbf3;
+                            border:1px solid #bde4ca;
+                            color:#168046;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                        ">
+                            ACTIVO
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Documentos soporte para adquisiciones a no obligados a facturar.
+                    </p>
+
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                    ">
+
+                        <span>
+                            Resolución vigente
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                        ">
+                            Acceder →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <!-- NÓMINA -->
+
+                <a class="zk-module-card" th:href="@{/portal/nomina-electronica}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                04
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Nómina Electrónica
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#f3f3f3;
+                            border:1px solid #cccccc;
+                            color:#777777;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                        ">
+                            INACTIVO
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Generación, consulta y transmisión de nómina electrónica.
+                    </p>
+
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                    ">
+
+                        <span>
+                            Requiere configuración
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                        ">
+                            Configurar →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <!-- CONFIGURACIÓN -->
+
+                <a class="zk-module-card" th:href="@{/portal/configuraciones}"
+                   style="
+                       min-height:150px;
+                       background:#ffffff;
+                       border:1px solid #d8d1c5;
+                       border-radius:4px;
+                       padding:15px;
+                       box-sizing:border-box;
+                       text-decoration:none;
+                       color:#171717;
+                       display:flex;
+                       flex-direction:column;
+                   ">
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                        ">
+
+                            <span style="
+                                width:39px;
+                                height:39px;
+                                background:#f4f1eb;
+                                border:1px solid #d8d0c2;
+                                border-radius:4px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#806521;
+                                font-size:12px;
+                                font-weight:bold;
+                                flex-shrink:0;
+                            ">
+                                05
+                            </span>
+
+                            <strong style="
+                                font-family:Arial, Helvetica, sans-serif;
+                                font-size:14px;
+                                line-height:1.25;
+                                color:#181818;
+                            ">
+                                Configuración
+                            </strong>
+
+                        </div>
+
+                        <span style="
+                            background:#faf7ed;
+                            border:1px solid #d9cba5;
+                            color:#806522;
+                            border-radius:2px;
+                            padding:4px 6px;
+                            font-size:8px;
+                            font-weight:700;
+                        ">
+                            ADMIN
+                        </span>
+
+                    </div>
+
+
+                    <p style="
+                        margin:14px 0 0 0;
+                        font-size:12px;
+                        line-height:1.45;
+                        color:#444444;
+                    ">
+                        Sociedades, puntos de emisión, certificados digitales y parámetros.
+                    </p>
+
+
+                    <div style="
+                        margin-top:auto;
+                        padding-top:10px;
+                        border-top:1px solid #e7e2da;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        font-size:10px;
+                        color:#555555;
+                    ">
+
+                        <span>
+                            Administración
+                        </span>
+
+                        <span style="
+                            color:#956f0e;
+                            font-weight:700;
+                        ">
+                            Acceder →
+                        </span>
+
+                    </div>
+
+                </a>
+
+            </div>
+
+        </section>
+
     </section>
+
+    <aside style="
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:15px;
+    ">
+
+
+
+
+        <section style="
+            background:#ffffff;
+            border:1px solid #d6d0c5;
+            border-radius:4px;
+            padding:19px;
+            box-sizing:border-box;
+        ">
+
+            <div style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:15px;
+            ">
+
+                <h3 style="
+                    margin:0;
+                    font-size:11px;
+                    letter-spacing:1.4px;
+                    font-weight:800;
+                    color:#1b1b1b;
+                ">
+                    ESTADO DEL SISTEMA
+                </h3>
+
+                <span style="
+                    width:9px;
+                    height:9px;
+                    border-radius:50%;
+                    background:#26ad58;
+                    border:1px solid #15843f;
+                "></span>
+
+            </div>
+
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:9px 0;
+                font-size:11px;
+            ">
+
+                <span style="color:#333333;">
+                    Servicio de Recepción
+                </span>
+
+                    <strong th:text="${emissionServiceStatus}"
+                            style="
+                    color:#148144;
+                    font-size:10px;
+                ">
+                    Operativo
+                </strong>
+
+            </div>
+
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:9px 0;
+                font-size:11px;
+            ">
+
+                <span style="color:#333333;">
+                    Servicio de Emisión
+                </span>
+
+                    <strong th:text="${receptionServiceStatus}"
+                            style="
+                    color:#148144;
+                    font-size:10px;
+                ">
+                    Operativo
+                </strong>
+
+            </div>
+
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:9px 0;
+                font-size:11px;
+                gap:10px;
+            ">
+
+                <span style="color:#333333;">
+                    Validación Previa
+                </span>
+
+                    <strong th:text="${validationStatus}"
+                            style="
+                    color:#8d6a14;
+                    font-size:10px;
+                    text-align:right;
+                ">
+                    Sin actividad
+                </strong>
+
+            </div>
+
+
+            <div style="
+                height:1px;
+                background:#ddd8d0;
+                margin:9px 0 15px 0;
+            "></div>
+
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:7px;
+                font-size:10px;
+                color:#444444;
+            ">
+
+                <span>
+                    Cuota mensual (Docs)
+                </span>
+
+                <strong>
+                    No disponible
+                </strong>
+
+            </div>
+
+
+            <div style="
+                width:100%;
+                height:7px;
+                background:#e8e6e2;
+                border-radius:10px;
+                overflow:hidden;
+            ">
+
+                <div style="
+                    width:0%;
+                    height:100%;
+                    background:#8f6a0e;
+                    border-radius:10px;
+                "></div>
+
+            </div>
+
+        </section>
+
+        <section style="
+            background:#ffffff;
+            border:1px solid #d6d0c5;
+            border-radius:4px;
+            padding:19px;
+            box-sizing:border-box;
+        ">
+
+
+            <div style="
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                margin-bottom:10px;
+            ">
+
+                <h3 style="
+                    margin:0;
+                    font-size:11px;
+                    letter-spacing:1.4px;
+                    font-weight:800;
+                    color:#1b1b1b;
+                ">
+                    ACTIVIDAD RECIENTE
+                </h3>
+
+
+                <span style="
+                    font-size:9px;
+                    color:#888888;
+                "
+                th:text="${actividadReciente != null ? actividadReciente.size() + ' registros' : '0 registros'}">
+                    0 registros
+                </span>
+
+            </div>
+
+
+
+            <div th:if="${actividadReciente == null or #lists.isEmpty(actividadReciente)}"
+                 style="
+                     padding:22px 5px;
+                     text-align:center;
+                     color:#888888;
+                     font-size:11px;
+                 ">
+
+                <i class="bi bi-inbox"
+                   style="
+                       display:block;
+                       font-size:24px;
+                       margin-bottom:8px;
+                       color:#b0a99d;
+                   ">
+                </i>
+
+                No hay actividad reciente.
+
+            </div>
+
+            <div th:each="actividad : ${actividadReciente}"
+                 style="
+                     display:flex;
+                     gap:10px;
+                     padding:12px 0;
+                     border-bottom:1px solid #eeeae3;
+                 ">
+
+
+
+                <div style="
+                    width:29px;
+                    height:29px;
+                    flex-shrink:0;
+                    border-radius:50%;
+                    border:1px solid #d7d0c4;
+                    background:#f7f5f0;
+                    color:#806521;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:11px;
+                ">
+
+                    <i class="bi bi-receipt"></i>
+
+                </div>
+
+
+
+                <div style="
+                    min-width:0;
+                    flex:1;
+                ">
+
+
+
+                    <strong style="
+                        display:block;
+                        font-size:11px;
+                        color:#1b1b1b;
+                        margin-bottom:3px;
+                    "
+                    th:text="${'Factura ' + actividad.documentNumber()}">
+
+                        Factura -
+
+                    </strong>
+
+
+
+                    <span style="
+                        display:block;
+                        font-size:10px;
+                        line-height:1.4;
+                        color:#555555;
+                    ">
+
+                        Estado DIAN:
+
+                        <strong
+                            th:text="${actividad.estadoDian != null and !#strings.isEmpty(actividad.estadoDian)
+                                ? actividad.estadoDian
+                                : 'SIN ESTADO'}"
+                            th:style="${actividad.estadoDian != null and
+                                       #strings.equalsIgnoreCase(actividad.estadoDian, 'ACEPTADA')
+                                       ? 'font-weight:700;color:#148144;'
+                                       : 'font-weight:700;color:#8d6a14;'}">
+
+
+                        </strong>
+
+                    </span>
+
+
+
+                    <small style="
+                        display:block;
+                        margin-top:4px;
+                        font-size:9px;
+                        color:#888888;
+                    "
+                    th:text="${actividad.updatedAt != null
+                        ? #temporals.format(
+                            actividad.updatedAt,
+                            'dd/MM/yyyy HH:mm'
+                          )
+                        : (actividad.createdAt != null
+                            ? #temporals.format(
+                                actividad.createdAt,
+                                'dd/MM/yyyy HH:mm'
+                              )
+                            : 'Fecha no disponible')}">
+
+                        Fecha no disponible
+
+                    </small>
+
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </aside>
+
 </main>
 
-<a class="zkm-floating-action" th:href="@{/portal/facturacion/manual}" aria-label="Nueva factura">+</a>
+<style>
 
-<script>
-    const storedTheme = localStorage.getItem('zk-theme') || 'light';
-    document.body.dataset.theme = storedTheme;
-    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-    document.documentElement.classList.toggle('light', storedTheme !== 'dark');
-    const themeBtn = document.querySelector('[data-theme-toggle]');
-    if (themeBtn) {
-        themeBtn.textContent = storedTheme === 'dark' ? 'Claro' : 'Oscuro';
-        themeBtn.addEventListener('click', () => {
-            const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-            document.body.dataset.theme = nextTheme;
-            document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-            document.documentElement.classList.toggle('light', nextTheme !== 'dark');
-            localStorage.setItem('zk-theme', nextTheme);
-            themeBtn.textContent = nextTheme === 'dark' ? 'Claro' : 'Oscuro';
-        });
+@media (max-width: 1100px) {
+
+    header nav {
+        display:none !important;
     }
-</script>
+
+    main {
+        grid-template-columns:1fr !important;
+    }
+
+}
+
+
+@media (max-width: 750px) {
+
+    header {
+        padding:0 12px !important;
+    }
+
+    header > div:nth-last-child(3) {
+        display:none !important;
+    }
+
+    main {
+        padding:10px !important;
+    }
+
+    main section > div:first-child {
+        flex-direction:column !important;
+        align-items:flex-start !important;
+    }
+
+    main section > div:first-child > div:last-child {
+        width:100%;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    main section section > div:nth-child(2) {
+        grid-template-columns:1fr !important;
+    }
+
+}
+
+</style>
+
+
 </body>
 </html>

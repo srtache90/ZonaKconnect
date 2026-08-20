@@ -7,6 +7,7 @@ import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -46,6 +47,18 @@ public class PortalDashboardController {
                 ? session.getAttribute("emissionPointId").toString()
                 : "";
         Map<String, Object> kpis = resolveDashboardKpis(tenantId, emissionPointId);
+        List<PortalAnalyticsRepository.RecentActivity> actividadReciente;
+        try {
+            actividadReciente = portalAnalyticsRepository.recentActivities(UUID.fromString(tenantId));
+        } catch (Exception ignored) {
+            actividadReciente = List.of();
+        }
+        model.addAttribute("actividadReciente", actividadReciente);
+        model.addAttribute("emissionServiceStatus", kpis.isEmpty() ? "Sin datos" : "Operativo");
+        model.addAttribute("receptionServiceStatus", actividadReciente.isEmpty() ? "Sin actividad" : "Operativo");
+        long accepted = asLong(kpis.get("accepted_dian"));
+        long rejected = asLong(kpis.get("rejected_dian"));
+        model.addAttribute("validationStatus", accepted + rejected > 0 ? "Con resultados" : "Sin actividad");
         model.addAttribute("kpiEmittedToday", asLong(kpis.get("emitted_today")));
         model.addAttribute("kpiEmittedMonth", asLong(kpis.get("emitted_month")));
         model.addAttribute("kpiAccepted", asLong(kpis.get("accepted_dian")));

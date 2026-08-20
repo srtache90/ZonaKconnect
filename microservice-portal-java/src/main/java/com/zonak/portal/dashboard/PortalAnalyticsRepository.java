@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -47,6 +48,25 @@ public class PortalAnalyticsRepository {
                 tenantId
         );
     }
+
+        public List<RecentActivity> recentActivities(UUID tenantId) {
+        return jdbcTemplate.query(
+            """
+                SELECT prefijo, numero, estado_dian, created_at, updated_at
+                FROM invoices
+                WHERE company_id = ?
+                ORDER BY COALESCE(updated_at, created_at) DESC
+                LIMIT 8
+                """,
+            (rs, rowNum) -> new RecentActivity(
+                rs.getString("prefijo") + "-" + rs.getLong("numero"),
+                rs.getString("estado_dian"),
+                rs.getObject("created_at", OffsetDateTime.class),
+                rs.getObject("updated_at", OffsetDateTime.class)
+            ),
+            tenantId
+        );
+        }
 
     public List<Map<String, Object>> searchDocuments(UUID tenantId, String q) {
         if (!StringUtils.hasText(q) || q.trim().length() < 2) {
@@ -114,5 +134,13 @@ public class PortalAnalyticsRepository {
         kpis.put("support_documents", 0L);
         kpis.put("payroll_documents", 0L);
         return kpis;
+    }
+
+    public record RecentActivity(
+            String documentNumber,
+            String estadoDian,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt
+    ) {
     }
 }

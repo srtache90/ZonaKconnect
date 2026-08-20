@@ -87,21 +87,3 @@ ON CONFLICT (id) DO UPDATE SET
     is_active = EXCLUDED.is_active,
     updated_at = now();
 
-DELETE FROM sucursal_config
-WHERE company_id = '00000000-0000-0000-0000-000000000001'
-  AND sucursal_code = 'PV-LOCAL';
-
-INSERT INTO sucursal_config (
-    company_id,
-    sucursal_code,
-    formato_plantilla,
-    logo_url
-)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'DIAN-MOCK',
-    'CARTA',
-    NULL
-)
-ON CONFLICT (company_id, sucursal_code) DO UPDATE SET
-    formato_plantilla = EXCLUDED.formato_plantilla;

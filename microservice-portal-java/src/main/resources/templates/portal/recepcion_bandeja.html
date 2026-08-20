@@ -56,6 +56,10 @@
                     <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
                     <button class="btn btn-outline-dark rounded-pill px-4" type="submit">Sincronizar correo</button>
                 </form>
+                <a class="btn btn-outline-primary rounded-pill px-4"
+                   th:href="@{/portal/recepcion/reportes(sociedadId=${selectedSociedadId})}">
+                    Ver reporte de recepción
+                </a>
                 <form class="d-flex gap-2 align-items-center"
                       enctype="multipart/form-data"
                       method="post"

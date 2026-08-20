@@ -33,13 +33,13 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String token = jwtCookieService.readToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            authenticateFromToken(request, token);
+            authenticateFromToken(request, response, token);
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private void authenticateFromToken(HttpServletRequest request, String token) {
+    private void authenticateFromToken(HttpServletRequest request, HttpServletResponse response, String token) {
         try {
             Map<String, Object> claims = jwtCookieService.verifyToken(token);
             String username = claims.get("sub").toString();
@@ -73,6 +73,7 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (IllegalArgumentException ignored) {
             SecurityContextHolder.clearContext();
+            jwtCookieService.clearAuthCookie(response);
         }
     }
 }

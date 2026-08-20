@@ -141,6 +141,142 @@ button.btn {
     font-family: var(--dc-font);
     font-weight: 500;
     border-radius: var(--dc-radius-sm) !important;
+
+.zk-invoices-page {
+    background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(249,247,243,.18));
+}
+
+.zk-invoices-header {
+    background: #080808 !important;
+    border-bottom-color: #292929 !important;
+}
+
+.zk-invoices-brand {
+    color: #ffffff !important;
+    letter-spacing: .01em;
+}
+
+.zk-invoices-brand span {
+    color: #dccea9 !important;
+    font-size: .72em;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.zk-invoices-avatar {
+    background: #967117 !important;
+    color: #ffffff !important;
+}
+
+.zk-invoices-header-icon {
+    background: #967117 !important;
+    color: #ffffff !important;
+}
+
+.zk-invoices-page-title {
+    color: #1b1b1b !important;
+}
+
+.zk-invoices-primary-action {
+    background: #967117 !important;
+    color: #ffffff !important;
+    border: 1px solid #967117;
+}
+
+.zk-invoices-page .bg-primary {
+    background-color: #967117 !important;
+}
+
+.zk-invoices-page [class~="bg-primary"] {
+    background-color: #967117 !important;
+}
+
+.zk-invoices-page .border-primary {
+    border-color: #967117 !important;
+}
+
+.zk-invoices-page .text-primary {
+    color: #1b1b1b !important;
+}
+
+.zk-invoices-page [class~="text-primary"],
+.zk-invoices-page [class~="text-headline-lg"],
+.zk-invoices-page [class~="text-headline-md"] {
+    color: #1b1b1b !important;
+}
+
+.zk-invoices-page [class~="border-primary"] {
+    border-color: #967117 !important;
+}
+
+.zk-invoices-page [class~="text-on-primary"] {
+    color: #ffffff !important;
+}
+
+.zk-invoices-page .text-headline-lg,
+.zk-invoices-page .text-headline-md,
+.zk-invoices-page .text-on-surface-variant,
+.zk-invoices-page .text-outline {
+    color: #444748 !important;
+}
+
+.zk-invoices-page .text-headline-lg,
+.zk-invoices-page .text-headline-md {
+    color: #1b1b1b !important;
+}
+
+.zk-invoices-page .zk-invoices-panel .focus\:border-secondary:focus,
+.zk-invoices-page .zk-invoices-panel select:focus,
+.zk-invoices-page .zk-invoices-panel input:focus {
+    border-color: #967117 !important;
+    box-shadow: 0 0 0 3px rgba(150, 113, 23, .14) !important;
+}
+
+.zk-invoices-page .bg-secondary-fixed {
+    background: #f4f1eb !important;
+    color: #806521 !important;
+}
+
+.zk-invoices-panel,
+.zk-invoices-table {
+    box-shadow: 0 10px 28px rgba(46, 38, 24, .055) !important;
+}
+
+.zk-invoices-panel {
+    position: relative;
+}
+
+.zk-invoices-panel::before {
+    position: absolute;
+    top: 0;
+    left: 1.5rem;
+    width: 3.5rem;
+    height: 3px;
+    content: "";
+    background: #967117;
+    border-radius: 0 0 4px 4px;
+}
+
+.zk-invoice-row {
+    position: relative;
+    transition: background-color .18s ease, box-shadow .18s ease;
+}
+
+.zk-invoice-row:hover {
+    z-index: 1;
+    box-shadow: inset 3px 0 0 #967117, 0 4px 16px rgba(46, 38, 24, .06);
+}
+
+@media (max-width: 700px) {
+    .zk-invoices-panel,
+    .zk-invoices-table {
+        border-radius: 14px !important;
+    }
+
+    .zk-invoice-row {
+        padding: 1.1rem !important;
+    }
+}
     letter-spacing: 0.01em;
 }
 

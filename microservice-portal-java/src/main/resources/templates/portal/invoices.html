@@ -6,20 +6,93 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e2de; border-radius: 10px; }
+
+        .zk-invoices-header {
+            background: #080808 !important;
+            border-bottom-color: #292929 !important;
+        }
+
+        .zk-invoices-menu,
+        .zk-invoices-menu .material-symbols-outlined {
+            color: #ffffff !important;
+        }
+
+        .zk-invoices-header-icon,
+        .zk-invoices-avatar,
+        .zk-invoices-page .bg-primary {
+            background: #967117 !important;
+            border-color: #967117 !important;
+        }
+
+        .zk-invoices-brand {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0;
+            min-width: 142px;
+            color: #ffffff !important;
+            text-decoration: none;
+        }
+
+        .zk-invoices-logo {
+            display: block;
+            width: 112px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .zk-invoices-brand span {
+            color: #dccea9 !important;
+            font-family: "TT Commons", Arial, sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .zk-invoices-page,
+        .zk-invoices-page-title,
+        .zk-invoices-page [class~="text-primary"],
+        .zk-invoices-page [class~="text-headline-lg"],
+        .zk-invoices-page [class~="text-headline-md"] {
+            color: #1b1b1b !important;
+        }
+
+        .zk-invoices-page {
+            background: linear-gradient(135deg, #fcfaf6 0%, #f0ece3 100%) !important;
+        }
+
+        .zk-invoices-page .text-on-primary {
+            color: #ffffff !important;
+        }
+
+        .zk-invoices-page .border-primary {
+            border-color: #967117 !important;
+        }
+
+        .zk-invoices-page .zk-invoices-panel,
+        .zk-invoices-page .zk-invoices-table {
+            border-color: #d6d0c5 !important;
+            box-shadow: 0 14px 34px rgba(54, 43, 20, .08) !important;
+        }
     </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar('emision', 'emision')}"></div>
 
-<header class="fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
+<header class="zk-invoices-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
     <div class="flex items-center gap-3">
-        <button class="p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
-            <span class="material-symbols-outlined text-on-surface-variant">menu</span>
+        <button class="zk-invoices-menu p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
+            <span class="material-symbols-outlined">menu</span>
         </button>
-        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span class="material-symbols-outlined text-on-primary text-[20px]">account_balance_wallet</span>
-        </div>
-        <h1 class="font-headline-md text-headline-md font-semibold text-primary">DIAN Connect</h1>
+        <a class="zk-invoices-brand" th:href="@{/portal}" aria-label="Zona K Connect">
+            <img th:src="@{/imagen/Zonak1.png}"
+                 src="/imagen/Zonak1.png"
+                 alt="Zona K"
+                 class="zk-invoices-logo">
+            <span>CONNECT</span>
+        </a>
     </div>
 
     <div class="flex items-center gap-4">
@@ -29,19 +102,19 @@
         <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors" id="theme-toggle" type="button">
             <span class="material-symbols-outlined text-on-surface-variant">contrast</span>
         </button>
-        <div class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-semibold">JD</div>
+        <div class="zk-invoices-avatar w-10 h-10 rounded-xl flex items-center justify-center font-semibold">JD</div>
     </div>
 </header>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
+<main class="zk-invoices-page pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
-            <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Emisión de Facturas</h2>
+            <h2 class="zk-invoices-page-title font-headline-lg text-headline-lg mb-2">Emisión de Facturas</h2>
             <p class="font-body-md text-on-surface-variant max-w-lg">
                 Gestiona y monitorea tus comprobantes electrónicos en tiempo real con validación directa ante la DIAN.
             </p>
         </div>
-        <a class="group relative flex items-center justify-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-xl font-label-md transition-all hover:shadow-xl active:scale-95 overflow-hidden text-decoration-none"
+        <a class="zk-invoices-primary-action group relative flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-label-md transition-all hover:shadow-xl active:scale-95 overflow-hidden text-decoration-none"
            th:href="@{/portal/facturacion/manual}">
             <span class="material-symbols-outlined text-[20px]">add</span>
             <span>Nueva Factura</span>
@@ -58,7 +131,7 @@
          th:classappend="' bg-error-container border-error/20 text-on-error-container'"
          th:text="${error}">Operación con error</div>
 
-    <section class="mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
+    <section class="zk-invoices-panel mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
         <div class="flex flex-col gap-2 mb-5">
             <h3 class="font-headline-md text-headline-md font-semibold text-primary">Contexto de emisión</h3>
             <p class="font-body-md text-on-surface-variant">
@@ -114,7 +187,7 @@
         </p>
     </section>
 
-    <section class="mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
+    <section class="zk-invoices-panel mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
         <form class="grid grid-cols-1 md:grid-cols-3 gap-6" method="get" th:action="@{/portal/invoices}">
             <div class="flex flex-col gap-2">
                 <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Filtrar por Estado</label>
@@ -153,7 +226,7 @@
         </form>
     </section>
 
-    <section class="bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden border border-surface-container-highest">
+    <section class="zk-invoices-table bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden border border-surface-container-highest">
         <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low border-b border-surface-container-highest font-label-sm text-on-surface-variant">
             <div class="col-span-2">No. Factura</div>
             <div class="col-span-3">Documento</div>
@@ -164,7 +237,7 @@
         </div>
 
         <div class="divide-y divide-surface-container-highest">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group"
+            <div class="zk-invoice-row grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group"
                  th:each="invoice : ${invoices}"
                  th:with="dianValidated=${T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)},
                           canReemitDian=${invoice.tipo == 'EMITIDA' and !T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)}">
