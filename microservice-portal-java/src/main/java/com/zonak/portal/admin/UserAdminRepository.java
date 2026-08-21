@@ -45,13 +45,19 @@ public class UserAdminRepository {
                         GROUP BY u.id, u.username, u.rol
                         ORDER BY u.username ASC
                         """,
-                (rs, rowNum) -> new AdminUser(
-                        rs.getObject("id", UUID.class),
-                        rs.getString("username"),
-                        rs.getString("rol"),
-                        parseUuidList(rs.getString("sociedad_ids")),
-                        rs.getString("sociedades_label")
-                )
+                (rs, rowNum) -> {
+                    UUID id = rs.getObject("id", UUID.class);
+                    List<UserPointScope> scopes = findPointScopes(id);
+                    return new AdminUser(
+                            id,
+                            rs.getString("username"),
+                            rs.getString("rol"),
+                            parseUuidList(rs.getString("sociedad_ids")),
+                            rs.getString("sociedades_label"),
+                            scopes,
+                            buildPuntosLabel(scopes)
+                    );
+                }
         );
     }
 
@@ -70,13 +76,19 @@ public class UserAdminRepository {
                         FROM usuarios u
                         WHERE u.id = ?
                         """,
-                (rs, rowNum) -> new AdminUser(
-                        rs.getObject("id", UUID.class),
-                        rs.getString("username"),
-                        rs.getString("rol"),
-                        parseUuidList(rs.getString("sociedad_ids")),
-                        ""
-                ),
+                (rs, rowNum) -> {
+                    UUID uid = rs.getObject("id", UUID.class);
+                    List<UserPointScope> scopes = findPointScopes(uid);
+                    return new AdminUser(
+                            uid,
+                            rs.getString("username"),
+                            rs.getString("rol"),
+                            parseUuidList(rs.getString("sociedad_ids")),
+                            "",
+                            scopes,
+                            buildPuntosLabel(scopes)
+                    );
+                },
                 id
         );
         return users.stream().findFirst();
@@ -105,6 +117,18 @@ public class UserAdminRepository {
             String passwordHashOrNull,
             String rol,
             List<UUID> sociedadIds
+    ) {
+        saveUser(id, username, passwordHashOrNull, rol, sociedadIds, List.of());
+    }
+
+    @Transactional
+    public void saveUser(
+            UUID id,
+            String username,
+            String passwordHashOrNull,
+            String rol,
+            List<UUID> sociedadIds,
+            List<UserPointScope> pointScopes
     ) {
         boolean exists = Boolean.TRUE.equals(jdbcTemplate.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM usuarios WHERE id = ?)",
@@ -159,6 +183,7 @@ public class UserAdminRepository {
                     "INSERT INTO usuario_sociedades (usuario_id, sociedad_id) VALUES (?, NULL)",
                     id
             );
+            replacePointScopes(id, pointScopes);
             return;
         }
 
@@ -172,6 +197,7 @@ public class UserAdminRepository {
                     sociedadId
             );
         }
+        replacePointScopes(id, pointScopes);
     }
 
     private static List<UUID> parseUuidList(String csv) {
@@ -190,7 +216,9 @@ public class UserAdminRepository {
             String username,
             String rol,
             List<UUID> sociedadIds,
-            String sociedadesLabel
+            String sociedadesLabel,
+            List<UserPointScope> pointScopes,
+            String puntosLabel
     ) {
         public String sociedadIdsCsv() {
             if (sociedadIds == null || sociedadIds.isEmpty()) {
@@ -198,5 +226,173 @@ public class UserAdminRepository {
             }
             return sociedadIds.stream().map(UUID::toString).collect(Collectors.joining(","));
         }
+
+        public String pointScopesCsv() {
+            if (pointScopes == null || pointScopes.isEmpty()) {
+                return "";
+            }
+            return pointScopes.stream()
+                    .map(scope -> scope.sociedadId() + ":"
+                            + (scope.allPointsOfSociety() || scope.emissionPointId() == null
+                            ? "*"
+                            : scope.emissionPointId().toString()))
+                    .collect(Collectors.joining(","));
+        }
+    }
+
+    public List<UserPointScope> findPointScopes(UUID usuarioId) {
+        return jdbcTemplate.query(
+                """
+                        SELECT sociedad_id, emission_point_id
+                        FROM usuario_puntos_venta
+                        WHERE usuario_id = ?
+                        ORDER BY sociedad_id, emission_point_id NULLS FIRST
+                        """,
+                (rs, rowNum) -> {
+                    UUID sociedadId = rs.getObject("sociedad_id", UUID.class);
+                    UUID pointId = rs.getObject("emission_point_id", UUID.class);
+                    if (pointId == null) {
+                        return UserPointScope.allOf(sociedadId);
+                    }
+                    return UserPointScope.point(sociedadId, pointId);
+                },
+                usuarioId
+        );
+    }
+
+    @Transactional
+    public void replacePointScopes(UUID usuarioId, List<UserPointScope> scopes) {
+        jdbcTemplate.update("DELETE FROM usuario_puntos_venta WHERE usuario_id = ?", usuarioId);
+        if (scopes == null) {
+            return;
+        }
+        for (UserPointScope scope : scopes) {
+            if (scope == null || scope.sociedadId() == null) {
+                continue;
+            }
+            jdbcTemplate.update(
+                    """
+                            INSERT INTO usuario_puntos_venta (usuario_id, sociedad_id, emission_point_id)
+                            VALUES (?, ?, ?)
+                            """,
+                    usuarioId,
+                    scope.sociedadId(),
+                    scope.allPointsOfSociety() ? null : scope.emissionPointId()
+            );
+        }
+    }
+
+    public List<UUID> findAllowedEmissionPointIds(UUID usuarioId, UUID sociedadId, boolean isAdmin) {
+        if (isAdmin) {
+            return jdbcTemplate.query(
+                    """
+                            SELECT id FROM emission_points
+                            WHERE company_id = ? AND is_active = TRUE
+                            ORDER BY codigo
+                            """,
+                    (rs, rowNum) -> rs.getObject("id", UUID.class),
+                    sociedadId
+            );
+        }
+
+        Boolean allPoints = jdbcTemplate.queryForObject(
+                """
+                        SELECT EXISTS (
+                            SELECT 1 FROM usuario_puntos_venta
+                            WHERE usuario_id = ? AND sociedad_id = ? AND emission_point_id IS NULL
+                        )
+                        """,
+                Boolean.class,
+                usuarioId,
+                sociedadId
+        );
+        if (Boolean.TRUE.equals(allPoints)) {
+            return jdbcTemplate.query(
+                    """
+                            SELECT id FROM emission_points
+                            WHERE company_id = ? AND is_active = TRUE
+                            ORDER BY codigo
+                            """,
+                    (rs, rowNum) -> rs.getObject("id", UUID.class),
+                    sociedadId
+            );
+        }
+
+        Integer scopedCount = jdbcTemplate.queryForObject(
+                """
+                        SELECT COUNT(*) FROM usuario_puntos_venta
+                        WHERE usuario_id = ? AND sociedad_id = ?
+                        """,
+                Integer.class,
+                usuarioId,
+                sociedadId
+        );
+        // Sin filas de alcance: compatibilidad = todos los puntos de la sociedad autorizada
+        if (scopedCount == null || scopedCount == 0) {
+            return jdbcTemplate.query(
+                    """
+                            SELECT id FROM emission_points
+                            WHERE company_id = ? AND is_active = TRUE
+                            ORDER BY codigo
+                            """,
+                    (rs, rowNum) -> rs.getObject("id", UUID.class),
+                    sociedadId
+            );
+        }
+
+        return jdbcTemplate.query(
+                """
+                        SELECT emission_point_id
+                        FROM usuario_puntos_venta
+                        WHERE usuario_id = ?
+                          AND sociedad_id = ?
+                          AND emission_point_id IS NOT NULL
+                        """,
+                (rs, rowNum) -> rs.getObject("emission_point_id", UUID.class),
+                usuarioId,
+                sociedadId
+        );
+    }
+
+    public boolean hasUnrestrictedPoints(UUID usuarioId, UUID sociedadId, boolean isAdmin) {
+        if (isAdmin) {
+            return true;
+        }
+        Boolean allPoints = jdbcTemplate.queryForObject(
+                """
+                        SELECT EXISTS (
+                            SELECT 1 FROM usuario_puntos_venta
+                            WHERE usuario_id = ? AND sociedad_id = ? AND emission_point_id IS NULL
+                        )
+                        """,
+                Boolean.class,
+                usuarioId,
+                sociedadId
+        );
+        if (Boolean.TRUE.equals(allPoints)) {
+            return true;
+        }
+        Integer scopedCount = jdbcTemplate.queryForObject(
+                """
+                        SELECT COUNT(*) FROM usuario_puntos_venta
+                        WHERE usuario_id = ? AND sociedad_id = ?
+                        """,
+                Integer.class,
+                usuarioId,
+                sociedadId
+        );
+        return scopedCount == null || scopedCount == 0;
+    }
+
+    private String buildPuntosLabel(List<UserPointScope> scopes) {
+        if (scopes == null || scopes.isEmpty()) {
+            return "Todos los PV de sus sociedades";
+        }
+        long all = scopes.stream().filter(UserPointScope::allPointsOfSociety).count();
+        long specific = scopes.size() - all;
+        if (all > 0 && specific == 0) {
+            return "Todos los PV (" + all + " sociedad/es)";
+        }
+        return specific + " punto(s) específico(s)" + (all > 0 ? " + acceso total en " + all : "");
     }
 }

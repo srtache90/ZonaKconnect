@@ -1,5 +1,7 @@
 package com.zonak.portal.admin;
 
+import com.zonak.portal.security.PortalRoles;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -17,7 +19,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @PreAuthorize("hasRole('ADMIN')")
 public class UserAdminController {
-    private static final List<String> ALLOWED_ROLES = List.of("ADMIN", "OPERADOR", "CONSULTA");
+    private static final List<String> ALLOWED_ROLES = List.of(
+            PortalRoles.ADMIN,
+            PortalRoles.EMISOR,
+            PortalRoles.RECEPTOR,
+            PortalRoles.CONSULTA
+    );
 
     private final UserAdminRepository userAdminRepository;
     private final AdminPortalRepository adminPortalRepository;
@@ -37,6 +44,7 @@ public class UserAdminController {
     public String listUsers(Model model) {
         model.addAttribute("usuarios", userAdminRepository.findUsers());
         model.addAttribute("sociedades", adminPortalRepository.findSociedades());
+        model.addAttribute("puntosVenta", adminPortalRepository.findPuntosVenta());
         model.addAttribute("roles", ALLOWED_ROLES);
         model.addAttribute("navModule", "configuracion");
         model.addAttribute("navActive", "usuarios");
@@ -50,6 +58,7 @@ public class UserAdminController {
             @RequestParam(required = false) String password,
             @RequestParam String rol,
             @RequestParam(required = false) List<UUID> sociedadIds,
+            @RequestParam(required = false) List<String> pointScopes,
             RedirectAttributes redirectAttributes
     ) {
         String trimmedUsername = username == null ? "" : username.trim();
@@ -57,7 +66,8 @@ public class UserAdminController {
             redirectAttributes.addFlashAttribute("error", "El usuario es obligatorio.");
             return "redirect:/portal/admin/usuarios";
         }
-        if (!ALLOWED_ROLES.contains(rol)) {
+        String normalizedRole = PortalRoles.normalize(rol);
+        if (!ALLOWED_ROLES.contains(normalizedRole)) {
             redirectAttributes.addFlashAttribute("error", "Rol inválido.");
             return "redirect:/portal/admin/usuarios";
         }
@@ -78,9 +88,10 @@ public class UserAdminController {
         List<UUID> sociedades = sociedadIds == null
                 ? List.of()
                 : sociedadIds.stream().filter(s -> s != null).collect(Collectors.toList());
+        List<UserPointScope> scopes = parsePointScopes(pointScopes);
 
         try {
-            userAdminRepository.saveUser(userId, trimmedUsername, passwordHash, rol, sociedades);
+            userAdminRepository.saveUser(userId, trimmedUsername, passwordHash, normalizedRole, sociedades, scopes);
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
             return "redirect:/portal/admin/usuarios";
@@ -91,5 +102,26 @@ public class UserAdminController {
 
         redirectAttributes.addFlashAttribute("success", "Usuario guardado correctamente");
         return "redirect:/portal/admin/usuarios";
+    }
+
+    private static List<UserPointScope> parsePointScopes(List<String> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        List<UserPointScope> scopes = new ArrayList<>();
+        for (String entry : raw) {
+            if (!StringUtils.hasText(entry) || !entry.contains(":")) {
+                continue;
+            }
+            String[] parts = entry.split(":", 2);
+            UUID sociedadId = UUID.fromString(parts[0].trim());
+            String pointPart = parts[1].trim();
+            if ("*".equals(pointPart) || "ALL".equalsIgnoreCase(pointPart)) {
+                scopes.add(UserPointScope.allOf(sociedadId));
+            } else {
+                scopes.add(UserPointScope.point(sociedadId, UUID.fromString(pointPart)));
+            }
+        }
+        return scopes;
     }
 }

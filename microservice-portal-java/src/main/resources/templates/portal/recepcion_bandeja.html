@@ -61,6 +61,18 @@
                 </select>
             </div>
             <div class="col-md-2">
+                <label class="form-label text-muted small" for="emissionPointId">Punto</label>
+                <select class="form-select rounded-3" id="emissionPointId" name="emissionPointId">
+                    <option value="">Todos / sin filtrar</option>
+                    <option value="UNASSIGNED"
+                            th:selected="${selectedEmissionPointId == 'UNASSIGNED'}">Sin asignar</option>
+                    <option th:each="punto : ${puntosVenta}"
+                            th:value="${punto.id}"
+                            th:selected="${punto.id.toString() == selectedEmissionPointId}"
+                            th:text="${punto.codigo + ' - ' + punto.nombre}">PV</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label text-muted small" for="proveedor">Proveedor</label>
                 <input class="form-control rounded-3" id="proveedor" name="proveedor" th:value="${proveedor}" placeholder="Nombre o NIT">
             </div>
@@ -118,6 +130,7 @@
                     <tr class="text-muted small text-uppercase">
                         <th>Proveedor</th>
                         <th>Factura</th>
+                        <th>Punto</th>
                         <th>CUFE</th>
                         <th class="text-end">Total</th>
                         <th>Emisión</th>
@@ -129,7 +142,7 @@
                     </thead>
                     <tbody>
                     <tr th:if="${#lists.isEmpty(invoices)}">
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="10" class="text-center text-muted py-5">
                             No hay facturas abiertas para
                             <span class="fw-semibold" th:text="${selectedSociedadNombre}">esta empresa</span>.
                             Sincronice IMAP, importe XML o revise el histórico.
@@ -148,6 +161,25 @@
                             <a class="zk-data text-decoration-none"
                                th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
                                th:text="${invoice.invoiceNumber}">FE123</a>
+                        </td>
+                        <td class="small">
+                            <div th:if="${invoice.assignedEmissionPointId != null}"
+                                 th:text="${invoice.assignedEmissionPointLabel}">PV</div>
+                            <div th:if="${invoice.assignedEmissionPointId == null}" class="text-muted">Sin asignar</div>
+                            <div class="text-muted" style="font-size:11px"
+                                 th:text="${invoice.assignmentSource}">UNASSIGNED</div>
+                            <form class="mt-1" method="post"
+                                  th:if="${canAssignPoint}"
+                                  th:action="@{/portal/recepcion/{id}/asignar-punto(id=${invoice.id})}">
+                                <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+                                <select class="form-select form-select-sm" name="emissionPointId" onchange="this.form.submit()">
+                                    <option value="">Sin asignar</option>
+                                    <option th:each="punto : ${puntosVenta}"
+                                            th:value="${punto.id}"
+                                            th:selected="${invoice.assignedEmissionPointId != null and punto.id.equals(invoice.assignedEmissionPointId)}"
+                                            th:text="${punto.codigo}">PV</option>
+                                </select>
+                            </form>
                         </td>
                         <td class="small zk-data">
                             <span th:classappend="${!invoice.cufeValid} ? ' cufe-warn'">

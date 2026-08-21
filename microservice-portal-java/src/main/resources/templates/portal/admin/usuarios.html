@@ -10,7 +10,7 @@
 <main class="container py-4 pt-24 pb-32">
     <div class="mb-4">
         <h1 class="dc-page-title">Administración de Usuarios</h1>
-        <p class="dc-page-subtitle">Roles ADMIN, OPERADOR y CONSULTA con acceso multi-sociedad</p>
+        <p class="dc-page-subtitle">Roles ADMIN / EMISOR / RECEPTOR / CONSULTA, sociedades y alcance por punto de venta</p>
     </div>
 
     <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
@@ -37,8 +37,9 @@
                     <select class="form-select" id="rol" name="rol" required>
                         <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ADMIN</option>
                     </select>
+                    <div class="form-text">ADMIN=config; EMISOR=emisión; RECEPTOR=recepción; CONSULTA=solo lectura</div>
                 </div>
-                <div class="col-12">
+                <div class="col-md-6">
                     <label class="form-label" for="sociedadIds">Sociedades</label>
                     <select class="form-select" id="sociedadIds" name="sociedadIds" multiple size="6">
                         <option th:each="sociedad : ${sociedades}"
@@ -47,7 +48,23 @@
                             Sociedad
                         </option>
                     </select>
-                    <div class="form-text">Sin selección = acceso a todas las sociedades. Ctrl/Cmd para multi-selección.</div>
+                    <div class="form-text">Sin selección = acceso a todas las sociedades.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="pointScopes">Puntos de venta (alcance)</label>
+                    <select class="form-select" id="pointScopes" name="pointScopes" multiple size="8">
+                        <option th:each="sociedad : ${sociedades}"
+                                th:value="${sociedad.id + ':*'}"
+                                th:text="${'★ Todos los PV · ' + sociedad.razonSocial}">
+                            Todos
+                        </option>
+                        <option th:each="punto : ${puntosVenta}"
+                                th:value="${punto.sociedadId + ':' + punto.id}"
+                                th:text="${punto.codigo + ' - ' + punto.nombre + ' (' + punto.prefijo + ')'}">
+                            PV
+                        </option>
+                    </select>
+                    <div class="form-text">Vacío = todos los PV de sus sociedades (compatibilidad). Use ★ para forzar acceso total por sociedad.</div>
                 </div>
                 <div class="col-12 text-end">
                     <button class="btn btn-outline-secondary me-2" type="button" onclick="limpiarFormulario()">Limpiar</button>
@@ -66,27 +83,27 @@
                     <th>Usuario</th>
                     <th>Rol</th>
                     <th>Sociedades</th>
+                    <th>Puntos</th>
                     <th class="text-end">Acción</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="usuario : ${usuarios}">
                     <td th:text="${usuario.username()}">admin</td>
-                    <td>
-                        <span class="badge text-bg-secondary" th:text="${usuario.rol()}">ADMIN</span>
-                    </td>
+                    <td><span class="badge text-bg-secondary" th:text="${usuario.rol()}">ADMIN</span></td>
                     <td th:text="${usuario.sociedadesLabel()}">Todas</td>
+                    <td th:text="${usuario.puntosLabel()}">Todos</td>
                     <td class="text-end">
                         <button type="button"
                                 class="btn btn-sm btn-outline-primary"
-                                th:attr="data-id=${usuario.id()},data-username=${usuario.username()},data-rol=${usuario.rol()},data-sociedades=${usuario.sociedadIdsCsv()}"
+                                th:attr="data-id=${usuario.id()},data-username=${usuario.username()},data-rol=${usuario.rol()},data-sociedades=${usuario.sociedadIdsCsv()},data-puntos=${usuario.pointScopesCsv()}"
                                 onclick="editarUsuario(this)">
                             Editar
                         </button>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(usuarios)}">
-                    <td colspan="4" class="text-center text-muted py-4">No hay usuarios registrados.</td>
+                    <td colspan="5" class="text-center text-muted py-4">No hay usuarios registrados.</td>
                 </tr>
                 </tbody>
             </table>
@@ -99,23 +116,23 @@
         document.getElementById('usuarioId').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
-        document.getElementById('rol').value = 'OPERADOR';
-        const select = document.getElementById('sociedadIds');
-        Array.from(select.options).forEach(opt => opt.selected = false);
+        document.getElementById('rol').value = 'EMISOR';
+        Array.from(document.getElementById('sociedadIds').options).forEach(opt => opt.selected = false);
+        Array.from(document.getElementById('pointScopes').options).forEach(opt => opt.selected = false);
     }
 
     function editarUsuario(button) {
         document.getElementById('usuarioId').value = button.dataset.id || '';
         document.getElementById('username').value = button.dataset.username || '';
         document.getElementById('password').value = '';
-        document.getElementById('rol').value = button.dataset.rol || 'OPERADOR';
-        const selected = (button.dataset.sociedades || '')
-            .split(',')
-            .map(v => v.trim())
-            .filter(Boolean);
-        const select = document.getElementById('sociedadIds');
-        Array.from(select.options).forEach(opt => {
-            opt.selected = selected.includes(opt.value);
+        document.getElementById('rol').value = button.dataset.rol || 'EMISOR';
+        const selectedSoc = (button.dataset.sociedades || '').split(',').map(v => v.trim()).filter(Boolean);
+        Array.from(document.getElementById('sociedadIds').options).forEach(opt => {
+            opt.selected = selectedSoc.includes(opt.value);
+        });
+        const selectedPts = (button.dataset.puntos || '').split(',').map(v => v.trim()).filter(Boolean);
+        Array.from(document.getElementById('pointScopes').options).forEach(opt => {
+            opt.selected = selectedPts.includes(opt.value);
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }

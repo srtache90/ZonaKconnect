@@ -44,7 +44,11 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
             Map<String, Object> claims = jwtCookieService.verifyToken(token);
             String username = claims.get("sub").toString();
             String role = claims.get("role").toString();
+            if ("OPERADOR".equalsIgnoreCase(role)) {
+                role = "EMISOR";
+            }
             List<String> tenantIds = jwtCookieService.tenantIds(claims);
+            Object uidClaim = claims.get("uid");
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     username,
@@ -56,6 +60,9 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
             HttpSession session = request.getSession(true);
             session.setAttribute("role", role);
             session.setAttribute("username", username);
+            if (uidClaim != null) {
+                session.setAttribute("userId", uidClaim.toString());
+            }
             if (!tenantIds.isEmpty()) {
                 session.setAttribute("tenantIds", tenantIds);
                 Object existingTenantId = session.getAttribute("tenantId");

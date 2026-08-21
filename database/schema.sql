@@ -94,6 +94,10 @@ CREATE TABLE received_invoices (
     pdf_s3_url TEXT,
     raw_payload_jsonb JSONB NOT NULL DEFAULT '{}'::jsonb,
     dian_response_jsonb JSONB NOT NULL DEFAULT '{}'::jsonb,
+    assigned_emission_point_id UUID,
+    assignment_source VARCHAR(40) NOT NULL DEFAULT 'UNASSIGNED',
+    assigned_at TIMESTAMPTZ,
+    assigned_by_user_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

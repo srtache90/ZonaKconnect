@@ -1,0 +1,101 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Proveedor → Punto | DIAN Connect')}"></th:block>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="container py-4 pt-24 pb-32">
+    <div class="mb-4">
+        <h1 class="dc-page-title">Asignación proveedor → punto</h1>
+        <p class="dc-page-subtitle">Enruta automáticamente facturas recibidas al punto de venta según NIT del proveedor</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <form class="row g-3 mb-4" method="get" th:action="@{/portal/admin/proveedores-punto}">
+        <div class="col-md-6">
+            <label class="form-label" for="sociedadId">Sociedad</label>
+            <select class="form-select" id="sociedadId" name="sociedadId" onchange="this.form.submit()">
+                <option th:each="s : ${sociedades}"
+                        th:value="${s.id}"
+                        th:selected="${s.id.toString() == selectedSociedadId}"
+                        th:text="${s.razonSocial}">Sociedad</option>
+            </select>
+        </div>
+    </form>
+
+    <section class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">Nueva / actualizar regla</div>
+        <div class="card-body">
+            <form th:action="@{/portal/admin/proveedores-punto}" method="post" class="row g-3">
+                <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+                <div class="col-md-4">
+                    <label class="form-label" for="supplierNit">NIT proveedor</label>
+                    <input class="form-control" id="supplierNit" name="supplierNit" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="emissionPointId">Punto de venta</label>
+                    <select class="form-select" id="emissionPointId" name="emissionPointId" required>
+                        <option value="">Seleccione...</option>
+                        <option th:each="p : ${puntosVenta}"
+                                th:value="${p.id}"
+                                th:text="${p.codigo + ' - ' + p.nombre}">PV</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="notes">Notas</label>
+                    <input class="form-control" id="notes" name="notes">
+                </div>
+                <div class="col-12 text-end">
+                    <button class="btn btn-primary" type="submit">Guardar regla</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card shadow-sm">
+        <div class="card-header bg-white">Reglas activas / históricas</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>NIT</th>
+                    <th>Punto</th>
+                    <th>Notas</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${rows}">
+                    <td th:text="${row.supplierNit()}">900</td>
+                    <td th:text="${row.emissionPointLabel()}">PV</td>
+                    <td th:text="${row.notes()}">-</td>
+                    <td>
+                        <span class="badge" th:classappend="${row.active()} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${row.active()} ? 'Activa' : 'Inactiva'">Activa</span>
+                    </td>
+                    <td class="text-end">
+                        <form th:if="${row.active()}" th:action="@{/portal/admin/proveedores-punto/desactivar}" method="post" class="d-inline">
+                            <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
+                            <input type="hidden" name="id" th:value="${row.id()}">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Desactivar</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(rows)}">
+                    <td colspan="5" class="text-center text-muted py-4">Sin reglas para esta sociedad.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

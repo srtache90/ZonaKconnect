@@ -130,24 +130,67 @@ func (s *Store) InsertReceivedInvoice(
 		cufeArg = parsed.CUFE
 	}
 
-	_, err = s.DB.Exec(ctx, `
+	var insertedID uuid.UUID
+	err = s.DB.QueryRow(ctx, `
 		INSERT INTO received_invoices (
 			company_id, supplier_name, supplier_nit, supplier_email, invoice_number, cufe,
 			issue_date, total_amount, estado_dian, source, raw_payload_jsonb
 		) VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, 'PENDIENTE', $9, $10::jsonb)
+		RETURNING id
 	`, companyID, parsed.ProveedorNombre, parsed.ProveedorNIT, parsed.ProveedorEmail, parsed.InvoiceNumber,
-		cufeArg, issueDate, totalFloat, source, string(rawJSON))
+		cufeArg, issueDate, totalFloat, source, string(rawJSON)).Scan(&insertedID)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "unique") {
 			return false, "duplicado UNIQUE", nil
 		}
 		return false, "", fmt.Errorf("insert received_invoices: %w", err)
 	}
+	_ = s.assignBySupplierDefault(ctx, companyID, insertedID, parsed.ProveedorNIT)
 	msg := ""
 	if receptorMismatch {
 		msg = "importada con NIT receptor distinto"
 	}
 	return true, msg, nil
+}
+
+func (s *Store) assignBySupplierDefault(ctx context.Context, companyID, invoiceID uuid.UUID, supplierNIT string) error {
+	digits := onlyDigits(supplierNIT)
+	if digits == "" {
+		return nil
+	}
+	var pointID uuid.UUID
+	err := s.DB.QueryRow(ctx, `
+		SELECT emission_point_id
+		FROM supplier_default_points
+		WHERE company_id = $1
+		  AND is_active = TRUE
+		  AND regexp_replace(supplier_nit, '[^0-9]', '', 'g') = $2
+		LIMIT 1
+	`, companyID, digits).Scan(&pointID)
+	if err != nil {
+		return nil
+	}
+	_, err = s.DB.Exec(ctx, `
+		UPDATE received_invoices
+		SET assigned_emission_point_id = $3,
+		    assignment_source = 'SUPPLIER_DEFAULT',
+		    assigned_at = now(),
+		    updated_at = now()
+		WHERE id = $1
+		  AND company_id = $2
+		  AND assigned_emission_point_id IS NULL
+	`, invoiceID, companyID, pointID)
+	return err
+}
+
+func onlyDigits(value string) string {
+	var b strings.Builder
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func (s *Store) IngestPackage(ctx context.Context, companyID uuid.UUID, content []byte, fileName, source string) (IngestResult, error) {

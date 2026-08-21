@@ -1,14 +1,17 @@
 package com.zonak.portal.controller;
 
+import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
 import com.zonak.portal.mail.InvoiceMailDispatchService;
 import com.zonak.portal.mail.MailReceptionSyncService;
+import com.zonak.portal.recepcion.ReceivedInvoiceAssignmentService;
 import com.zonak.portal.recepcion.ReceivedInvoiceDetail;
 import com.zonak.portal.recepcion.ReceivedInvoiceFilter;
 import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
 import com.zonak.portal.recepcion.RecepcionEstadoDian;
 import com.zonak.portal.recepcion.RecepcionTacitAcceptanceService;
+import com.zonak.portal.security.PortalRoles;
 import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
@@ -37,19 +40,22 @@ public class RecepcionPortalController {
     private final MailReceptionSyncService mailReceptionSyncService;
     private final InvoiceMailDispatchService invoiceMailDispatchService;
     private final RecepcionTacitAcceptanceService recepcionTacitAcceptanceService;
+    private final ReceivedInvoiceAssignmentService receivedInvoiceAssignmentService;
 
     public RecepcionPortalController(
             PortalSessionService portalSessionService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
             MailReceptionSyncService mailReceptionSyncService,
             InvoiceMailDispatchService invoiceMailDispatchService,
-            RecepcionTacitAcceptanceService recepcionTacitAcceptanceService
+            RecepcionTacitAcceptanceService recepcionTacitAcceptanceService,
+            ReceivedInvoiceAssignmentService receivedInvoiceAssignmentService
     ) {
         this.portalSessionService = portalSessionService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
         this.mailReceptionSyncService = mailReceptionSyncService;
         this.invoiceMailDispatchService = invoiceMailDispatchService;
         this.recepcionTacitAcceptanceService = recepcionTacitAcceptanceService;
+        this.receivedInvoiceAssignmentService = receivedInvoiceAssignmentService;
     }
 
     @GetMapping("/portal/recepcion")
@@ -65,6 +71,7 @@ public class RecepcionPortalController {
             @RequestParam(required = false) String cufe,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String emissionPointId,
             HttpSession session,
             Model model
     ) {
@@ -80,6 +87,7 @@ public class RecepcionPortalController {
                 toDate,
                 null,
                 null,
+                emissionPointId,
                 session,
                 model
         );
@@ -160,7 +168,11 @@ public class RecepcionPortalController {
         String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
         try {
             MailReceptionSyncService.SyncResult result = mailReceptionSyncService.syncInbox(UUID.fromString(tenantId));
-            redirectAttributes.addFlashAttribute("success", result.summary());
+            int assigned = receivedInvoiceAssignmentService.assignPendingForCompany(UUID.fromString(tenantId));
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    result.summary() + (assigned > 0 ? " Asignadas a PV por NIT: " + assigned + "." : "")
+            );
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
                     "error",
@@ -188,9 +200,11 @@ public class RecepcionPortalController {
                     archivo.getOriginalFilename(),
                     "XML_UPLOAD"
             );
+            int assigned = receivedInvoiceAssignmentService.assignPendingForCompany(UUID.fromString(tenantId));
             redirectAttributes.addFlashAttribute(
                     "success",
-                    "XML importado para la sociedad activa. Documentos nuevos: " + imported + "."
+                    "XML importado para la sociedad activa. Documentos nuevos: " + imported
+                            + (assigned > 0 ? ". Asignadas a PV: " + assigned : "") + "."
             );
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
@@ -276,6 +290,41 @@ public class RecepcionPortalController {
         return "redirect:/portal/recepcion/" + id + "/detalle";
     }
 
+    @PostMapping("/portal/recepcion/{id}/asignar-punto")
+    public String asignarPunto(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String emissionPointId,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false) String sociedadId,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (!PortalRoles.canMutateReception(portalSessionService.resolveRole(session))) {
+            redirectAttributes.addFlashAttribute("error", "No tiene permiso para asignar puntos en recepción.");
+            return bandejaRedirect(sociedadId);
+        }
+        UUID tenantUuid = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+        UUID userId = portalSessionService.resolveUserId(session);
+        UUID pointId = null;
+        if (StringUtils.hasText(emissionPointId)) {
+            pointId = UUID.fromString(emissionPointId.trim());
+            List<UUID> allowed = portalSessionService.resolveAllowedEmissionPointIds(session, tenantUuid);
+            if (!allowed.contains(pointId)) {
+                redirectAttributes.addFlashAttribute("error", "El punto seleccionado no está en su alcance.");
+                return bandejaRedirect(sociedadId != null ? sociedadId : tenantUuid.toString());
+            }
+        }
+        try {
+            receivedInvoiceAssignmentService.assignManually(tenantUuid, id, pointId, userId, reason);
+            redirectAttributes.addFlashAttribute("success", "Punto de recepción actualizado.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return bandejaRedirect(sociedadId != null ? sociedadId : tenantUuid.toString());
+    }
+
     private String renderList(
             String view,
             String navActive,
@@ -288,6 +337,7 @@ public class RecepcionPortalController {
             String toDate,
             String minTotal,
             String maxTotal,
+            String emissionPointId,
             HttpSession session,
             Model model
     ) {
@@ -311,22 +361,59 @@ public class RecepcionPortalController {
                 .findFirst()
                 .orElse(sociedades.getFirst());
 
-        ReceivedInvoiceFilter filter = new ReceivedInvoiceFilter(
-                tenantUuid,
-                parseDate(fromDate),
-                parseDate(toDate),
-                blankToNull(estadoDian),
-                blankToNull(proveedor),
-                blankToNull(cufe),
-                parseDecimal(minTotal),
-                parseDecimal(maxTotal),
-                openOnly ? Boolean.TRUE : null
-        );
+        List<UUID> allowedPoints = portalSessionService.resolveAllowedEmissionPointIds(session, tenantUuid);
+        boolean includeUnassigned = portalSessionService.canSeeUnassignedReceived(session, tenantUuid);
+        UUID filterPoint = null;
+        boolean onlyUnassigned = "UNASSIGNED".equalsIgnoreCase(emissionPointId);
+        if (!onlyUnassigned && StringUtils.hasText(emissionPointId)) {
+            filterPoint = UUID.fromString(emissionPointId.trim());
+            if (!allowedPoints.contains(filterPoint) && !PortalRoles.isAdmin(portalSessionService.resolveRole(session))) {
+                filterPoint = null;
+            }
+        }
+        ReceivedInvoiceFilter filter;
+        if (onlyUnassigned) {
+            filter = new ReceivedInvoiceFilter(
+                    tenantUuid,
+                    parseDate(fromDate),
+                    parseDate(toDate),
+                    blankToNull(estadoDian),
+                    blankToNull(proveedor),
+                    blankToNull(cufe),
+                    parseDecimal(minTotal),
+                    parseDecimal(maxTotal),
+                    openOnly ? Boolean.TRUE : null,
+                    List.of(),
+                    true,
+                    null
+            );
+        } else {
+            filter = new ReceivedInvoiceFilter(
+                    tenantUuid,
+                    parseDate(fromDate),
+                    parseDate(toDate),
+                    blankToNull(estadoDian),
+                    blankToNull(proveedor),
+                    blankToNull(cufe),
+                    parseDecimal(minTotal),
+                    parseDecimal(maxTotal),
+                    openOnly ? Boolean.TRUE : null,
+                    filterPoint == null ? allowedPoints : null,
+                    includeUnassigned,
+                    filterPoint
+            );
+        }
         List<ReceivedInvoiceRow> invoices = receivedInvoiceRepository.findReceived(filter);
         RecepcionTacitAcceptanceService.AlertsSummary alerts =
                 recepcionTacitAcceptanceService.summarizeAlerts(invoices);
+        List<PuntoVenta> puntosVenta = portalSessionService.resolvePuntosVenta(session).stream()
+                .filter(p -> p.sociedadId().equals(tenantUuid))
+                .toList();
 
         model.addAttribute("sociedades", sociedades);
+        model.addAttribute("puntosVenta", puntosVenta);
+        model.addAttribute("selectedEmissionPointId", emissionPointId);
+        model.addAttribute("canAssignPoint", PortalRoles.canMutateReception(portalSessionService.resolveRole(session)));
         model.addAttribute("invoices", invoices);
         model.addAttribute("selectedSociedadId", selectedSociedadId);
         model.addAttribute("selectedSociedadNombre", selectedSociedad.razonSocial());
