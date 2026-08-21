@@ -58,8 +58,141 @@ body.zk-body {
 }
 
 .zk-dashboard-main {
-    max-width: 1480px;
+    width: min(100% - 32px, 1088px) !important;
+    max-width: 1088px;
+    padding: 16px 0 28px !important;
+    grid-template-columns: minmax(0, 1fr) 255px !important;
+    gap: 24px !important;
     margin-inline: auto;
+}
+
+.zk-dashboard-shell {
+    margin: 8px !important;
+    min-height: calc(100vh - 16px);
+    overflow-x: hidden;
+    background: #f7f3eb !important;
+    color: #202020;
+    border: 8px solid #aeb4bb;
+    border-radius: 20px;
+    box-sizing: border-box;
+}
+
+.zk-dashboard-header {
+    height: 58px !important;
+    padding: 0 24px !important;
+    gap: 16px !important;
+    background: #080808 !important;
+    border-bottom: 1px solid #292929 !important;
+}
+
+.zk-dashboard-brand {
+    min-width: 150px !important;
+    height: 52px;
+    gap: 0 !important;
+}
+
+.zk-dashboard-brand img {
+    width: 108px !important;
+    height: auto !important;
+}
+
+.zk-dashboard-nav {
+    gap: 0 !important;
+}
+
+.zk-dashboard-nav a {
+    height: 58px !important;
+    padding: 0 18px !important;
+    color: #bdbdbd !important;
+    font-size: 12px !important;
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+}
+
+.zk-dashboard-nav a:first-child {
+    background: #967117 !important;
+    color: #ffffff !important;
+}
+
+.zk-dashboard-nav a:hover {
+    background: #1b1b1b !important;
+    color: #ffffff !important;
+}
+
+.zk-dashboard-modules {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+}
+
+.zk-dashboard-main > section > div:first-child {
+    min-height: 86px !important;
+    padding: 18px 22px !important;
+}
+
+.zk-dashboard-main > section > div:first-child h1 {
+    font-size: 22px !important;
+}
+
+.zk-dashboard-module-grid {
+    gap: 16px !important;
+}
+
+.zk-module-card {
+    min-height: 146px !important;
+    padding: 15px !important;
+}
+
+.zk-module-card p {
+    margin-top: 12px !important;
+    font-size: 11px !important;
+}
+
+.zk-dashboard-main > aside > section {
+    padding: 17px !important;
+}
+
+.zk-dashboard-main > aside > section {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+}
+
+.zk-dashboard-main > section > div:first-child,
+.zk-dashboard-modules {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+}
+
+.zk-dashboard-modules {
+    padding: 22px !important;
+}
+
+.zk-module-card {
+    min-height: 164px !important;
+    border-radius: 14px !important;
+    background: #fffdfa !important;
+}
+
+.zk-module-card strong {
+    font-size: 15px !important;
+}
+
+.zk-dashboard-main > aside {
+    gap: 14px !important;
+}
+
+@media (max-width: 900px) {
+    .zk-dashboard-main {
+        width: min(100% - 24px, 720px) !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .zk-dashboard-header {
+        padding: 0 16px !important;
+    }
+
+    .zk-dashboard-nav {
+        display: none !important;
+    }
 }
 
 .zk-module-card {
@@ -103,6 +236,19 @@ body.zk-body {
     border-top-color: #e8dfcf !important;
 }
 
+.zk-dashboard-module-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.zk-module-card > div:first-child > span:last-child {
+    background: #111111 !important;
+    border-color: #111111 !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+}
+
 @media (max-width: 900px) {
     .zk-dashboard-main {
         grid-template-columns: 1fr !important;
@@ -115,6 +261,185 @@ body.zk-body {
 
 @media (max-width: 560px) {
     .zk-module-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Dashboard reference layout: these rules intentionally override legacy inline styles. */
+.zk-dashboard-shell {
+    margin: 0 !important;
+    min-height: 100vh !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #f7f3eb !important;
+    font-family: var(--zk-font-sans) !important;
+}
+
+.zk-dashboard-header {
+    height: 68px !important;
+    padding: 0 32px !important;
+    background: #080808 !important;
+    border-bottom: 1px solid #292929 !important;
+}
+
+.zk-dashboard-header > button {
+    color: #ffffff !important;
+}
+
+.zk-dashboard-brand {
+    min-width: 180px !important;
+}
+
+.zk-dashboard-brand img {
+    width: 118px !important;
+    height: auto !important;
+}
+
+.zk-dashboard-nav a {
+    height: 68px !important;
+    padding: 0 20px !important;
+    font-size: 13px !important;
+}
+
+.zk-dashboard-main {
+    width: min(100% - 40px, 1180px) !important;
+    max-width: 1180px !important;
+    min-height: calc(100vh - 68px) !important;
+    padding: 26px 0 48px !important;
+    grid-template-columns: minmax(0, 1fr) 270px !important;
+    gap: 22px !important;
+}
+
+.zk-dashboard-main > section > div:first-child {
+    min-height: 122px !important;
+    padding: 26px 28px !important;
+    border-radius: 14px !important;
+    border-color: #d6d0c5 !important;
+    box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
+}
+
+.zk-dashboard-main > section > div:first-child h1 {
+    font-size: 28px !important;
+    color: #171717 !important;
+}
+
+.zk-dashboard-main > section > div:first-child p {
+    font-size: 14px !important;
+}
+
+.zk-dashboard-main > section > div:first-child a {
+    height: 44px !important;
+    padding: 0 20px !important;
+    border-radius: 6px !important;
+    background: #967117 !important;
+    border-color: #967117 !important;
+}
+
+.zk-dashboard-modules {
+    margin-top: 22px !important;
+    padding: 26px !important;
+    border-radius: 14px !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.zk-dashboard-module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+}
+
+.zk-module-card {
+    min-height: 176px !important;
+    padding: 20px !important;
+    border-radius: 14px !important;
+    border-color: #e0d8ca !important;
+    background: #fffdfa !important;
+}
+
+.zk-module-card > div:first-child > div:first-child > span {
+    width: 42px !important;
+    height: 42px !important;
+}
+
+.zk-module-card strong {
+    font-size: 16px !important;
+}
+
+.zk-dashboard-main > aside > section {
+    padding: 22px !important;
+    border-radius: 14px !important;
+    border-color: #d6d0c5 !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
+}
+
+@media (max-width: 900px) {
+    .zk-dashboard-main {
+        width: min(100% - 28px, 720px) !important;
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .zk-dashboard-header {
+        padding: 0 16px !important;
+    }
+
+    .zk-dashboard-module-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Locked reference composition for the Dashboard. */
+.zk-dashboard-shell {
+    background: #f7f3eb !important;
+}
+
+.zk-dashboard-main {
+    width: min(1180px, calc(100% - 48px)) !important;
+    max-width: calc(100% - 32px) !important;
+    grid-template-columns: minmax(0, 1fr) 255px !important;
+    gap: 28px !important;
+}
+
+.zk-dashboard-modules {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.zk-dashboard-module-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 22px !important;
+}
+
+.zk-module-card {
+    min-height: 172px !important;
+    padding: 22px !important;
+    background: #fffdfa !important;
+    border-radius: 14px !important;
+}
+
+.zk-module-card p {
+    margin-top: 16px !important;
+    line-height: 1.55 !important;
+}
+
+.zk-module-card > div:last-child {
+    padding-top: 14px !important;
+}
+
+@media (max-width: 900px) {
+    .zk-dashboard-main {
+        width: calc(100% - 24px) !important;
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 560px) {
+    .zk-dashboard-module-grid {
         grid-template-columns: 1fr !important;
     }
 }
