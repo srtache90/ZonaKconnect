@@ -9,6 +9,7 @@ namespace DIAN_NET.Services
     {
         string CalcularCUFE(FacturaDto factura, string ambiente);
         string CalcularCUDE(NotaCreditoDto notaCredito, string ambiente);
+        string CalcularCUDE(NotaDebitoDto notaDebito, string ambiente);
         string CalcularCUFE(string xmlSinFirma, string numeroDocumento, DateTime fechaEmision, string tipoDocumento);
         string CalcularCUDEEvento(
             string eventId,

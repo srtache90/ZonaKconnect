@@ -750,6 +750,209 @@ namespace DIAN_NET.Services
             return creditNote.ToString();
         }
 
+        private static void NormalizarNotaDebito(NotaDebitoDto notaDebito)
+        {
+            if (notaDebito == null)
+            {
+                throw new ArgumentNullException(nameof(notaDebito));
+            }
+
+            notaDebito.CustomizationID = Default(notaDebito.CustomizationID, "30");
+            notaDebito.DebitNoteTypeCode = Default(notaDebito.DebitNoteTypeCode, "92");
+            notaDebito.Moneda = Default(notaDebito.Moneda, "COP");
+            notaDebito.ConfiguracionDian ??= new ConfiguracionDianDto();
+            notaDebito.ConfiguracionDian.TipoAmbiente = Default(notaDebito.ConfiguracionDian.TipoAmbiente, "2");
+
+            notaDebito.Emisor ??= new EmisorDto();
+            notaDebito.Emisor.TipoIdentificacion = Default(notaDebito.Emisor.TipoIdentificacion, "31");
+            notaDebito.Emisor.TipoPersona = Default(notaDebito.Emisor.TipoPersona, "1");
+            notaDebito.Emisor.Dv = Default(notaDebito.Emisor.Dv, "0");
+            notaDebito.Emisor.RegimenFiscal = Default(notaDebito.Emisor.RegimenFiscal, "R-99-PN");
+            notaDebito.Emisor.TributoId = Default(notaDebito.Emisor.TributoId, "01");
+            notaDebito.Emisor.TributoNombre = Default(notaDebito.Emisor.TributoNombre, NombreTributo(notaDebito.Emisor.TributoId));
+            notaDebito.Emisor.Direccion = NormalizarDireccion(notaDebito.Emisor.Direccion);
+
+            notaDebito.Cliente ??= new ClienteDto();
+            notaDebito.Cliente.TipoIdentificacion = Default(notaDebito.Cliente.TipoIdentificacion, "31");
+            notaDebito.Cliente.TipoPersona = Default(notaDebito.Cliente.TipoPersona, "1");
+            notaDebito.Cliente.Dv = Default(notaDebito.Cliente.Dv, "0");
+            notaDebito.Cliente.RegimenFiscal = Default(notaDebito.Cliente.RegimenFiscal, "R-99-PN");
+            notaDebito.Cliente.TributoId = Default(notaDebito.Cliente.TributoId, "ZZ");
+            notaDebito.Cliente.TributoNombre = Default(notaDebito.Cliente.TributoNombre, NombreTributo(notaDebito.Cliente.TributoId));
+            notaDebito.Cliente.Direccion = NormalizarDireccion(notaDebito.Cliente.Direccion);
+
+            notaDebito.FacturaReferencia ??= new ReferenciaDocumentoDto();
+            notaDebito.FacturaReferencia.SchemeName = Default(notaDebito.FacturaReferencia.SchemeName, "CUFE-SHA384");
+
+            foreach (var concepto in notaDebito.ConceptosCorreccion ?? Enumerable.Empty<ConceptoCorreccionDto>())
+            {
+                concepto.ReferenceID = Default(concepto.ReferenceID, notaDebito.FacturaReferencia.NumeroDocumento);
+                concepto.Codigo = Default(concepto.Codigo, "1");
+                concepto.Descripcion = Default(concepto.Descripcion, "Intereses");
+            }
+
+            foreach (var item in notaDebito.Items ?? Enumerable.Empty<ItemDto>())
+            {
+                item.UnidadMedida = Default(item.UnidadMedida, "94");
+                foreach (var impuesto in item.Impuestos ?? Enumerable.Empty<ImpuestoDto>())
+                {
+                    NormalizarImpuesto(impuesto, item);
+                }
+            }
+        }
+
+        public string GenerarXmlNotaDebito(NotaDebitoDto notaDebito)
+        {
+            NormalizarNotaDebito(notaDebito);
+
+            var debitNote = new XElement(XName.Get("DebitNote", "urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"),
+                new XAttribute(XName.Get("schemaLocation", XSI_NAMESPACE),
+                    "urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2 http://docs.oasis-open.org/ubl/os-UBL-2.1/xsd/maindoc/UBL-DebitNote-2.1.xsd"),
+                new XAttribute(XNamespace.Xmlns + "cac", CAC_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "cbc", CBC_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "sts", DIAN_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "xsi", XSI_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "ext", EXT_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "xades", XADES_NAMESPACE),
+                new XAttribute(XNamespace.Xmlns + "ds", DS_NAMESPACE),
+                new XAttribute("xmlns", "urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"));
+
+            debitNote.Add(CrearUBLExtensionsNotaDebito(notaDebito));
+            debitNote.Add(new XElement(XName.Get("UBLVersionID", CBC_NAMESPACE), "UBL 2.1"));
+            debitNote.Add(new XElement(XName.Get("CustomizationID", CBC_NAMESPACE), notaDebito.CustomizationID));
+            debitNote.Add(new XElement(XName.Get("ProfileID", CBC_NAMESPACE), "DIAN 2.1: Nota Débito de Factura Electrónica de Venta"));
+            debitNote.Add(new XElement(XName.Get("ProfileExecutionID", CBC_NAMESPACE), notaDebito.ConfiguracionDian.TipoAmbiente));
+            debitNote.Add(new XElement(XName.Get("ID", CBC_NAMESPACE), notaDebito.NumeroDocumento));
+            debitNote.Add(new XElement(XName.Get("UUID", CBC_NAMESPACE),
+                new XAttribute("schemeID", notaDebito.ConfiguracionDian.TipoAmbiente),
+                new XAttribute("schemeName", "CUDE-SHA384"),
+                new XAttribute("schemeAgencyID", "195"),
+                new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                string.Empty));
+            debitNote.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), notaDebito.FechaEmision.ToString("yyyy-MM-dd")));
+            debitNote.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), notaDebito.FechaEmision.ToString("HH:mm:ss") + "-05:00"));
+            debitNote.Add(new XElement(XName.Get("DebitNoteTypeCode", CBC_NAMESPACE), notaDebito.DebitNoteTypeCode));
+
+            foreach (var nota in notaDebito.Notas ?? Enumerable.Empty<string>())
+            {
+                debitNote.Add(new XElement(XName.Get("Note", CBC_NAMESPACE), nota));
+            }
+
+            debitNote.Add(new XElement(XName.Get("DocumentCurrencyCode", CBC_NAMESPACE), notaDebito.Moneda));
+            debitNote.Add(new XElement(XName.Get("LineCountNumeric", CBC_NAMESPACE), notaDebito.Items.Count));
+            debitNote.Add(CrearDiscrepancyResponseNotaDebito(notaDebito));
+            debitNote.Add(CrearBillingReferenceNotaCredito(notaDebito.FacturaReferencia));
+            debitNote.Add(CrearAccountingSupplierParty(notaDebito.Emisor));
+            debitNote.Add(CrearAccountingCustomerParty(notaDebito.Cliente));
+            debitNote.Add(CrearTaxTotals(notaDebito.Items));
+            debitNote.Add(CrearWithholdingTaxTotals(notaDebito.Items));
+            debitNote.Add(CrearLegalMonetaryTotal(notaDebito.Totales));
+
+            foreach (var item in notaDebito.Items)
+            {
+                debitNote.Add(CrearDebitNoteLine(item));
+            }
+
+            return debitNote.ToString();
+        }
+
+        private XElement CrearUBLExtensionsNotaDebito(NotaDebitoDto notaDebito)
+        {
+            var extensions = new XElement(XName.Get("UBLExtensions", EXT_NAMESPACE));
+            var extension1 = new XElement(XName.Get("UBLExtension", EXT_NAMESPACE));
+            var extensionContent1 = new XElement(XName.Get("ExtensionContent", EXT_NAMESPACE));
+            var dianExtensions = new XElement(XName.Get("DianExtensions", DIAN_NAMESPACE));
+
+            dianExtensions.Add(new XElement(XName.Get("InvoiceSource", DIAN_NAMESPACE),
+                new XElement(XName.Get("IdentificationCode", CBC_NAMESPACE),
+                    new XAttribute("listAgencyID", "6"),
+                    new XAttribute("listAgencyName", "United Nations Economic Commission for Europe"),
+                    new XAttribute("listSchemeURI", "urn:oasis:names:specification:ubl:codelist:gc:CountryIdentificationCode-2.1"),
+                    "CO")));
+
+            dianExtensions.Add(new XElement(XName.Get("SoftwareProvider", DIAN_NAMESPACE),
+                new XElement(XName.Get("ProviderID", DIAN_NAMESPACE),
+                    new XAttribute("schemeAgencyID", "195"),
+                    new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                    new XAttribute("schemeID", notaDebito.Emisor.Dv),
+                    new XAttribute("schemeName", notaDebito.Emisor.TipoIdentificacion),
+                    notaDebito.Emisor.Nit),
+                new XElement(XName.Get("SoftwareID", DIAN_NAMESPACE),
+                    new XAttribute("schemeAgencyID", "195"),
+                    new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                    notaDebito.ConfiguracionDian.SoftwareId)));
+
+            dianExtensions.Add(new XElement(XName.Get("SoftwareSecurityCode", DIAN_NAMESPACE),
+                new XAttribute("schemeAgencyID", "195"),
+                new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                CalcularSoftwareSecurityCode(notaDebito.ConfiguracionDian.SoftwareId, notaDebito.ConfiguracionDian.Pin, notaDebito.NumeroDocumento)));
+
+            dianExtensions.Add(new XElement(XName.Get("AuthorizationProvider", DIAN_NAMESPACE),
+                new XElement(XName.Get("AuthorizationProviderID", DIAN_NAMESPACE),
+                    new XAttribute("schemeAgencyID", "195"),
+                    new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                    new XAttribute("schemeID", "4"),
+                    new XAttribute("schemeName", "31"),
+                    "800197268")));
+
+            dianExtensions.Add(new XElement(XName.Get("QRCode", DIAN_NAMESPACE), string.Empty));
+
+            extensionContent1.Add(dianExtensions);
+            extension1.Add(extensionContent1);
+            extensions.Add(extension1);
+            extensions.Add(new XElement(XName.Get("UBLExtension", EXT_NAMESPACE),
+                new XElement(XName.Get("ExtensionContent", EXT_NAMESPACE))));
+
+            return extensions;
+        }
+
+        private XElement CrearDiscrepancyResponseNotaDebito(NotaDebitoDto notaDebito)
+        {
+            var concepto = notaDebito.ConceptosCorreccion.First();
+            var discrepancy = new XElement(XName.Get("DiscrepancyResponse", CAC_NAMESPACE));
+            if (!string.IsNullOrWhiteSpace(concepto.ReferenceID))
+            {
+                discrepancy.Add(new XElement(XName.Get("ReferenceID", CBC_NAMESPACE), concepto.ReferenceID));
+            }
+            discrepancy.Add(new XElement(XName.Get("ResponseCode", CBC_NAMESPACE), concepto.Codigo));
+            discrepancy.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), concepto.Descripcion));
+            return discrepancy;
+        }
+
+        private XElement CrearDebitNoteLine(ItemDto item)
+        {
+            var line = new XElement(XName.Get("DebitNoteLine", CAC_NAMESPACE));
+            line.Add(new XElement(XName.Get("ID", CBC_NAMESPACE), item.NumeroLinea));
+            line.Add(new XElement(XName.Get("DebitedQuantity", CBC_NAMESPACE),
+                new XAttribute("unitCode", item.UnidadMedida),
+                item.Cantidad.ToString("F2", CultureInfo.InvariantCulture)));
+            line.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
+                new XAttribute("currencyID", "COP"),
+                item.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+
+            if (item.Impuestos != null && item.Impuestos.Count > 0)
+            {
+                line.Add(CrearTaxTotals(new List<ItemDto> { item }));
+                line.Add(CrearWithholdingTaxTotals(new List<ItemDto> { item }));
+            }
+
+            var itemElement = new XElement(XName.Get("Item", CAC_NAMESPACE));
+            itemElement.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), item.Descripcion));
+            itemElement.Add(new XElement(XName.Get("SellersItemIdentification", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), item.Codigo)));
+            line.Add(itemElement);
+
+            line.Add(new XElement(XName.Get("Price", CAC_NAMESPACE),
+                new XElement(XName.Get("PriceAmount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    item.PrecioUnitario.ToString("F2", CultureInfo.InvariantCulture)),
+                new XElement(XName.Get("BaseQuantity", CBC_NAMESPACE),
+                    new XAttribute("unitCode", item.UnidadMedida),
+                    "1.00")));
+
+            return line;
+        }
+
         private XElement CrearUBLExtensionsNotaCredito(NotaCreditoDto notaCredito)
         {
             var extensions = new XElement(XName.Get("UBLExtensions", EXT_NAMESPACE));

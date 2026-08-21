@@ -90,6 +90,26 @@ namespace DIAN_NET.Services
             return Sha384(cadena);
         }
 
+        public string CalcularCUDE(NotaDebitoDto notaDebito, string ambiente)
+        {
+            if (notaDebito == null)
+            {
+                throw new ArgumentNullException(nameof(notaDebito));
+            }
+
+            // Misma fórmula CUDE-SHA384 que nota crédito (DIAN).
+            return CalcularCUDE(new NotaCreditoDto
+            {
+                NumeroDocumento = notaDebito.NumeroDocumento,
+                FechaEmision = notaDebito.FechaEmision,
+                Totales = notaDebito.Totales,
+                Items = notaDebito.Items,
+                Emisor = notaDebito.Emisor,
+                Cliente = notaDebito.Cliente,
+                ConfiguracionDian = notaDebito.ConfiguracionDian
+            }, ambiente);
+        }
+
         public string CalcularCUFE(string xmlSinFirma, string numeroDocumento, DateTime fechaEmision, string tipoDocumento)
         {
             // El CUFE se calcula con SHA384 según especificaciones DIAN

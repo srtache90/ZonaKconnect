@@ -46,6 +46,21 @@ namespace DIAN_NET.Controllers
             return response.Exitoso ? Ok(response) : StatusCode(502, response);
         }
 
+        [HttpPost("debit-note")]
+        [ProducesResponseType(typeof(EmitDocumentResponse), 200)]
+        [ProducesResponseType(typeof(EmitDocumentResponse), 400)]
+        [ProducesResponseType(typeof(EmitDocumentResponse), 502)]
+        public async Task<ActionResult<EmitDocumentResponse>> EmitDebitNote([FromBody] EmitDebitNoteRequest request)
+        {
+            if (request?.NotaDebito == null)
+            {
+                return BadRequest(Failed("La nota débito es requerida."));
+            }
+
+            var response = await _emissionService.EmitDebitNoteAsync(request);
+            return response.Exitoso ? Ok(response) : StatusCode(502, response);
+        }
+
         [HttpPost("support-document")]
         [ProducesResponseType(typeof(EmitDocumentResponse), 200)]
         [ProducesResponseType(typeof(EmitDocumentResponse), 400)]
@@ -82,6 +97,7 @@ namespace DIAN_NET.Controllers
             {
                 Status = "Fallido",
                 Exitoso = false,
+                EstadoDian = "RECHAZADO_DIAN",
                 StatusCode = "BAD_REQUEST",
                 StatusDescription = error,
                 Errores = new[] { error }

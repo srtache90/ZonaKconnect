@@ -4,6 +4,7 @@ import com.zonak.portal.admin.AdminPortalRepository;
 import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
 import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
+import com.zonak.portal.dto.CreateDebitNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.dto.InvoiceListResponseDTO;
 import com.zonak.portal.dto.InvoiceResponseDTO;
@@ -129,6 +130,11 @@ public class InvoicePortalController {
                         .emitCreditNote(form.toCreditNoteDTO(), tenantUuid.toString(), emissionPointId.toString())
                         .block();
                 invoiceId = response != null ? response.id() : null;
+            } else if ("92".equals(tipoOperacion)) {
+                InvoiceResponseDTO response = invoiceClientService
+                        .emitDebitNote(form.toDebitNoteDTO(), tenantUuid.toString(), emissionPointId.toString())
+                        .block();
+                invoiceId = response != null ? response.id() : null;
             } else {
                 invoiceId = invoiceOrchestratorService
                         .processAndPersistInvoice(form.toDTO(), tenantUuid.toString(), emissionPointId.toString())
@@ -149,6 +155,7 @@ public class InvoicePortalController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String documentKind,
             @RequestParam(required = false) String sociedadId,
             @RequestParam(required = false) String emissionPointId,
             HttpSession session,
@@ -187,7 +194,7 @@ public class InvoicePortalController {
         int safeLimit = Math.min(Math.max(limit, 1), 100);
 
         InvoiceListResponseDTO response = invoiceClientService
-                .getInvoices(safePage, safeLimit, estado, tipo, tenantId, selectedEmissionPointId)
+                .getInvoices(safePage, safeLimit, estado, tipo, documentKind, tenantId, selectedEmissionPointId)
                 .block();
 
         List<InvoiceListResponseDTO.InvoiceItemDTO> invoices = response != null && response.invoices() != null
@@ -212,6 +219,7 @@ public class InvoicePortalController {
         model.addAttribute("nextPage", safePage + 1);
         model.addAttribute("estado", estado);
         model.addAttribute("tipo", tipo);
+        model.addAttribute("documentKind", documentKind);
         model.addAttribute("navModule", "emision");
         model.addAttribute("navActive", "emision");
 
@@ -721,6 +729,53 @@ public class InvoicePortalController {
             );
         }
 
+        public CreateDebitNoteRequestDTO toDebitNoteDTO() {
+            if (!StringUtils.hasText(cufeReferencia)) {
+                throw new IllegalArgumentException("CUFE/CUDE de referencia es obligatorio para nota débito");
+            }
+            if (!StringUtils.hasText(numeroDocumentoReferencia)) {
+                throw new IllegalArgumentException("Número de factura referenciada es obligatorio para nota débito");
+            }
+
+            List<CreateInvoiceRequestDTO.ItemDTO> itemDTOs = buildItemDtos();
+            TotalsSnapshot totalsSnapshot = computeTotals(itemDTOs);
+            Map<String, Object> totals = new HashMap<>();
+            totals.put("subtotal", totalsSnapshot.subtotal());
+            totals.put("iva", totalsSnapshot.iva());
+            totals.put("propina", totalsSnapshot.propina());
+            totals.put("total", totalsSnapshot.total());
+
+            String conceptoCodigo = defaultIfBlank(conceptoCredito, "1");
+            String numeroRef = numeroDocumentoReferencia.trim();
+            String fechaEmision = formatFechaEmisionReferencia(fechaEmisionReferencia);
+
+            return new CreateDebitNoteRequestDTO(
+                    "LOCAL",
+                    "30",
+                    "92",
+                    new CreateInvoiceRequestDTO.CustomerDTO(
+                            mapIdentificationType(tipoDocumentoIdentidad),
+                            identificacion,
+                            razonSocial,
+                            email
+                    ),
+                    new CreateCreditNoteRequestDTO.FacturaReferenciaDTO(
+                            "FV",
+                            numeroRef,
+                            fechaEmision,
+                            cufeReferencia.trim(),
+                            "CUFE-SHA384"
+                    ),
+                    List.of(new CreateCreditNoteRequestDTO.ConceptoCorreccionDTO(
+                            numeroRef,
+                            conceptoCodigo,
+                            describeConceptoDebito(conceptoCodigo)
+                    )),
+                    itemDTOs,
+                    totals
+            );
+        }
+
         private List<CreateInvoiceRequestDTO.ItemDTO> buildItemDtos() {
             List<CreateInvoiceRequestDTO.ItemDTO> itemDTOs = new ArrayList<>();
             if (items != null) {
@@ -799,6 +854,14 @@ public class InvoicePortalController {
                 case "2" -> "Anulación de factura electrónica";
                 case "3" -> "Rebaja o descuento total";
                 default -> "Devolucion parcial de los bienes y/o no aceptacion parcial del servicio";
+            };
+        }
+
+        private String describeConceptoDebito(String codigo) {
+            return switch (codigo) {
+                case "2" -> "Cobro de mayor valor";
+                case "3" -> "Otros";
+                default -> "Intereses";
             };
         }
 

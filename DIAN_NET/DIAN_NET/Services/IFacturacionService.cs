@@ -10,6 +10,7 @@ namespace DIAN_NET.Services
     {
         Task<EnviarFacturaResponse> EnviarFacturaAsync(EnviarFacturaRequest request);
         Task<EnviarFacturaResponse> EnviarNotaCreditoAsync(EnviarNotaCreditoRequest request);
+        Task<EnviarFacturaResponse> EnviarNotaDebitoAsync(EnviarNotaDebitoRequest request);
         Task<EnviarFacturaResponse> EnviarXmlFacturaAsync(string xmlBase, string ambiente);
         Task<EnviarFacturaResponse> EnviarDocumentoSoporteAsync(EnviarDocumentoSoporteRequest request);
         Task<EnviarFacturaResponse> EnviarNominaAsync(EmitPayrollRequest request);
