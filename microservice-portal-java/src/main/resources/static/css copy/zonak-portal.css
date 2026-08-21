@@ -109,6 +109,10 @@ body.zk-body {
     border-right: 1px solid transparent;
 }
 
+.zk-dashboard-nav a:first-child {
+    background: #967117 !important;
+    color: #ffffff !important;
+}
 
 .zk-dashboard-nav a:hover {
     background: #1b1b1b !important;
@@ -327,8 +331,8 @@ body.zk-body {
     height: 44px !important;
     padding: 0 20px !important;
     border-radius: 6px !important;
-    background: #f3ead56b !important;
-    border-color: #f1dca841 !important;
+    background: #967117 !important;
+    border-color: #967117 !important;
 }
 
 .zk-dashboard-modules {
@@ -389,7 +393,7 @@ body.zk-body {
 
 /* Locked reference composition for the Dashboard. */
 .zk-dashboard-shell {
-    background: #f9f3e7b8 !important;
+    background: #f7f3eb !important;
 }
 
 .zk-dashboard-main {
