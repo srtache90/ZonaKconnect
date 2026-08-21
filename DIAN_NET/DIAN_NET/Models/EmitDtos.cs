@@ -24,6 +24,12 @@ namespace DIAN_NET.Models
         public NotaCreditoDto? NotaCredito { get; set; }
     }
 
+    public class EmitDebitNoteRequest
+    {
+        public string Ambiente { get; set; } = "Habilitacion";
+        public NotaDebitoDto? NotaDebito { get; set; }
+    }
+
     public class EmitPayrollRequest
     {
         public string Ambiente { get; set; } = "Habilitacion";
@@ -34,6 +40,8 @@ namespace DIAN_NET.Models
     {
         public string Status { get; set; } = "Fallido";
         public bool Exitoso { get; set; }
+        [JsonPropertyName("estado_dian")]
+        public string? EstadoDian { get; set; }
         public string? CufeCune { get; set; }
         public string? CUFE { get; set; }
         public string? CUNE { get; set; }

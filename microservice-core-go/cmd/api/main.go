@@ -55,6 +55,17 @@ type createCreditNoteRequest struct {
 	Totals              json.RawMessage         `json:"totals_jsonb"`
 }
 
+type createDebitNoteRequest struct {
+	Ambiente            string                  `json:"ambiente"`
+	CustomizationID     string                  `json:"customization_id"`
+	DebitNoteTypeCode   string                  `json:"debit_note_type_code"`
+	Cliente             invoiceCustomer         `json:"cliente"`
+	FacturaReferencia   dianDocumentReference   `json:"factura_referencia"`
+	ConceptosCorreccion []dianCorrectionConcept `json:"conceptos_correccion"`
+	Items               []invoiceItem           `json:"items"`
+	Totals              json.RawMessage         `json:"totals_jsonb"`
+}
+
 type invoiceCustomer struct {
 	TipoIdentificacion   string `json:"tipo_identificacion"`
 	NumeroIdentificacion string `json:"numero_identificacion"`
@@ -75,6 +86,7 @@ type dianNetRequest struct {
 	Ambiente    string          `json:"ambiente"`
 	Factura     *dianInvoice    `json:"factura,omitempty"`
 	NotaCredito *dianCreditNote `json:"notaCredito,omitempty"`
+	NotaDebito  *dianDebitNote  `json:"notaDebito,omitempty"`
 	XMLBase     string          `json:"xml_base,omitempty"`
 }
 
@@ -87,20 +99,22 @@ type DIANConfig struct {
 }
 
 type dianNetResponse struct {
-	Status                       string `json:"status"`
-	Exitoso                      bool   `json:"exitoso"`
-	EstadoDian                   string `json:"estado_dian"`
-	StatusCode                   string `json:"statusCode"`
-	StatusDescription            string `json:"statusDescription"`
-	CudeCune                     string `json:"cufeCune"`
-	CUFE                         string `json:"cufe"`
-	CUNE                         string `json:"cune"`
-	UUID                         string `json:"uuid"`
-	TrackID                      string `json:"trackID"`
-	SignedXMLBase64              string `json:"signedXmlBase64"`
-	ApplicationResponseXML       string `json:"applicationResponseXml"`
-	ApplicationResponseXMLBase64 string `json:"applicationResponseXmlBase64"`
-	ZipBase64                    string `json:"zipBase64"`
+	Status                       string   `json:"status"`
+	Exitoso                      bool     `json:"exitoso"`
+	EstadoDian                   string   `json:"estado_dian"`
+	StatusCode                   string   `json:"statusCode"`
+	StatusDescription            string   `json:"statusDescription"`
+	StatusMessage                string   `json:"statusMessage"`
+	CudeCune                     string   `json:"cufeCune"`
+	CUFE                         string   `json:"cufe"`
+	CUNE                         string   `json:"cune"`
+	UUID                         string   `json:"uuid"`
+	TrackID                      string   `json:"trackID"`
+	SignedXMLBase64              string   `json:"signedXmlBase64"`
+	ApplicationResponseXML       string   `json:"applicationResponseXml"`
+	ApplicationResponseXMLBase64 string   `json:"applicationResponseXmlBase64"`
+	ZipBase64                    string   `json:"zipBase64"`
+	Errores                      []string `json:"errores"`
 }
 
 type companyEmissionContext struct {
@@ -133,6 +147,7 @@ type addressDTO struct {
 
 type dianInvoice struct {
 	TipoDocumento     string            `json:"tipoDocumento"`
+	InvoiceTypeCode   string            `json:"invoiceTypeCode"`
 	NumeroDocumento   string            `json:"numeroDocumento"`
 	FechaEmision      time.Time         `json:"fechaEmision"`
 	FechaVencimiento  time.Time         `json:"fechaVencimiento"`
@@ -150,6 +165,24 @@ type dianCreditNote struct {
 	TipoDocumento       string                  `json:"tipoDocumento"`
 	CustomizationID     string                  `json:"customizationID"`
 	CreditNoteTypeCode  string                  `json:"creditNoteTypeCode"`
+	NumeroDocumento     string                  `json:"numeroDocumento"`
+	FechaEmision        time.Time               `json:"fechaEmision"`
+	Moneda              string                  `json:"moneda"`
+	FacturaReferencia   dianDocumentReference   `json:"facturaReferencia"`
+	Emisor              dianParty               `json:"emisor"`
+	Cliente             dianCustomer            `json:"cliente"`
+	ConceptosCorreccion []dianCorrectionConcept `json:"conceptosCorreccion"`
+	Items               []dianInvoiceItem       `json:"items"`
+	Totales             dianTotals              `json:"totales"`
+	Observaciones       string                  `json:"observaciones"`
+	Notas               []string                `json:"notas"`
+	ConfiguracionDian   dianConfigDTO           `json:"configuracionDian"`
+}
+
+type dianDebitNote struct {
+	TipoDocumento       string                  `json:"tipoDocumento"`
+	CustomizationID     string                  `json:"customizationID"`
+	DebitNoteTypeCode   string                  `json:"debitNoteTypeCode"`
 	NumeroDocumento     string                  `json:"numeroDocumento"`
 	FechaEmision        time.Time               `json:"fechaEmision"`
 	Moneda              string                  `json:"moneda"`
@@ -270,6 +303,7 @@ type invoiceListItem struct {
 	DianErrorCode        *string   `json:"dian_error_code"`
 	DianErrorDescription *string   `json:"dian_error_description"`
 	DianStatusMessage    *string   `json:"dian_status_message"`
+	DianErrores          *string   `json:"dian_errores"`
 	DianTrackId          *string   `json:"dian_track_id"`
 	CustomerEmail        *string   `json:"customer_email"`
 	DocumentKind         string    `json:"document_kind"`
@@ -314,6 +348,7 @@ func main() {
 		pr.Get("/api/v1/invoices", a.handleGetInvoices)
 		pr.Post("/api/v1/invoices", a.handleCreateInvoice)
 		pr.Post("/api/v1/credit-notes", a.handleCreateCreditNote)
+		pr.Post("/api/v1/debit-notes", a.handleCreateDebitNote)
 		pr.Post("/api/v1/support-documents", a.handleCreateSupportDocument)
 		pr.Post("/api/v1/payroll", a.handleCreatePayroll)
 		pr.Get("/api/v1/invoices/{id}/documents/{kind}", a.handleDownloadInvoiceDocument)
@@ -410,6 +445,27 @@ func (a *app) handleGetInvoices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if kind := strings.ToUpper(strings.TrimSpace(q.Get("document_kind"))); kind != "" {
+		args = append(args, kind)
+		where = append(where, fmt.Sprintf(`COALESCE(NULLIF(document_kind, ''), 'INVOICE') = $%d`, len(args)))
+	}
+
+	if ep := strings.TrimSpace(q.Get("emission_point_id")); ep != "" {
+		epID, err := uuid.Parse(ep)
+		if err != nil {
+			http.Error(w, "emission_point_id inválido", http.StatusBadRequest)
+			return
+		}
+		args = append(args, epID)
+		where = append(where, fmt.Sprintf("emission_point_id = $%d", len(args)))
+	} else if strings.EqualFold(q.Get("tipo"), "EMITIDA") {
+		// Si el cliente envía X-Emission-Point-ID, acotar listado emitido al PV activo.
+		if epID, ok := r.Context().Value(emissionPointIDKey).(uuid.UUID); ok {
+			args = append(args, epID)
+			where = append(where, fmt.Sprintf("emission_point_id = $%d", len(args)))
+		}
+	}
+
 	whereSQL := strings.Join(where, " AND ")
 
 	var totalRecords int64
@@ -436,12 +492,31 @@ func (a *app) handleGetInvoices(w http.ResponseWriter, r *http.Request) {
 			created_at,
 			updated_at,
 			NULLIF(COALESCE(dian_response_jsonb->>'statusCode', dian_response_jsonb->>'status_code', ''), ''),
-			NULLIF(COALESCE(dian_response_jsonb->>'statusDescription', dian_response_jsonb->>'status_description', ''), ''),
-			NULLIF(COALESCE(dian_response_jsonb->>'status', dian_response_jsonb->>'estado_dian', ''), ''),
+			NULLIF(COALESCE(
+				dian_response_jsonb->>'statusDescription',
+				dian_response_jsonb->>'status_description',
+				dian_response_jsonb->>'statusMessage',
+				''
+			), ''),
+			NULLIF(COALESCE(
+				dian_response_jsonb->>'statusMessage',
+				dian_response_jsonb->>'status',
+				dian_response_jsonb->>'estado_dian',
+				''
+			), ''),
+			NULLIF(COALESCE(
+				(
+					SELECT string_agg(elem, ' | ')
+					FROM jsonb_array_elements_text(COALESCE(dian_response_jsonb->'errores', '[]'::jsonb)) AS elem
+				),
+				dian_response_jsonb->>'errores',
+				''
+			), ''),
 			NULLIF(COALESCE(dian_response_jsonb->>'trackID', dian_response_jsonb->>'trackId', dian_response_jsonb->>'uuid', ''), ''),
 			NULLIF(COALESCE(raw_dian_payload_jsonb->'cliente'->>'email', raw_dian_payload_jsonb->'customer'->>'email', ''), ''),
 			COALESCE(NULLIF(document_kind, ''), CASE
 				WHEN raw_dian_payload_jsonb ? 'credit_note_type_code' THEN 'CREDIT_NOTE'
+				WHEN raw_dian_payload_jsonb ? 'debit_note_type_code' THEN 'DEBIT_NOTE'
 				WHEN raw_dian_payload_jsonb ? 'trabajador' THEN 'PAYROLL'
 				WHEN raw_dian_payload_jsonb ? 'proveedor' AND emission_point_id IS NOT NULL THEN 'SUPPORT'
 				ELSE 'INVOICE'
@@ -473,6 +548,7 @@ func (a *app) handleGetInvoices(w http.ResponseWriter, r *http.Request) {
 			&invoice.DianErrorCode,
 			&invoice.DianErrorDescription,
 			&invoice.DianStatusMessage,
+			&invoice.DianErrores,
 			&invoice.DianTrackId,
 			&invoice.CustomerEmail,
 			&invoice.DocumentKind,
@@ -644,17 +720,19 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var prefijo string
-	var numeroActual, rangoHasta int64
+	var prefijoNC string
+	var numeroNC, rangoHasta int64
 	err = tx.QueryRow(r.Context(), `
-		SELECT prefijo, numero_actual, rango_hasta
+		SELECT COALESCE(NULLIF(BTRIM(prefijo_nc), ''), 'NC'),
+		       COALESCE(numero_actual_nc, GREATEST(rango_desde - 1, 0)),
+		       rango_hasta
 		FROM emission_points
 		WHERE company_id = $1
 		  AND id = $2
 		  AND is_active = TRUE
 		  AND CURRENT_DATE BETWEEN vigencia_desde AND vigencia_hasta
 		FOR UPDATE
-	`, tenantID, emissionPointID).Scan(&prefijo, &numeroActual, &rangoHasta)
+	`, tenantID, emissionPointID).Scan(&prefijoNC, &numeroNC, &rangoHasta)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "punto de emisi?n no pertenece al tenant o no est? vigente", http.StatusBadRequest)
@@ -664,7 +742,8 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nextNumber := numeroActual + 1
+	prefijo := prefijoNC
+	nextNumber := numeroNC + 1
 	if nextNumber > rangoHasta {
 		http.Error(w, "rango de resoluci?n DIAN agotado", http.StatusBadRequest)
 		return
@@ -696,7 +775,7 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 			raw_dian_payload_jsonb,
 			document_kind
 		)
-		VALUES ($1, $2, $3, $4, 'PENDIENTE_NC', $5::jsonb, $6::jsonb, 'CREDIT_NOTE')
+		VALUES ($1, $2, $3, $4, 'PENDIENTE', $5::jsonb, $6::jsonb, 'CREDIT_NOTE')
 		RETURNING id
 	`, tenantID, emissionPointID, prefijo, nextNumber, totals, rawPayload).Scan(&invoiceID)
 	if err != nil {
@@ -706,7 +785,7 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 
 	_, err = tx.Exec(r.Context(), `
 		UPDATE emission_points
-		SET numero_actual = $3,
+		SET numero_actual_nc = $3,
 		    updated_at = now()
 		WHERE company_id = $1
 		  AND id = $2
@@ -732,6 +811,127 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"id":     invoiceID,
 		"status": "NOTA_CREDITO_PERSISTIDA_EN_PROCESAMIENTO",
+	})
+}
+
+func (a *app) handleCreateDebitNote(w http.ResponseWriter, r *http.Request) {
+	tenantID := mustTenantID(r.Context())
+	emissionPointID := mustEmissionPointID(r.Context())
+
+	var req createDebitNoteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "payload inv?lido", http.StatusBadRequest)
+		return
+	}
+	if len(req.Items) == 0 {
+		http.Error(w, "items requeridos", http.StatusBadRequest)
+		return
+	}
+	if req.FacturaReferencia.NumeroDocumento == "" || req.FacturaReferencia.CUFE == "" {
+		http.Error(w, "factura_referencia con numero_documento y cufe es requerida", http.StatusBadRequest)
+		return
+	}
+	if len(req.ConceptosCorreccion) == 0 {
+		http.Error(w, "conceptos_correccion requerido", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := a.db.BeginTx(r.Context(), pgx.TxOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var prefijoND string
+	var numeroND, rangoHasta int64
+	err = tx.QueryRow(r.Context(), `
+		SELECT COALESCE(NULLIF(BTRIM(prefijo_nd), ''), 'ND'),
+		       COALESCE(numero_actual_nd, GREATEST(rango_desde - 1, 0)),
+		       rango_hasta
+		FROM emission_points
+		WHERE company_id = $1
+		  AND id = $2
+		  AND is_active = TRUE
+		  AND CURRENT_DATE BETWEEN vigencia_desde AND vigencia_hasta
+		FOR UPDATE
+	`, tenantID, emissionPointID).Scan(&prefijoND, &numeroND, &rangoHasta)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "punto de emisi?n no pertenece al tenant o no est? vigente", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nextNumber := numeroND + 1
+	if nextNumber > rangoHasta {
+		http.Error(w, "rango de resoluci?n DIAN agotado", http.StatusBadRequest)
+		return
+	}
+
+	rawPayload, err := json.Marshal(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	totals := req.Totals
+	if len(totals) == 0 {
+		totals, err = json.Marshal(map[string]any{"items": req.Items})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	var invoiceID uuid.UUID
+	err = tx.QueryRow(r.Context(), `
+		INSERT INTO invoices (
+			company_id,
+			emission_point_id,
+			prefijo,
+			numero,
+			estado_dian,
+			totals_jsonb,
+			raw_dian_payload_jsonb,
+			document_kind
+		)
+		VALUES ($1, $2, $3, $4, 'PENDIENTE', $5::jsonb, $6::jsonb, 'DEBIT_NOTE')
+		RETURNING id
+	`, tenantID, emissionPointID, prefijoND, nextNumber, totals, rawPayload).Scan(&invoiceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = tx.Exec(r.Context(), `
+		UPDATE emission_points
+		SET numero_actual_nd = $3,
+		    updated_at = now()
+		WHERE company_id = $1
+		  AND id = $2
+	`, tenantID, emissionPointID, nextNumber)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	go func(tenantID, emissionPointID, invoiceID uuid.UUID, prefijo string, numero int64, req createDebitNoteRequest) {
+		ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
+		defer cancel()
+		if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
+			log.Printf("emitDebitNoteToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
+		}
+	}(tenantID, emissionPointID, invoiceID, prefijoND, nextNumber, req)
+
+	writeJSON(w, http.StatusAccepted, map[string]any{
+		"id":     invoiceID,
+		"status": "NOTA_DEBITO_PERSISTIDA_EN_PROCESAMIENTO",
 	})
 }
 
@@ -785,6 +985,17 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		if documentKind == "DEBIT_NOTE" || strings.Contains(string(rawPayload), "debit_note_type_code") {
+			var req createDebitNoteRequest
+			if err := json.Unmarshal(rawPayload, &req); err != nil {
+				log.Printf("reemit ND unmarshal invoice_id=%s error=%v", invoiceID, err)
+				return
+			}
+			if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
+				log.Printf("reemit ND invoice_id=%s error=%v", invoiceID, err)
+			}
+			return
+		}
 		var req createInvoiceRequest
 		if err := json.Unmarshal(rawPayload, &req); err != nil {
 			log.Printf("reemit FV unmarshal invoice_id=%s error=%v", invoiceID, err)
@@ -828,31 +1039,55 @@ func (a *app) handleUpdateInvoiceUrls(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) allocateNextNumber(ctx context.Context, tenantID, emissionPointID uuid.UUID) (prefijo string, nextNumber int64, err error) {
+	return a.allocateNextNumberByKind(ctx, tenantID, emissionPointID, "INVOICE")
+}
+
+func (a *app) allocateNextNumberByKind(ctx context.Context, tenantID, emissionPointID uuid.UUID, documentKind string) (prefijo string, nextNumber int64, err error) {
 	tx, err := a.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", 0, err
 	}
 	defer tx.Rollback(ctx)
 
-	var numeroActual, rangoHasta int64
+	var prefijoFE, prefijoNC, prefijoND string
+	var numeroFE, numeroNC, numeroND, rangoHasta int64
 	err = tx.QueryRow(ctx, `
-		SELECT prefijo, numero_actual, rango_hasta
+		SELECT prefijo,
+		       numero_actual,
+		       COALESCE(NULLIF(BTRIM(prefijo_nc), ''), 'NC'),
+		       COALESCE(numero_actual_nc, GREATEST(rango_desde - 1, 0)),
+		       COALESCE(NULLIF(BTRIM(prefijo_nd), ''), 'ND'),
+		       COALESCE(numero_actual_nd, GREATEST(rango_desde - 1, 0)),
+		       rango_hasta
 		FROM emission_points
 		WHERE company_id = $1 AND id = $2 AND is_active = TRUE
 		  AND CURRENT_DATE BETWEEN vigencia_desde AND vigencia_hasta
 		FOR UPDATE
-	`, tenantID, emissionPointID).Scan(&prefijo, &numeroActual, &rangoHasta)
+	`, tenantID, emissionPointID).Scan(&prefijoFE, &numeroFE, &prefijoNC, &numeroNC, &prefijoND, &numeroND, &rangoHasta)
 	if err != nil {
 		return "", 0, err
 	}
-	nextNumber = numeroActual + 1
+
+	var updateSQL string
+	switch strings.ToUpper(strings.TrimSpace(documentKind)) {
+	case "CREDIT_NOTE":
+		prefijo = prefijoNC
+		nextNumber = numeroNC + 1
+		updateSQL = `UPDATE emission_points SET numero_actual_nc = $3, updated_at = now() WHERE company_id = $1 AND id = $2`
+	case "DEBIT_NOTE":
+		prefijo = prefijoND
+		nextNumber = numeroND + 1
+		updateSQL = `UPDATE emission_points SET numero_actual_nd = $3, updated_at = now() WHERE company_id = $1 AND id = $2`
+	default:
+		prefijo = prefijoFE
+		nextNumber = numeroFE + 1
+		updateSQL = `UPDATE emission_points SET numero_actual = $3, updated_at = now() WHERE company_id = $1 AND id = $2`
+	}
+
 	if nextNumber > rangoHasta {
 		return "", 0, errors.New("rango de resolución DIAN agotado")
 	}
-	if _, err = tx.Exec(ctx, `
-		UPDATE emission_points SET numero_actual = $3, updated_at = now()
-		WHERE company_id = $1 AND id = $2
-	`, tenantID, emissionPointID, nextNumber); err != nil {
+	if _, err = tx.Exec(ctx, updateSQL, tenantID, emissionPointID, nextNumber); err != nil {
 		return "", 0, err
 	}
 	if err = tx.Commit(ctx); err != nil {
@@ -1220,6 +1455,87 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 	return payload, nil
 }
 
+func (a *app) emitDebitNoteToDianNet(ctx context.Context, tenantID, emissionPointID, invoiceID uuid.UUID, prefijo string, numero int64, debitNoteReq createDebitNoteRequest) (json.RawMessage, error) {
+	emissionCtx, err := a.loadCompanyEmissionContext(ctx, tenantID, emissionPointID)
+	if err != nil {
+		return nil, err
+	}
+	if emissionCtx.DIANConfig.S3CertificateKey == "" || emissionCtx.DIANConfig.SecretsManagerPasswordKey == "" {
+		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
+	}
+
+	ambiente := debitNoteReq.Ambiente
+	if ambiente == "" {
+		ambiente = emissionCtx.DIANConfig.Ambiente
+	}
+	if ambiente == "" {
+		ambiente = "Habilitacion"
+	}
+
+	notaDebito := buildDianDebitNote(debitNoteReq, emissionCtx, prefijo, numero, ambiente)
+	body, err := json.Marshal(dianNetRequest{
+		Ambiente:   ambiente,
+		NotaDebito: &notaDebito,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.dianAPIURL+"/api/v1/emit/debit-note", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", tenantID.String())
+	req.Header.Set("X-Cert-S3-Key", emissionCtx.DIANConfig.S3CertificateKey)
+	req.Header.Set("X-Cert-Password-Secret-Key", emissionCtx.DIANConfig.SecretsManagerPasswordKey)
+	req.Header.Set("X-DIAN-Ambiente", ambiente)
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := json.RawMessage(respBody)
+	if !json.Valid(payload) {
+		payload, _ = json.Marshal(map[string]string{"raw_body": string(respBody)})
+	}
+
+	var dianResp dianNetResponse
+	_ = json.Unmarshal(payload, &dianResp)
+
+	estadoDian := resolveDianStatus(dianResp, resp.StatusCode)
+	uuidCude := resolveDianIdentifier(dianResp)
+	xmlURL := fmt.Sprintf("/api/v1/invoices/%s/documents/signed-xml", invoiceID)
+	pdfURL := fmt.Sprintf("/api/v1/invoices/%s/documents/pdf", invoiceID)
+
+	_, err = a.db.Exec(ctx, `
+		UPDATE invoices
+		SET estado_dian = $3,
+		    uuid_cude = NULLIF($4, ''),
+		    xml_s3_url = $5,
+		    pdf_s3_url = $6,
+		    dian_response_jsonb = $7::jsonb,
+		    updated_at = now()
+		WHERE company_id = $1
+		  AND id = $2
+	`, tenantID, invoiceID, estadoDian, uuidCude, xmlURL, pdfURL, payload)
+	if err != nil {
+		return payload, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return payload, fmt.Errorf("DIAN_API status %d", resp.StatusCode)
+	}
+	return payload, nil
+}
+
 func (a *app) loadCompanyEmissionContext(ctx context.Context, tenantID, emissionPointID uuid.UUID) (companyEmissionContext, error) {
 	var result companyEmissionContext
 	var direccionRaw, dianConfigRaw json.RawMessage
@@ -1326,8 +1642,13 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 	}
 
 	now := time.Now()
+	invoiceTypeCode := "01"
+	if isContingencyInvoice(req) {
+		invoiceTypeCode = "05"
+	}
 	return dianInvoice{
 		TipoDocumento:    "FV",
+		InvoiceTypeCode:  invoiceTypeCode,
 		NumeroDocumento:  fmt.Sprintf("%s%d", prefijo, numero),
 		FechaEmision:     now,
 		FechaVencimiento: now,
@@ -1456,6 +1777,115 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 	}
 }
 
+func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionContext, prefijo string, numero int64, ambiente string) dianDebitNote {
+	totals := resolveTotalsFromItems(req.Items, req.Totals)
+	items := make([]dianInvoiceItem, 0, len(req.Items))
+	for i, item := range req.Items {
+		quantity := defaultFloat(item.Cantidad, 1)
+		subtotal := quantity*item.PrecioUnitario - item.Descuento
+		if subtotal < 0 {
+			subtotal = 0
+		}
+		taxes := normalizeDianTaxes(item.Impuestos, subtotal, quantity, "94")
+		items = append(items, dianInvoiceItem{
+			NumeroLinea:    i + 1,
+			Codigo:         defaultString(item.Codigo, fmt.Sprintf("ND-ITEM-%03d", i+1)),
+			Descripcion:    defaultString(item.Descripcion, "Ajuste de nota debito"),
+			Cantidad:       quantity,
+			UnidadMedida:   "94",
+			PrecioUnitario: item.PrecioUnitario,
+			Descuento:      item.Descuento,
+			Subtotal:       subtotal,
+			Impuestos:      taxes,
+			Total:          subtotal + sumDianTaxValues(taxes),
+		})
+	}
+
+	now := time.Now()
+	reference := req.FacturaReferencia
+	if reference.TipoDocumento == "" {
+		reference.TipoDocumento = "FV"
+	}
+	if reference.SchemeName == "" {
+		reference.SchemeName = "CUFE-SHA384"
+	}
+
+	concepts := req.ConceptosCorreccion
+	for i := range concepts {
+		if concepts[i].ReferenceID == "" {
+			concepts[i].ReferenceID = reference.NumeroDocumento
+		}
+		if concepts[i].Codigo == "" {
+			concepts[i].Codigo = "1"
+		}
+		if concepts[i].Descripcion == "" {
+			concepts[i].Descripcion = "Intereses"
+		}
+	}
+
+	return dianDebitNote{
+		TipoDocumento:     "ND",
+		CustomizationID:   defaultString(req.CustomizationID, "30"),
+		DebitNoteTypeCode: defaultString(req.DebitNoteTypeCode, "92"),
+		NumeroDocumento:   fmt.Sprintf("%s%d", prefijo, numero),
+		FechaEmision:      now,
+		Moneda:            "COP",
+		FacturaReferencia: reference,
+		Emisor:            buildDianEmisor(emissionCtx),
+		Cliente: dianCustomer{
+			TipoIdentificacion:   defaultString(req.Cliente.TipoIdentificacion, "31"),
+			NumeroIdentificacion: req.Cliente.NumeroIdentificacion,
+			Dv:                   "0",
+			TipoPersona:          "1",
+			RazonSocial:          defaultString(req.Cliente.RazonSocial, "Cliente"),
+			NombreComercial:      defaultString(req.Cliente.RazonSocial, "Cliente"),
+			Direccion:            defaultAddress(addressDTO{}),
+			Email:                req.Cliente.Email,
+			RegimenFiscal:        "R-99-PN",
+			TributoID:            "ZZ",
+			TributoNombre:        "No Aplica",
+		},
+		ConceptosCorreccion: concepts,
+		Items:               items,
+		Totales:             totals,
+		Observaciones:       "Nota debito generada desde Core Go y emitida por DIAN_NET",
+		Notas:               []string{"Origen normalizado por Core Go"},
+		ConfiguracionDian: dianConfigDTO{
+			NumeroResolucion: emissionCtx.ResolucionDIAN,
+			FechaResolucion:  emissionCtx.VigenciaDesde,
+			FechaInicio:      emissionCtx.VigenciaDesde,
+			FechaFin:         emissionCtx.VigenciaHasta,
+			Prefijo:          prefijo,
+			RangoInicio:      strconv.FormatInt(emissionCtx.RangoDesde, 10),
+			RangoFin:         strconv.FormatInt(emissionCtx.RangoHasta, 10),
+			TipoAmbiente:     dianEnvironmentCode(ambiente),
+			SoftwareID:       defaultString(emissionCtx.DIANConfig.SoftwareID, "SOFTWARE-ID-LOCAL"),
+			Pin:              defaultString(emissionCtx.DIANConfig.Pin, "PIN-LOCAL"),
+			ClaveTecnica:     emissionCtx.ClaveTecnica,
+		},
+	}
+}
+
+func isContingencyInvoice(req createInvoiceRequest) bool {
+	if strings.Contains(strings.ToLower(req.XMLBase), "tipooperacion=05") {
+		return true
+	}
+	if len(req.Totals) == 0 {
+		return false
+	}
+	var raw map[string]any
+	if json.Unmarshal(req.Totals, &raw) != nil {
+		return false
+	}
+	if v, ok := raw["contingency"].(bool); ok && v {
+		return true
+	}
+	if v, ok := raw["tipoOperacion"].(string); ok && strings.TrimSpace(v) == "05" {
+		return true
+	}
+	return false
+}
+
 func resolveTotals(req createInvoiceRequest) dianTotals {
 	return resolveTotalsFromItems(req.Items, req.Totals)
 }
@@ -1544,20 +1974,32 @@ func sumTaxesFromItems(items []invoiceItem) float64 {
 }
 
 func resolveDianStatus(resp dianNetResponse, httpStatus int) string {
-	switch {
-	case resp.EstadoDian != "":
-		return resp.EstadoDian
-	case resp.Exitoso && resp.StatusDescription != "":
-		return resp.StatusDescription
-	case resp.Status != "":
-		return resp.Status
-	case resp.StatusCode != "":
-		return resp.StatusCode
-	case httpStatus < 200 || httpStatus > 299:
-		return "ERROR_DIAN_NET"
-	default:
+	canonical := strings.ToUpper(strings.TrimSpace(resp.EstadoDian))
+	switch canonical {
+	case "ENVIADO", "RECHAZADO_DIAN", "ERROR_DIAN_NET", "PENDIENTE", "EN_REINTENTO":
+		return canonical
+	}
+
+	exitoso := resp.Exitoso ||
+		strings.EqualFold(strings.TrimSpace(resp.StatusCode), "00") ||
+		strings.EqualFold(strings.TrimSpace(resp.Status), "Exitoso")
+	if exitoso {
 		return "ENVIADO"
 	}
+
+	desc := strings.ToLower(resp.StatusDescription + " " + resp.StatusMessage + " " + resp.Status)
+	if strings.Contains(desc, "validado") && strings.Contains(desc, "exitos") && !strings.Contains(desc, "rechaz") {
+		return "ENVIADO"
+	}
+
+	if httpStatus < 200 || httpStatus > 299 {
+		// Si hay payload DIAN con código/descripcion, es rechazo; si no, fallo de red/servicio.
+		if resp.StatusCode != "" || resp.StatusDescription != "" || len(resp.Errores) > 0 {
+			return "RECHAZADO_DIAN"
+		}
+		return "ERROR_DIAN_NET"
+	}
+	return "RECHAZADO_DIAN"
 }
 
 func resolveDianIdentifier(resp dianNetResponse) string {

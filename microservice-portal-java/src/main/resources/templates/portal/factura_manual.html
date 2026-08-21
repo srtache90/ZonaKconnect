@@ -10,7 +10,7 @@
 <main class="container py-4 pt-24 pb-32">
     <div class="mb-4">
         <h1 class="dc-page-title">Facturación Manual</h1>
-        <p class="dc-page-subtitle">Facturas estándar, notas crédito y contingencia con cálculo fiscal controlado.</p>
+        <p class="dc-page-subtitle">Facturas estándar, notas crédito/débito y contingencia con cálculo fiscal controlado.</p>
     </div>
 
     <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
@@ -37,6 +37,7 @@
                             <select class="form-select" id="tipoOperacion" name="tipoOperacion" required>
                                 <option value="01">01 - Factura estándar</option>
                                 <option value="91">91 - Nota crédito</option>
+                                <option value="92">92 - Nota débito</option>
                                 <option value="05">05 - Factura de contingencia</option>
                             </select>
                         </div>
@@ -84,12 +85,12 @@
                         </div>
 
                         <div class="col-12 border rounded p-3 bg-white d-none" id="creditNoteFields">
-                            <h3 class="h6">Referencia de nota crédito</h3>
+                            <h3 class="h6" id="referenceNoteTitle">Referencia de nota crédito/débito</h3>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label" for="cufeReferencia">CUFE/CUDE referencia</label>
                                     <input class="form-control" id="cufeReferencia" name="cufeReferencia" maxlength="96">
-                                    <div class="form-text">Obligatorio para nota crédito. Debe tener 96 caracteres.</div>
+                                    <div class="form-text">Obligatorio para NC/ND. Debe tener 96 caracteres.</div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" for="numeroDocumentoReferencia">Factura referenciada</label>
@@ -102,9 +103,9 @@
                                 <div class="col-md-2">
                                     <label class="form-label" for="conceptoCredito">Concepto</label>
                                     <select class="form-select" id="conceptoCredito" name="conceptoCredito">
-                                        <option value="1">1 - Devolución parcial</option>
-                                        <option value="2">2 - Anulación</option>
-                                        <option value="3">3 - Rebaja total</option>
+                                        <option value="1">1 - Devolución / Intereses</option>
+                                        <option value="2">2 - Anulación / Mayor valor</option>
+                                        <option value="3">3 - Rebaja / Otros</option>
                                     </select>
                                 </div>
                             </div>
@@ -268,9 +269,17 @@
     }
 
     function toggleCreditNoteFields() {
-        creditNoteFields.classList.toggle('d-none', tipoOperacion.value !== '91');
-        document.getElementById('cufeReferencia').required = tipoOperacion.value === '91';
-        document.getElementById('conceptoCredito').required = tipoOperacion.value === '91';
+        const isAdjustmentNote = tipoOperacion.value === '91' || tipoOperacion.value === '92';
+        creditNoteFields.classList.toggle('d-none', !isAdjustmentNote);
+        document.getElementById('cufeReferencia').required = isAdjustmentNote;
+        document.getElementById('numeroDocumentoReferencia').required = isAdjustmentNote;
+        document.getElementById('conceptoCredito').required = isAdjustmentNote;
+        const title = document.getElementById('referenceNoteTitle');
+        if (title) {
+            title.textContent = tipoOperacion.value === '92'
+                ? 'Referencia de nota débito'
+                : 'Referencia de nota crédito';
+        }
     }
 
     function reindexItems() {

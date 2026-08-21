@@ -1,6 +1,7 @@
 package com.zonak.portal.service;
 
 import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
+import com.zonak.portal.dto.CreateDebitNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.dto.InvoiceListResponseDTO;
 import com.zonak.portal.dto.InvoiceResponseDTO;
@@ -64,6 +65,26 @@ public class InvoiceClientService {
         return coreGoWebClient
                 .post()
                 .uri("/api/v1/credit-notes")
+                .headers(headers -> applyTenantHeaders(headers, tenantId, emissionPointId))
+                .bodyValue(dto)
+                .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(body -> Mono.error(new InvoiceEmissionException(response.statusCode(), body)))
+                )
+                .bodyToMono(InvoiceResponseDTO.class);
+    }
+
+    public Mono<InvoiceResponseDTO> emitDebitNote(
+            CreateDebitNoteRequestDTO dto,
+            String tenantId,
+            String emissionPointId
+    ) {
+        return coreGoWebClient
+                .post()
+                .uri("/api/v1/debit-notes")
                 .headers(headers -> applyTenantHeaders(headers, tenantId, emissionPointId))
                 .bodyValue(dto)
                 .retrieve()
@@ -173,9 +194,21 @@ public class InvoiceClientService {
             String tenantId,
             String emissionPointId
     ) {
+        return getInvoices(page, limit, estado, tipo, null, tenantId, emissionPointId);
+    }
+
+    public Mono<InvoiceListResponseDTO> getInvoices(
+            int page,
+            int limit,
+            String estado,
+            String tipo,
+            String documentKind,
+            String tenantId,
+            String emissionPointId
+    ) {
         return coreGoWebClient
                 .get()
-                .uri(uriBuilder -> buildInvoicesUri(uriBuilder, page, limit, estado, tipo))
+                .uri(uriBuilder -> buildInvoicesUri(uriBuilder, page, limit, estado, tipo, documentKind, emissionPointId))
                 .headers(headers -> applyTenantHeaders(headers, tenantId, emissionPointId))
                 .retrieve()
                 .onStatus(
@@ -222,7 +255,15 @@ public class InvoiceClientService {
                 .toEntity(byte[].class);
     }
 
-    private java.net.URI buildInvoicesUri(UriBuilder uriBuilder, int page, int limit, String estado, String tipo) {
+    private java.net.URI buildInvoicesUri(
+            UriBuilder uriBuilder,
+            int page,
+            int limit,
+            String estado,
+            String tipo,
+            String documentKind,
+            String emissionPointId
+    ) {
         UriBuilder builder = uriBuilder
                 .path("/api/v1/invoices")
                 .queryParam("page", page)
@@ -233,6 +274,12 @@ public class InvoiceClientService {
         }
         if (StringUtils.hasText(tipo)) {
             builder.queryParam("tipo", tipo);
+        }
+        if (StringUtils.hasText(documentKind)) {
+            builder.queryParam("document_kind", documentKind);
+        }
+        if (StringUtils.hasText(emissionPointId)) {
+            builder.queryParam("emission_point_id", emissionPointId);
         }
 
         return builder.build();

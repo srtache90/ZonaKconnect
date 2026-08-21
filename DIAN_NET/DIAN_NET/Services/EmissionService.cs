@@ -39,6 +39,17 @@ namespace DIAN_NET.Services
             return MapResponse(response, "CUDE");
         }
 
+        public async Task<EmitDocumentResponse> EmitDebitNoteAsync(EmitDebitNoteRequest request)
+        {
+            var response = await _facturacionService.EnviarNotaDebitoAsync(new EnviarNotaDebitoRequest
+            {
+                Ambiente = request.Ambiente,
+                NotaDebito = request.NotaDebito!
+            });
+
+            return MapResponse(response, "CUDE");
+        }
+
         public async Task<EmitDocumentResponse> EmitSupportDocumentAsync(EmitSupportDocumentRequest request)
         {
             var response = await _facturacionService.EnviarDocumentoSoporteAsync(new EnviarDocumentoSoporteRequest
@@ -60,11 +71,14 @@ namespace DIAN_NET.Services
         {
             var uuid = ExtractUuid(response.ApplicationResponseXml) ?? response.CUFE;
             var errores = response.Errores ?? Array.Empty<string>();
+            var exitoso = response.Exitoso || response.IsValid ||
+                          string.Equals(response.StatusCode, "00", StringComparison.OrdinalIgnoreCase);
 
             return new EmitDocumentResponse
             {
-                Status = response.Exitoso ? "Exitoso" : "Fallido",
-                Exitoso = response.Exitoso,
+                Status = exitoso ? "Exitoso" : "Fallido",
+                Exitoso = exitoso,
+                EstadoDian = exitoso ? "ENVIADO" : "RECHAZADO_DIAN",
                 CufeCune = response.CUFE,
                 CUFE = identifierKind == "CUFE" ? response.CUFE : null,
                 CUNE = identifierKind == "CUNE" ? response.CUFE : null,

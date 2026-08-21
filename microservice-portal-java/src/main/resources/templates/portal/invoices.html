@@ -142,6 +142,7 @@
             <input name="page" type="hidden" value="1">
             <input name="estado" th:if="${estado != null}" th:value="${estado}" type="hidden">
             <input name="tipo" th:if="${tipo != null}" th:value="${tipo}" type="hidden">
+            <input name="documentKind" th:if="${documentKind != null}" th:value="${documentKind}" type="hidden">
             <input name="limit" th:value="${limit}" type="hidden">
 
             <div class="flex flex-col gap-2">
@@ -188,26 +189,38 @@
     </section>
 
     <section class="zk-invoices-panel mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
-        <form class="grid grid-cols-1 md:grid-cols-3 gap-6" method="get" th:action="@{/portal/invoices}">
+        <form class="grid grid-cols-1 md:grid-cols-4 gap-6" method="get" th:action="@{/portal/invoices}">
+            <input name="sociedadId" th:value="${selectedSociedadId}" type="hidden">
+            <input name="emissionPointId" th:value="${selectedEmissionPointId}" type="hidden">
             <div class="flex flex-col gap-2">
                 <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Filtrar por Estado</label>
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">person_search</span>
                     <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
                            name="estado"
-                           placeholder="Estado DIAN..."
+                           placeholder="ENVIADO / RECHAZADO_DIAN..."
                            th:value="${estado}"
                            type="text">
                 </div>
             </div>
 
             <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Tipo de documento</label>
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Tipo flujo</label>
                 <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
                         name="tipo">
-                    <option value="" th:selected="${tipo == null or #strings.isEmpty(tipo)}">Todos los tipos</option>
+                    <option value="" th:selected="${tipo == null or #strings.isEmpty(tipo)}">Todos</option>
                     <option value="EMITIDA" th:selected="${tipo == 'EMITIDA'}">Emitidas</option>
-                    <option value="RECIBIDA" th:selected="${tipo == 'RECIBIDA'}">Recibidas</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Clase documento</label>
+                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                        name="documentKind">
+                    <option value="" th:selected="${documentKind == null or #strings.isEmpty(documentKind)}">Todas</option>
+                    <option value="INVOICE" th:selected="${documentKind == 'INVOICE'}">Factura (01/05)</option>
+                    <option value="CREDIT_NOTE" th:selected="${documentKind == 'CREDIT_NOTE'}">Nota crédito (91)</option>
+                    <option value="DEBIT_NOTE" th:selected="${documentKind == 'DEBIT_NOTE'}">Nota débito (92)</option>
                 </select>
             </div>
 
@@ -246,10 +259,17 @@
                 </div>
                 <div class="col-span-3 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-semibold text-[12px]"
-                         th:text="${#strings.substring(invoice.tipo, 0, 1)}">E</div>
+                         th:text="${invoice.documentKind != null and !#strings.isEmpty(invoice.documentKind) ? #strings.substring(invoice.documentKind, 0, 1) : #strings.substring(invoice.tipo, 0, 1)}">E</div>
                     <div>
-                        <span class="font-body-md text-on-surface d-block" th:text="${invoice.tipo}">EMITIDA</span>
+                        <span class="font-body-md text-on-surface d-block"
+                              th:text="${invoice.documentKind != null and !#strings.isEmpty(invoice.documentKind) ? invoice.documentKind : invoice.tipo}">INVOICE</span>
                         <span class="text-[12px] text-on-surface-variant" th:text="${invoice.id}">invoice-id</span>
+                        <span class="text-[11px] text-on-surface-variant d-block"
+                              th:if="${!dianValidated and invoice.dianErrorDescription != null and !#strings.isEmpty(invoice.dianErrorDescription)}"
+                              th:text="${#strings.abbreviate(invoice.dianErrorDescription, 80)}">mensaje DIAN</span>
+                        <span class="text-[11px] text-on-surface-variant d-block"
+                              th:if="${!dianValidated and (invoice.dianErrorDescription == null or #strings.isEmpty(invoice.dianErrorDescription)) and invoice.dianErrores != null and !#strings.isEmpty(invoice.dianErrores)}"
+                              th:text="${#strings.abbreviate(invoice.dianErrores, 80)}">errores DIAN</span>
                     </div>
                 </div>
                 <div class="col-span-2 font-body-md text-on-surface-variant"
@@ -290,7 +310,9 @@
                                      data-dian-error-code=${invoice.dianErrorCode},
                                      data-dian-error-description=${invoice.dianErrorDescription},
                                      data-dian-status-message=${invoice.dianStatusMessage},
+                                     data-dian-errores=${invoice.dianErrores},
                                      data-dian-track-id=${invoice.dianTrackId},
+                                     data-document-kind=${invoice.documentKind},
                                      data-updated-at=${#temporals.format(invoice.updatedAt, 'dd/MM/yyyy HH:mm')}"
                             type="button">
                         <span class="material-symbols-outlined text-[16px]">info</span>
@@ -402,9 +424,21 @@
                     <div class="text-[13px] text-emerald-900 mt-2 hidden" id="dian-detail-track-row"><span class="font-semibold">Track ID:</span> <span id="dian-detail-track-id">--</span></div>
                 </div>
                 <div class="p-4 rounded-xl border border-error/20 bg-error-container hidden" id="dian-detail-error-box">
-                    <div class="font-label-sm text-on-error-container uppercase mb-2">Error de validación</div>
+                    <div class="font-label-sm text-on-error-container uppercase mb-2">Error / rechazo DIAN</div>
                     <div class="text-[13px] text-on-error-container"><span class="font-semibold">Código:</span> <span id="dian-detail-error-code">--</span></div>
                     <div class="text-[13px] text-on-error-container mt-2"><span class="font-semibold">Descripción:</span> <span id="dian-detail-error-description">--</span></div>
+                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-errores-row">
+                        <span class="font-semibold">Errores:</span>
+                        <span id="dian-detail-errores">--</span>
+                    </div>
+                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-error-track-row">
+                        <span class="font-semibold">Track ID:</span>
+                        <span id="dian-detail-error-track-id">--</span>
+                    </div>
+                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-error-message-row">
+                        <span class="font-semibold">Mensaje:</span>
+                        <span id="dian-detail-error-message">--</span>
+                    </div>
                 </div>
                 <div class="p-4 rounded-xl border border-surface-container-highest bg-surface-container-low hidden" id="dian-detail-pending-box">
                     <div class="font-label-sm text-on-surface-variant uppercase mb-2">Estado en proceso</div>
@@ -707,48 +741,80 @@
         const errorCode = button.dataset.dianErrorCode || '';
         const errorDescription = button.dataset.dianErrorDescription || '';
         const statusMessage = button.dataset.dianStatusMessage || '';
+        const errores = button.dataset.dianErrores || '';
         const trackId = button.dataset.dianTrackId || '';
-        const isValidated = hasText(uuidCude) && estadoDian === 'ENVIADO';
-        const hasError = hasText(errorCode) || hasText(errorDescription);
+        const documentKind = button.dataset.documentKind || '';
+        const estadoUpper = estadoDian.toUpperCase();
+        const estadoLower = estadoDian.toLowerCase();
+        const isValidated = hasText(uuidCude) && (
+            estadoUpper === 'ENVIADO' ||
+            ((estadoLower.includes('validado') || estadoLower.includes('exitosamente')) && !estadoLower.includes('rechaz'))
+        );
+        const isRejected = estadoUpper === 'RECHAZADO_DIAN'
+            || estadoUpper === 'ERROR_DIAN_NET'
+            || estadoUpper === 'RECHAZADO'
+            || estadoLower.includes('rechaz')
+            || estadoLower.includes('fallid');
+        const hasErrorDetail = hasText(errorCode) || hasText(errorDescription) || hasText(errores) || hasText(statusMessage);
 
-        document.getElementById('dian-detail-invoice-number').textContent = button.dataset.invoiceNumber || 'Factura';
-        document.getElementById('dian-detail-estado').textContent = estadoDian;
+        document.getElementById('dian-detail-invoice-number').textContent = button.dataset.invoiceNumber || 'Documento';
+        document.getElementById('dian-detail-estado').textContent = hasText(documentKind)
+            ? `${estadoDian} · ${documentKind}`
+            : estadoDian;
         document.getElementById('dian-detail-updated-at').textContent = button.dataset.updatedAt || '--';
 
         const successBox = document.getElementById('dian-detail-success-box');
         const errorBox = document.getElementById('dian-detail-error-box');
         const pendingBox = document.getElementById('dian-detail-pending-box');
         const trackRow = document.getElementById('dian-detail-track-row');
+        const erroresRow = document.getElementById('dian-detail-errores-row');
+        const errorTrackRow = document.getElementById('dian-detail-error-track-row');
+        const errorMessageRow = document.getElementById('dian-detail-error-message-row');
 
         successBox.classList.add('hidden');
         errorBox.classList.add('hidden');
         pendingBox.classList.add('hidden');
         trackRow.classList.add('hidden');
+        erroresRow.classList.add('hidden');
+        errorTrackRow.classList.add('hidden');
+        errorMessageRow.classList.add('hidden');
 
         if (isValidated) {
             document.getElementById('dian-detail-cude').textContent = uuidCude;
             document.getElementById('dian-detail-success-message').textContent = hasText(statusMessage)
                 ? statusMessage
-                : 'Documento validado correctamente por la DIAN.';
+                : (hasText(errorDescription) ? errorDescription : 'Documento validado correctamente por la DIAN.');
             if (hasText(trackId)) {
                 document.getElementById('dian-detail-track-id').textContent = trackId;
                 trackRow.classList.remove('hidden');
             }
             successBox.classList.remove('hidden');
-        } else if (hasError) {
+        } else if (isRejected || hasErrorDetail) {
             document.getElementById('dian-detail-error-code').textContent = hasText(errorCode) ? errorCode : 'N/D';
             document.getElementById('dian-detail-error-description').textContent = hasText(errorDescription)
                 ? errorDescription
                 : (hasText(statusMessage) ? statusMessage : 'Sin descripción adicional de la DIAN.');
+            if (hasText(errores)) {
+                document.getElementById('dian-detail-errores').textContent = errores;
+                erroresRow.classList.remove('hidden');
+            }
+            if (hasText(statusMessage) && statusMessage !== errorDescription) {
+                document.getElementById('dian-detail-error-message').textContent = statusMessage;
+                errorMessageRow.classList.remove('hidden');
+            }
+            if (hasText(trackId)) {
+                document.getElementById('dian-detail-error-track-id').textContent = trackId;
+                errorTrackRow.classList.remove('hidden');
+            }
             errorBox.classList.remove('hidden');
         } else {
             const pendingMessage = document.getElementById('dian-detail-pending-message');
-            if (estadoDian === 'EN_REINTENTO') {
-                pendingMessage.textContent = 'La factura está en cola de reintento ante la DIAN. Consulte nuevamente en unos minutos.';
-            } else if (estadoDian === 'PENDIENTE') {
-                pendingMessage.textContent = 'La factura fue persistida y está pendiente de respuesta de validación por la DIAN.';
+            if (estadoUpper === 'EN_REINTENTO') {
+                pendingMessage.textContent = 'El documento está en cola de reintento ante la DIAN. Consulte nuevamente en unos minutos.';
+            } else if (estadoUpper === 'PENDIENTE' || estadoUpper.startsWith('PENDIENTE_')) {
+                pendingMessage.textContent = 'El documento fue persistido y está pendiente de respuesta de validación por la DIAN.';
             } else {
-                pendingMessage.textContent = 'La factura aún no ha sido validada por la DIAN. Puede reenviarla usando la opción de reintento en la fila.';
+                pendingMessage.textContent = 'El documento aún no ha sido validado por la DIAN. Puede reenviarlo usando la opción de reintento en la fila.';
             }
             pendingBox.classList.remove('hidden');
         }

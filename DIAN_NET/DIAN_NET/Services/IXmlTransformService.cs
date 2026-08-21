@@ -9,6 +9,7 @@ namespace DIAN_NET.Services
     {
         string GenerarXmlFactura(FacturaDto factura);
         string GenerarXmlNotaCredito(NotaCreditoDto notaCredito);
+        string GenerarXmlNotaDebito(NotaDebitoDto notaDebito);
         string GenerarXmlDocumentoSoporte(DocumentoSoporteDto documentoSoporte);
         string GenerarXmlNomina(NominaDto nomina);
     }
