@@ -43,7 +43,15 @@ public class AuthController {
             return "login";
         }
 
-        jwtCookieService.writeAuthCookie(response, jwtCookieService.createToken(user.get()));
+        jwtCookieService.writeAuthCookie(response, jwtCookieService.createToken(
+                new AuthenticatedUser(
+                        user.get().id(),
+                        user.get().username(),
+                        user.get().passwordHash(),
+                        com.zonak.portal.security.PortalRoles.normalize(user.get().role()),
+                        user.get().tenantIds()
+                )
+        ));
         return "redirect:/portal";
     }
 

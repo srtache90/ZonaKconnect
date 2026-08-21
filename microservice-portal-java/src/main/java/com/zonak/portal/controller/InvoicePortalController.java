@@ -436,7 +436,8 @@ public class InvoicePortalController {
     }
 
     private List<UUID> resolveSociedadIds(HttpSession session) {
-        if ("ADMIN".equals(session.getAttribute("role"))) {
+        if (com.zonak.portal.security.PortalRoles.isAdmin(
+                session.getAttribute("role") == null ? null : session.getAttribute("role").toString())) {
             return adminPortalRepository.findSociedades().stream()
                     .map(Sociedad::id)
                     .toList();
@@ -456,7 +457,8 @@ public class InvoicePortalController {
     }
 
     private List<Sociedad> resolveSociedades(HttpSession session) {
-        if ("ADMIN".equals(session.getAttribute("role"))) {
+        if (com.zonak.portal.security.PortalRoles.isAdmin(
+                session.getAttribute("role") == null ? null : session.getAttribute("role").toString())) {
             return adminPortalRepository.findSociedades();
         }
 

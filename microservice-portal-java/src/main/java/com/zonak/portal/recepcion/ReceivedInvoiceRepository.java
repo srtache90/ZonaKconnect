@@ -44,7 +44,7 @@ public class ReceivedInvoiceRepository {
             String estadoDian
     ) {
         return findReceived(new ReceivedInvoiceFilter(
-                sociedadId, fromDate, toDate, estadoDian, null, null, null, null, null
+                sociedadId, fromDate, toDate, estadoDian, null, null, null, null, null, null, true, null
         ));
     }
 
@@ -68,8 +68,12 @@ public class ReceivedInvoiceRepository {
                        r.updated_at,
                        r.raw_payload_jsonb::text AS raw_payload,
                        r.dian_response_jsonb::text AS dian_response,
-                       r.source
+                       r.source,
+                       r.assigned_emission_point_id,
+                       COALESCE(ep.codigo || ' - ' || ep.nombre, '') AS assigned_point_label,
+                       COALESCE(r.assignment_source, 'UNASSIGNED') AS assignment_source
                 FROM received_invoices r
+                LEFT JOIN emission_points ep ON ep.id = r.assigned_emission_point_id
                 WHERE r.company_id = ?
                 """);
         List<Object> params = new ArrayList<>();
@@ -112,6 +116,27 @@ public class ReceivedInvoiceRepository {
                      )
                     """);
         }
+        if (filter.assignedEmissionPointId() != null) {
+            sql.append(" AND r.assigned_emission_point_id = ?");
+            params.add(filter.assignedEmissionPointId());
+        } else if (filter.allowedEmissionPointIds() != null) {
+            List<UUID> allowed = filter.allowedEmissionPointIds();
+            boolean includeUnassigned = !Boolean.FALSE.equals(filter.includeUnassigned());
+            if (allowed.isEmpty() && !includeUnassigned) {
+                sql.append(" AND 1=0");
+            } else if (!allowed.isEmpty()) {
+                String placeholders = String.join(",", java.util.Collections.nCopies(allowed.size(), "?"));
+                if (includeUnassigned) {
+                    sql.append(" AND (r.assigned_emission_point_id IS NULL OR r.assigned_emission_point_id IN (")
+                            .append(placeholders).append("))");
+                } else {
+                    sql.append(" AND r.assigned_emission_point_id IN (").append(placeholders).append(")");
+                }
+                params.addAll(allowed);
+            } else if (includeUnassigned) {
+                sql.append(" AND r.assigned_emission_point_id IS NULL");
+            }
+        }
         sql.append(" ORDER BY r.created_at DESC LIMIT 500");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapRow(rs, sociedadNit), params.toArray());
@@ -135,8 +160,12 @@ public class ReceivedInvoiceRepository {
                                r.updated_at,
                                r.raw_payload_jsonb::text AS raw_payload,
                                r.dian_response_jsonb::text AS dian_response,
-                               r.source
+                               r.source,
+                               r.assigned_emission_point_id,
+                               COALESCE(ep.codigo || ' - ' || ep.nombre, '') AS assigned_point_label,
+                               COALESCE(r.assignment_source, 'UNASSIGNED') AS assignment_source
                         FROM received_invoices r
+                        LEFT JOIN emission_points ep ON ep.id = r.assigned_emission_point_id
                         WHERE r.company_id = ? AND r.id = ?
                         """,
                 (rs, rowNum) -> mapDetail(rs, sociedadId, sociedadNit),
@@ -170,7 +199,7 @@ public class ReceivedInvoiceRepository {
 
     public List<ReceivedInvoiceRow> findEligibleForTacitAcceptance(UUID sociedadId) {
         return findReceived(new ReceivedInvoiceFilter(
-                sociedadId, null, null, "RECIBIDA_086", null, null, null, null, null
+                sociedadId, null, null, "RECIBIDA_086", null, null, null, null, null, null, true, null
         ));
     }
 
@@ -307,7 +336,10 @@ public class ReceivedInvoiceRepository {
                 plazo.status(),
                 plazo.label(),
                 plazo.diasRestantes(),
-                plazo.limite()
+                plazo.limite(),
+                rs.getObject("assigned_emission_point_id", UUID.class),
+                safe(rs.getString("assigned_point_label")),
+                safe(rs.getString("assignment_source"))
         );
     }
 

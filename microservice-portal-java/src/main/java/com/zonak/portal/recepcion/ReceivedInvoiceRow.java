@@ -24,6 +24,9 @@ public record ReceivedInvoiceRow(
         RecepcionPlazoStatus plazoStatus,
         String plazoLabel,
         Integer diasRestantes,
-        LocalDate plazoLimite
+        LocalDate plazoLimite,
+        UUID assignedEmissionPointId,
+        String assignedEmissionPointLabel,
+        String assignmentSource
 ) {
 }

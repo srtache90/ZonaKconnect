@@ -3,6 +3,8 @@ package com.zonak.portal.service;
 import com.zonak.portal.admin.AdminPortalRepository;
 import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
+import com.zonak.portal.admin.UserAdminRepository;
+import com.zonak.portal.security.PortalRoles;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Objects;
@@ -18,13 +20,16 @@ public class PortalSessionService {
     private static final String LOCAL_EMISSION_POINT_ID = "00000000-0000-0000-0000-000000000101";
 
     private final AdminPortalRepository adminPortalRepository;
+    private final UserAdminRepository userAdminRepository;
     private final boolean localMode;
 
     public PortalSessionService(
             AdminPortalRepository adminPortalRepository,
+            UserAdminRepository userAdminRepository,
             @Value("${aws.local-mode:false}") boolean localMode
     ) {
         this.adminPortalRepository = adminPortalRepository;
+        this.userAdminRepository = userAdminRepository;
         this.localMode = localMode;
     }
 
@@ -43,8 +48,21 @@ public class PortalSessionService {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "tenantId no existe en sesión");
     }
 
+    public UUID resolveUserId(HttpSession session) {
+        Object userId = session.getAttribute("userId");
+        if (userId == null || userId.toString().isBlank()) {
+            return null;
+        }
+        return UUID.fromString(userId.toString());
+    }
+
+    public String resolveRole(HttpSession session) {
+        Object role = session.getAttribute("role");
+        return PortalRoles.normalize(role == null ? null : role.toString());
+    }
+
     public List<UUID> resolveSociedadIds(HttpSession session) {
-        if ("ADMIN".equals(session.getAttribute("role"))) {
+        if (PortalRoles.isAdmin(resolveRole(session))) {
             return adminPortalRepository.findSociedades().stream()
                     .map(Sociedad::id)
                     .toList();
@@ -63,7 +81,7 @@ public class PortalSessionService {
     }
 
     public List<Sociedad> resolveSociedades(HttpSession session) {
-        if ("ADMIN".equals(session.getAttribute("role"))) {
+        if (PortalRoles.isAdmin(resolveRole(session))) {
             return adminPortalRepository.findSociedades();
         }
         return adminPortalRepository.findSociedadesByIds(resolveSociedadIds(session));
@@ -91,7 +109,43 @@ public class PortalSessionService {
 
     public List<PuntoVenta> resolvePuntosVenta(HttpSession session) {
         List<UUID> sociedadIds = resolveSociedadIds(session);
-        return adminPortalRepository.findPuntosVentaActivosBySociedades(sociedadIds);
+        List<PuntoVenta> all = adminPortalRepository.findPuntosVentaActivosBySociedades(sociedadIds);
+        UUID userId = resolveUserId(session);
+        if (userId == null || PortalRoles.isAdmin(resolveRole(session))) {
+            return all;
+        }
+        return all.stream()
+                .filter(punto -> {
+                    List<UUID> allowed = userAdminRepository.findAllowedEmissionPointIds(
+                            userId, punto.sociedadId(), false
+                    );
+                    return allowed.contains(punto.id());
+                })
+                .toList();
+    }
+
+    public List<UUID> resolveAllowedEmissionPointIds(HttpSession session, UUID sociedadId) {
+        UUID userId = resolveUserId(session);
+        boolean admin = PortalRoles.isAdmin(resolveRole(session));
+        if (userId == null) {
+            return admin
+                    ? adminPortalRepository.findPuntosVentaActivosBySociedades(List.of(sociedadId))
+                    .stream().map(PuntoVenta::id).toList()
+                    : List.of();
+        }
+        return userAdminRepository.findAllowedEmissionPointIds(userId, sociedadId, admin);
+    }
+
+    public boolean canSeeUnassignedReceived(HttpSession session, UUID sociedadId) {
+        UUID userId = resolveUserId(session);
+        boolean admin = PortalRoles.isAdmin(resolveRole(session));
+        if (admin) {
+            return true;
+        }
+        if (userId == null) {
+            return false;
+        }
+        return userAdminRepository.hasUnrestrictedPoints(userId, sociedadId, false);
     }
 
     public String resolveSelectedEmissionPointId(
