@@ -1,0 +1,162 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Detalle recepción | DIAN Connect')}"></th:block>
+    <style>
+        .timeline { border-left: 2px solid #cfd8dc; margin-left: 0.75rem; padding-left: 1.25rem; }
+        .timeline-item { position: relative; margin-bottom: 1.25rem; }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.55rem;
+            top: 0.35rem;
+            width: 0.65rem;
+            height: 0.65rem;
+            border-radius: 50%;
+            background: #37474f;
+        }
+        .badge-tacita { background: #e8f5e9; color: #1b5e20; }
+        .xml-preview {
+            max-height: 280px;
+            overflow: auto;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f5f7f8;
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop" th:if="${detail != null}">
+    <div class="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <p class="dc-page-subtitle mb-1">Recepción / Detalle</p>
+            <h1 class="dc-page-title" th:text="${detail.invoiceNumber}">FE000</h1>
+            <p class="dc-page-subtitle mb-0"
+               th:text="${detail.proveedorName + ' · NIT ' + detail.proveedorNit}">Proveedor</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-dark rounded-pill px-4" th:href="@{/portal/recepcion/bandeja(sociedadId=${selectedSociedadId})}">Bandeja</a>
+            <a class="btn btn-outline-dark rounded-pill px-4" th:href="@{/portal/recepcion/historico(sociedadId=${selectedSociedadId})}">Histórico</a>
+            <a class="btn btn-outline-dark rounded-pill px-4"
+               th:href="@{/portal/recepcion/{id}/xml(id=${detail.id})}"
+               th:classappend="${!detail.documentsAvailable} ? ' disabled'">XML</a>
+            <a class="btn btn-zk rounded-pill px-4"
+               th:href="@{/portal/recepcion/{id}/representacion-grafica(id=${detail.id})}"
+               target="_blank"
+               th:classappend="${!detail.documentsAvailable} ? ' disabled'">PDF</a>
+        </div>
+    </div>
+
+    <div class="alert alert-danger rounded-4" th:if="${!#lists.isEmpty(detail.validationIssues)}">
+        <div class="fw-semibold mb-1">Observaciones de validación</div>
+        <ul class="mb-0">
+            <li th:each="issue : ${detail.validationIssues}" th:text="${issue}">issue</li>
+        </ul>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <section class="card zk-card h-100">
+                <div class="card-body">
+                    <h2 class="h4 mb-3">Datos fiscales</h2>
+                    <dl class="row mb-0 small">
+                        <dt class="col-5 text-muted">CUFE</dt>
+                        <dd class="col-7 zk-data text-break" th:text="${detail.cufe}">—</dd>
+                        <dt class="col-5 text-muted">CUFE válido</dt>
+                        <dd class="col-7" th:text="${detail.cufeValid} ? 'Sí' : 'No'">Sí</dd>
+                        <dt class="col-5 text-muted">Total</dt>
+                        <dd class="col-7 zk-data" th:text="${'$ ' + #numbers.formatDecimal(detail.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0</dd>
+                        <dt class="col-5 text-muted">Fecha emisión</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.fechaEmision}">—</dd>
+                        <dt class="col-5 text-muted">Estado</dt>
+                        <dd class="col-7">
+                            <span class="badge badge-soft rounded-pill px-3 py-2"
+                                  th:classappend="${detail.estadoDian.name() == 'ACEPTADA_TACITA'} ? ' badge-tacita' : ''"
+                                  th:text="${detail.estadoDian}">PENDIENTE</span>
+                        </dd>
+                        <dt class="col-5 text-muted">Fuente</dt>
+                        <dd class="col-7" th:text="${detail.source}">MAIL</dd>
+                        <dt class="col-5 text-muted">Recibida</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.createdAt}">—</dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+        <div class="col-lg-6">
+            <section class="card zk-card h-100">
+                <div class="card-body">
+                    <h2 class="h4 mb-3">Receptor y plazo</h2>
+                    <dl class="row mb-0 small">
+                        <dt class="col-5 text-muted">NIT sociedad</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.sociedadNit}">—</dd>
+                        <dt class="col-5 text-muted">NIT en XML</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.receptorNit}">—</dd>
+                        <dt class="col-5 text-muted">NIT coincide</dt>
+                        <dd class="col-7" th:text="${detail.receptorNitMatch} ? 'Sí' : 'No'">Sí</dd>
+                        <dt class="col-5 text-muted">Fecha 086</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.recibo086Date != null ? detail.recibo086Date : 'Pendiente'}">—</dd>
+                        <dt class="col-5 text-muted">Límite tácito</dt>
+                        <dd class="col-7 zk-data" th:text="${detail.plazoLimite != null ? detail.plazoLimite : 'N/A'}">—</dd>
+                        <dt class="col-5 text-muted">Plazo</dt>
+                        <dd class="col-7" th:text="${detail.plazoLabel}">—</dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="card zk-card mb-4">
+        <div class="card-body">
+            <h2 class="h4 mb-3">Timeline de eventos</h2>
+            <div class="timeline" th:if="${!#lists.isEmpty(detail.timeline)}">
+                <div class="timeline-item" th:each="item : ${detail.timeline}">
+                    <div class="fw-semibold" th:text="${item.label}">Evento</div>
+                    <div class="small text-muted">
+                        <span th:if="${item.code != null and !#strings.isEmpty(item.code)}" th:text="${item.code + ' · '}"></span>
+                        <span th:text="${item.at}">fecha</span>
+                        <span th:if="${item.trackId != null and !#strings.isEmpty(item.trackId)}"
+                              th:text="${' · TrackID=' + item.trackId}"></span>
+                        <span th:if="${item.cude != null and !#strings.isEmpty(item.cude)}"
+                              th:text="${' · CUDE=' + item.cude}"></span>
+                    </div>
+                    <div class="small" th:if="${item.detail != null and !#strings.isEmpty(item.detail)}" th:text="${item.detail}"></div>
+                </div>
+            </div>
+            <p class="text-muted mb-0" th:if="${#lists.isEmpty(detail.timeline)}">Sin eventos registrados aún.</p>
+        </div>
+    </section>
+
+    <section class="card zk-card mb-4" th:if="${detail.xmlPreview != null and !#strings.isEmpty(detail.xmlPreview)}">
+        <div class="card-body">
+            <h2 class="h4 mb-3">Vista previa XML</h2>
+            <pre class="xml-preview mb-0" th:text="${detail.xmlPreview}"></pre>
+        </div>
+    </section>
+
+    <section class="card zk-card mb-5">
+        <div class="card-body">
+            <h2 class="h4 mb-3">Reenviar por correo</h2>
+            <form class="row g-3 align-items-end" method="post" th:action="@{/portal/recepcion/{id}/reenviar-correo(id=${detail.id})}">
+                <div class="col-md-8">
+                    <label class="form-label" for="recipientEmail">Correo destino</label>
+                    <input class="form-control rounded-3" id="recipientEmail" name="recipientEmail" type="email" required
+                           placeholder="destinatario@empresa.com">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-zk rounded-pill px-4" type="submit" th:disabled="${!detail.documentsAvailable}">Reenviar</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+</body>
+</html>

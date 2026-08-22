@@ -1,11 +1,11 @@
 <!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Reportes de recepción | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Eventos RADIAN | DIAN Connect')}"></th:block>
     <style>
         .report-table { font-size: 0.85rem; }
         .report-table th { white-space: nowrap; }
-        .cufe-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cufe-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
 <body class="text-on-surface">
@@ -14,13 +14,15 @@
 
 <main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1400px] mx-auto">
     <div class="mb-8">
-        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Reportes de recepción</h2>
-        <p class="font-body-md text-on-surface-variant">Documentos recibidos de proveedores y su estado RADIAN.</p>
+        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Eventos RADIAN enviados</h2>
+        <p class="font-body-md text-on-surface-variant">
+            Estado unificado de acuses/recibos/aceptaciones/reclamos transmitidos a la DIAN y su notificación al proveedor.
+        </p>
     </div>
 
     <section class="glass-card rounded-2xl p-6 mb-6">
         <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
-        <form method="get" th:action="@{/portal/recepcion/reportes}" class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <form method="get" th:action="@{/portal/recepcion/reportes}" class="grid md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
                 <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
                 <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
@@ -42,10 +44,22 @@
                        type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
             <div>
-                <label class="block font-label-md mb-1" for="estadoDian">Estado DIAN</label>
+                <label class="block font-label-md mb-1" for="eventCode">Evento</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
+                        id="eventCode" name="eventCode">
+                    <option value="">Todos</option>
+                    <option value="085" th:selected="${eventCode == '085'}">085 Acuse</option>
+                    <option value="086" th:selected="${eventCode == '086'}">086 Recibo</option>
+                    <option value="087" th:selected="${eventCode == '087'}">087 Aceptación</option>
+                    <option value="088" th:selected="${eventCode == '088'}">088 Reclamo</option>
+                    <option value="TAC" th:selected="${eventCode == 'TAC'}">Tácita</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="estadoDian">Estado</label>
                 <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
                        type="text" id="estadoDian" name="estadoDian"
-                       placeholder="Ej: ACUSADA_085" th:value="${estadoDian}">
+                       placeholder="ENVIADO" th:value="${estadoDian}">
             </div>
             <div class="flex items-end gap-2">
                 <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit">Consultar</button>
@@ -54,6 +68,7 @@
                        sociedadId=${selectedSociedadId},
                        fromDate=${fromDate},
                        toDate=${toDate},
+                       eventCode=${eventCode},
                        estadoDian=${estadoDian})}">CSV</a>
             </div>
         </form>
@@ -63,38 +78,45 @@
         <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
             <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
             <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm"
-                  th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+                  th:text="'Eventos: ' + ${totalRegistros}">Eventos: 0</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full report-table">
                 <thead class="bg-surface-container-low">
                 <tr>
-                    <th class="text-left px-4 py-3">Proveedor</th>
-                    <th class="text-left px-4 py-3">NIT</th>
-                    <th class="text-left px-4 py-3">Factura</th>
-                    <th class="text-left px-4 py-3">CUFE</th>
-                    <th class="text-right px-4 py-3">Total</th>
                     <th class="text-left px-4 py-3">Fecha</th>
+                    <th class="text-left px-4 py-3">Evento</th>
+                    <th class="text-left px-4 py-3">Factura</th>
+                    <th class="text-left px-4 py-3">Proveedor</th>
+                    <th class="text-left px-4 py-3">CUFE</th>
                     <th class="text-left px-4 py-3">Estado</th>
+                    <th class="text-left px-4 py-3">TrackID</th>
+                    <th class="text-left px-4 py-3">Notificación</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(rows)}">
-                    <td colspan="7" class="px-4 py-8 text-center text-on-surface-variant">
-                        No hay facturas recibidas para los filtros seleccionados.
+                    <td colspan="8" class="text-center text-on-surface-variant py-8">
+                        No hay eventos RADIAN enviados para los filtros.
                     </td>
                 </tr>
                 <tr th:each="row : ${rows}" class="border-t border-surface-container-highest">
-                    <td class="px-4 py-3" th:text="${row.proveedorName}">Proveedor</td>
-                    <td class="px-4 py-3" th:text="${row.proveedorNit}">NIT</td>
-                    <td class="px-4 py-3" th:text="${row.invoiceNumber}">FV1</td>
-                    <td class="px-4 py-3 cufe-cell" th:title="${row.cufe}" th:text="${row.cufe}">CUFE</td>
-                    <td class="px-4 py-3 text-right"
-                        th:text="${#numbers.formatDecimal(row.totalAmount, 1, 'POINT', 2, 'COMMA')}">0</td>
-                    <td class="px-4 py-3" th:text="${row.fechaEmision}">2026-01-01</td>
+                    <td class="px-4 py-3 zk-data" th:text="${row.createdAt}">fecha</td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-[11px] font-label-sm bg-surface-container-low"
-                              th:text="${row.estadoDian}">PENDIENTE</span>
+                        <div class="fw-semibold" th:text="${row.eventCode}">085</div>
+                        <div class="text-muted small" th:text="${row.eventLabel}">Acuse</div>
+                    </td>
+                    <td class="px-4 py-3 zk-data" th:text="${row.invoiceNumber}">FE</td>
+                    <td class="px-4 py-3">
+                        <div th:text="${row.supplierName}">Proveedor</div>
+                        <div class="text-muted small zk-data" th:text="${row.supplierNit}">NIT</div>
+                    </td>
+                    <td class="px-4 py-3 cufe-cell zk-data" th:text="${row.cufe}">CUFE</td>
+                    <td class="px-4 py-3" th:text="${row.estado}">ENVIADO</td>
+                    <td class="px-4 py-3 zk-data small" th:text="${row.trackId}">track</td>
+                    <td class="px-4 py-3">
+                        <div th:text="${row.notifyStatus}">OMITIDO</div>
+                        <div class="text-muted small" th:text="${row.supplierEmail}">mail</div>
                     </td>
                 </tr>
                 </tbody>

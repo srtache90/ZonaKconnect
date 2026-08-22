@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"zonak/microservice-core-go/internal/reception"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -254,18 +256,6 @@ type dianConfigDTO struct {
 	ClaveTecnica     string    `json:"claveTecnica"`
 }
 
-type IncomingEmailWebhook struct {
-	TenantID    uuid.UUID `json:"tenant_id"`
-	S3Bucket    string    `json:"s3_bucket"`
-	S3ObjectKey string    `json:"s3_object_key"`
-	MessageID   string    `json:"message_id"`
-}
-
-type IncomingEmailAcceptedResponse struct {
-	Status      string `json:"status"`
-	S3ObjectKey string `json:"s3_object_key"`
-}
-
 type invoiceListItem struct {
 	ID                   uuid.UUID `json:"id"`
 	Tipo                 string    `json:"tipo"`
@@ -310,20 +300,37 @@ func main() {
 		dianAPIURL: strings.TrimRight(getenv("DIAN_API_URL", getenv("DIAN_NET_URL", "http://dian-net:8080")), "/"),
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+	receptionHandlers := reception.NewHandlers(
+		db,
+		getenv("JWT_SECRET", "local-dev-secret-change-before-production-32-bytes-minimum"),
+		getenv("AWS_ENDPOINT_URL", getenv("LOCALSTACK_ENDPOINT", "")),
+	)
 
 	r := chi.NewRouter()
-	r.Use(tenantMiddleware)
-	r.Get("/api/v1/invoices", a.handleGetInvoices)
-	r.Post("/api/v1/invoices", a.handleCreateInvoice)
-	r.Post("/api/v1/credit-notes", a.handleCreateCreditNote)
-	r.Post("/api/v1/support-documents", a.handleCreateSupportDocument)
-	r.Post("/api/v1/payroll", a.handleCreatePayroll)
-	r.Get("/api/v1/invoices/{id}/documents/{kind}", a.handleDownloadInvoiceDocument)
-	r.Post("/api/v1/invoices/{id}/reemit", a.handleReemitInvoice)
-	r.Patch("/api/v1/invoices/{id}/urls", a.handleUpdateInvoiceUrls)
-	r.Post("/api/v1/incoming-invoice-emails", a.handleIncomingInvoiceEmail)
-	r.Get("/api/v1/search", a.handleSearchDocuments)
-	r.Get("/api/v1/dashboard/kpis", a.handleDashboardKpis)
+
+	// Emisión / documentos: requieren tenant + punto de emisión
+	r.Group(func(pr chi.Router) {
+		pr.Use(tenantMiddleware)
+		pr.Get("/api/v1/invoices", a.handleGetInvoices)
+		pr.Post("/api/v1/invoices", a.handleCreateInvoice)
+		pr.Post("/api/v1/credit-notes", a.handleCreateCreditNote)
+		pr.Post("/api/v1/support-documents", a.handleCreateSupportDocument)
+		pr.Post("/api/v1/payroll", a.handleCreatePayroll)
+		pr.Get("/api/v1/invoices/{id}/documents/{kind}", a.handleDownloadInvoiceDocument)
+		pr.Post("/api/v1/invoices/{id}/reemit", a.handleReemitInvoice)
+		pr.Patch("/api/v1/invoices/{id}/urls", a.handleUpdateInvoiceUrls)
+		pr.Get("/api/v1/search", a.handleSearchDocuments)
+		pr.Get("/api/v1/dashboard/kpis", a.handleDashboardKpis)
+	})
+
+	// Recepción / ingestión: solo tenant (sin emission_point)
+	r.Group(func(rr chi.Router) {
+		rr.Use(tenantOnlyMiddleware)
+		rr.Post("/api/v1/reception/sync-imap", receptionHandlers.SyncIMAP)
+		rr.Post("/api/v1/reception/test-imap", receptionHandlers.TestIMAP)
+		rr.Post("/api/v1/reception/import-xml", receptionHandlers.ImportXML)
+		rr.Post("/api/v1/incoming-invoice-emails", receptionHandlers.IncomingEmailWebhook)
+	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
@@ -332,18 +339,30 @@ func tenantMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tenantID, err := uuid.Parse(r.Header.Get("X-Tenant-ID"))
 		if err != nil {
-			http.Error(w, "X-Tenant-ID inv?lido", http.StatusUnauthorized)
+			http.Error(w, "X-Tenant-ID inválido", http.StatusUnauthorized)
 			return
 		}
 
 		emissionPointID, err := uuid.Parse(r.Header.Get("X-Emission-Point-ID"))
 		if err != nil {
-			http.Error(w, "X-Emission-Point-ID inv?lido", http.StatusBadRequest)
+			http.Error(w, "X-Emission-Point-ID inválido", http.StatusBadRequest)
 			return
 		}
 
 		ctx := context.WithValue(r.Context(), tenantIDKey, tenantID)
 		ctx = context.WithValue(ctx, emissionPointIDKey, emissionPointID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func tenantOnlyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tenantID, err := uuid.Parse(r.Header.Get("X-Tenant-ID"))
+		if err != nil {
+			http.Error(w, "X-Tenant-ID inválido", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), tenantIDKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -1015,12 +1034,18 @@ func (a *app) handleDashboardKpis(w http.ResponseWriter, r *http.Request) {
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND date_trunc('month', created_at) = date_trunc('month', now())),
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND estado_dian IN ('ENVIADO', 'Documento Validado Exitosamente')),
 		  COUNT(*) FILTER (WHERE emission_point_id IS NOT NULL AND estado_dian IN ('RECHAZADO_DIAN', 'ERROR_DIAN_NET', 'RECHAZADO')),
-		  COUNT(*) FILTER (WHERE emission_point_id IS NULL AND estado_dian IN ('PENDIENTE', 'RECIBIDO_PND', 'ACUSADA_085', 'RECIBIDA_086')),
 		  COUNT(*) FILTER (WHERE COALESCE(document_kind, 'INVOICE') = 'SUPPORT'),
 		  COUNT(*) FILTER (WHERE COALESCE(document_kind, 'INVOICE') = 'PAYROLL')
 		FROM invoices
 		WHERE company_id = $1
-	`, tenantID).Scan(&emittedToday, &emittedMonth, &accepted, &rejected, &pendingReception, &supportCount, &payrollCount)
+	`, tenantID).Scan(&emittedToday, &emittedMonth, &accepted, &rejected, &supportCount, &payrollCount)
+
+	_ = a.db.QueryRow(r.Context(), `
+		SELECT COUNT(*)
+		FROM received_invoices
+		WHERE company_id = $1
+		  AND estado_dian IN ('PENDIENTE', 'ACUSADA_085', 'RECIBIDA_086')
+	`, tenantID).Scan(&pendingReception)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"emitted_today":       emittedToday,
@@ -1031,86 +1056,6 @@ func (a *app) handleDashboardKpis(w http.ResponseWriter, r *http.Request) {
 		"support_documents":   supportCount,
 		"payroll_documents":   payrollCount,
 	})
-}
-
-func (a *app) handleIncomingInvoiceEmail(w http.ResponseWriter, r *http.Request) {
-	tenantID := mustTenantID(r.Context())
-
-	var webhook IncomingEmailWebhook
-	if err := json.NewDecoder(r.Body).Decode(&webhook); err != nil {
-		http.Error(w, "payload inv?lido", http.StatusBadRequest)
-		return
-	}
-	if webhook.TenantID != uuid.Nil && webhook.TenantID != tenantID {
-		http.Error(w, "tenant_id no coincide", http.StatusForbidden)
-		return
-	}
-	if webhook.S3ObjectKey == "" {
-		http.Error(w, "s3_object_key requerido", http.StatusBadRequest)
-		return
-	}
-
-	go func(webhook IncomingEmailWebhook, tenantID uuid.UUID) {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancel()
-
-		emailRaw, err := downloadIncomingEmailFromS3(ctx, webhook.S3Bucket, webhook.S3ObjectKey)
-		if err != nil {
-			log.Printf("downloadIncomingEmailFromS3 tenant_id=%s s3_key=%s error=%v", tenantID, webhook.S3ObjectKey, err)
-			return
-		}
-
-		xmlFactura, err := extractSupplierInvoiceXML(emailRaw)
-		if err != nil {
-			log.Printf("extractSupplierInvoiceXML tenant_id=%s s3_key=%s error=%v", tenantID, webhook.S3ObjectKey, err)
-			return
-		}
-
-		rawPayload, _ := json.Marshal(map[string]any{
-			"role":     "RECIBIDA",
-			"webhook":  webhook,
-			"xml_base": xmlFactura,
-		})
-
-		prefijoProveedor := "FV"
-		numeroProveedor := int64(9999)
-
-		var invoiceID uuid.UUID
-		err = a.db.QueryRow(ctx, `
-			INSERT INTO invoices (
-				company_id,
-				emission_point_id,
-				prefijo,
-				numero,
-				estado_dian,
-				raw_dian_payload_jsonb
-			)
-			VALUES ($1, NULL, $2, $3, 'RECIBIDO_PND', $4::jsonb)
-			RETURNING id
-		`, tenantID, prefijoProveedor, numeroProveedor, rawPayload).Scan(&invoiceID)
-		if err != nil {
-			log.Printf("insert incoming invoice tenant_id=%s s3_key=%s error=%v", tenantID, webhook.S3ObjectKey, err)
-		}
-	}(webhook, tenantID)
-
-	writeJSON(w, http.StatusAccepted, IncomingEmailAcceptedResponse{
-		Status:      "WEBHOOK_RECIBIDO_EN_PROCESAMIENTO",
-		S3ObjectKey: webhook.S3ObjectKey,
-	})
-}
-
-func downloadIncomingEmailFromS3(ctx context.Context, bucket, objectKey string) ([]byte, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	return []byte("<Invoice><cbc:ID>SIMULADA</cbc:ID></Invoice>"), nil
-}
-
-func extractSupplierInvoiceXML(emailRaw []byte) (string, error) {
-	if len(emailRaw) == 0 {
-		return "", errors.New("correo vac?o")
-	}
-	return string(emailRaw), nil
 }
 
 func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointID, invoiceID uuid.UUID, prefijo string, numero int64, invoiceReq createInvoiceRequest) (json.RawMessage, error) {
