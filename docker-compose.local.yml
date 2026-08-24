@@ -52,6 +52,10 @@ services:
       - |
         set -e
         for f in $(ls /migrations/*.sql | sort); do
+          if [ "$$(basename "$$f")" = "014_dian_ambiente_mock.sql" ]; then
+            echo "Skipping optional migration: $$f"
+            continue
+          fi
           echo "Applying migration: $$f"
           psql -h postgres -U zona_k_app -d zona_k_facturacion -v ON_ERROR_STOP=1 -f "$$f"
         done

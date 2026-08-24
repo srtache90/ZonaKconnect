@@ -18,29 +18,30 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
           rel="stylesheet">
 
-    <link th:href="@{/css/zonak-portal.css}" rel="stylesheet">
+    <link th:href="@{/css/zonak-portal.css(v=20260820-2)}" rel="stylesheet">
 </head>
 
-<body style="
+<body class="zk-dashboard-shell" style="
     margin:0;
     padding:0;
-    background:#eeeae2;
-    color:#202020;
+    background:#f5f3ef;
+    color:#0f0707;
     font-family:Arial, Helvetica, sans-serif;
+    
 "
 data-theme="light">
 
-<header style="
-    height:68px;
+<header class="zk-dashboard-header" style="
+    height:55px;
     width:100%;
-    background:#080808;
+    background:#292929;
     color:#ffffff;
     display:flex;
     align-items:center;
-    padding:0 24px;
-    gap:18px;
+    padding:0 16px;
+    gap:12px;
     box-sizing:border-box;
-    border-bottom:1px solid #292929;
+    border-bottom:1px solid #3b3b3b;
 ">
     <button type="button"
             aria-label="Menú"
@@ -62,7 +63,7 @@ data-theme="light">
 
     </button>
 
-    <a th:href="@{/portal}"
+    <a class="zk-dashboard-brand" th:href="@{/portal}"
        style="
            display:flex;
            align-items:center;
@@ -102,7 +103,7 @@ data-theme="light">
 
     </a> 
 
-    <nav style="
+    <nav class="zk-dashboard-nav" style="
         height:100%;
         display:flex;
         align-items:center;
@@ -116,11 +117,9 @@ data-theme="light">
                display:flex;
                align-items:center;
                text-decoration:none;
-               color:#ffffff;
-               background:#967117;
+               color:#bdbdbd;
                font-size:13px;
                font-weight:600;
-               box-sizing:border-box;
            ">
             Dashboard
         </a>
@@ -173,8 +172,6 @@ data-theme="light">
     <div style="flex:1;"></div>
 
 
-    <!-- BUSCADOR -->
-
     <div style="
         width:245px;
         height:34px;
@@ -191,7 +188,7 @@ data-theme="light">
 
         <i class="bi bi-search"
            style="
-               color:#bd911e;
+               color:#f6e3b2;
                margin-right:9px;
                font-size:14px;
            ">
@@ -202,9 +199,6 @@ data-theme="light">
         </span>
 
     </div>
-
-
-    <!-- NOTIFICACIONES -->
 
     <button type="button"
             aria-label="Notificaciones"
@@ -222,8 +216,6 @@ data-theme="light">
 
     </button>
 
-
-    <!-- USUARIO -->
 
     <div style="
         display:flex;
@@ -249,7 +241,7 @@ data-theme="light">
 
             <small style="
                 display:block;
-                color:#c99b25;
+                color:#f8e7bd;
                 font-size:9px;
             "
             th:text="${tenantId != null ? 'NIT: ' + tenantId : 'Zona K'}">
@@ -263,7 +255,7 @@ data-theme="light">
             width:32px;
             height:32px;
             border-radius:50%;
-            background:#9a7418;
+            background:#efe2c3cd;
             color:#ffffff;
             display:flex;
             align-items:center;
@@ -279,43 +271,34 @@ data-theme="light">
 </header>
 
 
-<!-- =========================================================
-     CONTENIDO PRINCIPAL
-========================================================= -->
-
 <main class="zk-dashboard-main" style="
     width:100%;
-    min-height:calc(100vh - 68px);
-    padding:15px;
+    max-width: 115px;
+    margin:0 auto;
+    min-height:calc(100vh - 55px);
+    padding:24px 0 30px;
     box-sizing:border-box;
     display:grid;
-    grid-template-columns:minmax(0, 1fr) 310px;
-    gap:15px;
+    grid-template-columns:minmax(0, 1fr) 268px;
+    gap:24px;
+    
+    
 ">
-
-
-    <!-- =====================================================
-         COLUMNA PRINCIPAL
-    ====================================================== -->
-
     <section style="
         min-width:0;
     ">
-
-
-        <!-- ENCABEZADO -->
-
         <div style="
             background:#ffffff;
             border:1px solid #d6d0c5;
-            border-radius:4px;
-            min-height:96px;
-            padding:20px;
+            border-radius:22px;
+            min-height:102px;
+            padding:22px 24px;
             box-sizing:border-box;
             display:flex;
             align-items:center;
             justify-content:space-between;
             gap:20px;
+            box-shadow: 0 4px 18px rgba(35,35,35,.035);
         ">
 
             <div>
@@ -323,10 +306,10 @@ data-theme="light">
                 <h1 style="
                     margin:0 0 7px 0;
                     font-family:Arial, Helvetica, sans-serif;
-                    font-size:24px;
+                    font-size:23px;
                     line-height:1.2;
                     font-weight:700;
-                    color:#171d24;
+                    color:#191919;
                 ">
                     Operación Electrónica Corporativa
                 </h1>
@@ -342,9 +325,8 @@ data-theme="light">
             </div>
 
 
-            <!-- BOTONES -->
 
-            <div class="zk-module-grid" style="
+            <div class="zk-dashboard-module-grid" style="
                 display:flex;
                 align-items:center;
                 gap:8px;
@@ -376,11 +358,11 @@ data-theme="light">
                 <a th:href="@{/portal/facturacion/manual}"
                    style="
                        height:36px;
-                       padding:0 14px;
-                       background:#966f0e;
-                       border:1px solid #966f0e;
-                       border-radius:3px;
-                       color:#ffffff;
+                       padding:0 16px;
+                       background:#f4d9b5cb;
+                       border:1px solid #f9d5a5bc;
+                       border-radius:11px;
+                       color:#535050;
                        font-size:12px;
                        font-weight:600;
                        text-decoration:none;
@@ -400,18 +382,14 @@ data-theme="light">
 
         </div>
 
-
-        <!-- =================================================
-             MÓDULOS
-        ================================================== -->
-
-        <section style="
-            margin-top:15px;
+        <section class="zk-dashboard-modules" style="
+            margin-top:4px;
             background:#ffffff;
-            border:1px solid #d6d0c5;
-            border-radius:4px;
-            padding:20px;
+            border:1px solid #e7e3dc;
+            border-radius:22px;
+            padding:24px;
             box-sizing:border-box;
+            box-shadow: 0 4px 18px rgba(35,35,35,.035);
         ">
 
             <div style="
@@ -435,22 +413,21 @@ data-theme="light">
             </div>
 
 
-            <div style="
-                display:grid;
-                grid-template-columns:repeat(3, minmax(0, 1fr));
-                gap:14px;
-            ">
+                <div class="zk-dashboard-module-grid" style="
+                    display:grid;
+                    grid-template-columns:repeat(2, minmax(0, 1fr));
+                    gap:18px;
+                ">
 
-
-                <!-- EMISIÓN -->
 
                 <a class="zk-module-card" th:href="@{/portal/invoices}"
                    style="
-                       min-height:150px;
+                       min-height:158px;
                        background:#ffffff;
-                       border:1px solid #d8d1c5;
-                       border-radius:4px;
-                       padding:15px;
+                       border:1px solid #e4dfd7;
+                       border-radius:20px;
+                       box-shadow: 0 2px 8px rgba(30,30,30,.025);
+                       padding:20px;
                        box-sizing:border-box;
                        text-decoration:none;
                        color:#171717;
@@ -472,17 +449,17 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
+                                width:38px;
+                                height:38px;
+                                background:#faf9f6;
+                                border:1px solid #eee9e0;
+                                border-radius:12px;
                                 display:flex;
                                 align-items:center;
                                 justify-content:center;
-                                color:#806521;
+                                color:#a18457;
                                 font-size:12px;
-                                font-weight:bold;
+                                font-weight:700;
                                 flex-shrink:0;
                             ">
                                 01
@@ -500,14 +477,14 @@ data-theme="light">
                         </div>
 
                         <span style="
-                            background:#effbf3;
-                            border:1px solid #bde4ca;
-                            color:#168046;
-                            border-radius:2px;
-                            padding:4px 6px;
+                            background:#202020;
+                            border:1px solid #202020;
+                            color:#ffffff;
+                            border-radius:5px;
+                            padding:4px 8px;
                             font-size:8px;
                             font-weight:700;
-                            white-space:nowrap;
+                            white-space: nowrap;
                         ">
                             ACTIVO
                         </span>
@@ -524,8 +501,6 @@ data-theme="light">
                         Facturas electrónicas, documentos DIAN y representación gráfica.
                     </p>
 
-
-                    <!-- DATO REAL -->
 
                     <div style="
                         margin-top:auto;
@@ -560,9 +535,6 @@ data-theme="light">
 
                 </a>
 
-
-                <!-- REPORTES -->
-
                 <a class="zk-module-card" th:href="@{/portal/emision/reportes}"
                    style="
                        min-height:150px;
@@ -591,17 +563,17 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
+                                width:38px;
+                                height:38px;
+                                background:#ad9167e3;
+                                border:1px solid #c6b7a06d;
+                                border-radius:12px;
                                 display:flex;
                                 align-items:center;
                                 justify-content:center;
-                                color:#806521;
+                                color:#3e3a30;
                                 font-size:12px;
-                                font-weight:bold;
+                                font-weight:700;
                                 flex-shrink:0;
                             ">
                                 R1
@@ -619,13 +591,14 @@ data-theme="light">
                         </div>
 
                         <span style="
-                            background:#effbf3;
-                            border:1px solid #bde4ca;
-                            color:#168046;
-                            border-radius:2px;
-                            padding:4px 6px;
+                            background:#202020;
+                            border:1px solid #202020;
+                            color:#ffffff;
+                            border-radius:5px;
+                            padding:4px 8px;
                             font-size:8px;
                             font-weight:700;
+                            white-space: nowrap;
                         ">
                             ACTIVO
                         </span>
@@ -700,17 +673,17 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
+                                width:38px;
+                                height:38px;
+                                background:#faf9f6;
+                                border:1px solid #eee9e0;
+                                border-radius:12px;
                                 display:flex;
                                 align-items:center;
                                 justify-content:center;
-                                color:#806521;
+                                color:#a18457;
                                 font-size:12px;
-                                font-weight:bold;
+                                font-weight:700;
                                 flex-shrink:0;
                             ">
                                 02
@@ -728,11 +701,11 @@ data-theme="light">
                         </div>
 
                         <span style="
-                            background:#fff8e5;
-                            border:1px solid #e6d69e;
-                            color:#8c6a15;
-                            border-radius:2px;
-                            padding:4px 6px;
+                            background:#202020;
+                            border:1px solid #202020;
+                            color:#ffffff;
+                            border-radius:5px;
+                            padding:4px 8px;
                             font-size:8px;
                             font-weight:700;
                             white-space:nowrap;
@@ -810,17 +783,17 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
+                                width:38px;
+                                height:38px;
+                                background:#faf9f6;
+                                border:1px solid #eee9e0;
+                                border-radius:12px;
                                 display:flex;
                                 align-items:center;
                                 justify-content:center;
-                                color:#806521;
+                                color:#a18457;
                                 font-size:12px;
-                                font-weight:bold;
+                                font-weight:700;
                                 flex-shrink:0;
                             ">
                                 03
@@ -838,13 +811,14 @@ data-theme="light">
                         </div>
 
                         <span style="
-                            background:#effbf3;
-                            border:1px solid #bde4ca;
-                            color:#168046;
-                            border-radius:2px;
-                            padding:4px 6px;
+                            background:#202020;
+                            border:1px solid #202020;
+                            color:#ffffff;
+                            border-radius:5px;
+                            padding:4px 8px;
                             font-size:8px;
                             font-weight:700;
+                            white-space: nowrap;
                         ">
                             ACTIVO
                         </span>
@@ -919,17 +893,17 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
+                                width:38px;
+                                height:38px;
+                                background:#faf9f6;
+                                border:1px solid #eee9e0;
+                                border-radius:12px;
                                 display:flex;
                                 align-items:center;
                                 justify-content:center;
-                                color:#806521;
+                                color:#a18457;
                                 font-size:12px;
-                                font-weight:bold;
+                                font-weight:700;
                                 flex-shrink:0;
                             ">
                                 04
@@ -947,11 +921,11 @@ data-theme="light">
                         </div>
 
                         <span style="
-                            background:#f3f3f3;
-                            border:1px solid #cccccc;
-                            color:#777777;
-                            border-radius:2px;
-                            padding:4px 6px;
+                            background:#202020;
+                            border:1px solid #202020;
+                            color:#ffffff;
+                            border-radius:5px;
+                            padding:4px 8px;
                             font-size:8px;
                             font-weight:700;
                         ">
@@ -1028,18 +1002,18 @@ data-theme="light">
                         ">
 
                             <span style="
-                                width:39px;
-                                height:39px;
-                                background:#f4f1eb;
-                                border:1px solid #d8d0c2;
-                                border-radius:4px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#806521;
-                                font-size:12px;
-                                font-weight:bold;
-                                flex-shrink:0;
+                                        width:38px;
+                                        height:38px;
+                                        background:#faf9f6;
+                                        border:1px solid #eee9e0;
+                                        border-radius:12px;
+                                        display:flex;
+                                        align-items:center;
+                                        justify-content:center;
+                                        color:#a18457;
+                                        font-size:12px;
+                                        font-weight:700;
+                                        flex-shrink:0;
                             ">
                                 05
                             </span>
@@ -1124,10 +1098,11 @@ data-theme="light">
 
         <section style="
             background:#ffffff;
-            border:1px solid #d6d0c5;
-            border-radius:4px;
-            padding:19px;
+            border:1px solid #e7e3dc;
+            border-radius:20px;
+            padding:18px;
             box-sizing:border-box;
+            box-shadow: 0 4px 18px rgba(35,35,35,.035);
         ">
 
             <div style="
@@ -1167,7 +1142,7 @@ data-theme="light">
             ">
 
                 <span style="color:#333333;">
-                    Servicio de Recepción
+                    Servicio de Emision
                 </span>
 
                     <strong th:text="${emissionServiceStatus}"
@@ -1190,7 +1165,7 @@ data-theme="light">
             ">
 
                 <span style="color:#333333;">
-                    Servicio de Emisión
+                    Servicio de Recepcion
                 </span>
 
                     <strong th:text="${receptionServiceStatus}"
@@ -1277,10 +1252,11 @@ data-theme="light">
 
         <section style="
             background:#ffffff;
-            border:1px solid #d6d0c5;
-            border-radius:4px;
-            padding:19px;
+            border:1px solid #7e73dc;
+            border-radius:20px;
+            padding:18px;
             box-sizing:border-box;
+            box-shadow:0 4px 18px rgba(35,35,35,.035); 
         ">
 
 
@@ -1446,49 +1422,101 @@ data-theme="light">
 
 <style>
 
-@media (max-width: 1100px) {
+.zk-dashboard-main {
+    width:100%;
+    max-width:1140px;
+    margin:0 auto;
+}
 
-    header nav {
+
+
+.zk-module-card {
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease,
+        border-color .18s ease;
+}
+
+.zk-module-card:hover {
+    transform:translateY(-2px);
+    border-color:#d5c7b2 !important;
+    box-shadow:0 8px 22px rgba(40,35,25,.08) !important;
+}
+
+.zk-dashboard-header a {
+    transition:background .15s ease, color .15s ease;
+}
+
+
+@media (max-width:1100px) {
+
+    .zk-dashboard-header nav {
         display:none !important;
     }
 
-    main {
-        grid-template-columns:1fr !important;
+    main.zk-dashboard-main {
+        max-width:none !important;
+        width:100% !important;
+        padding:18px !important;
+        grid-template-columns:minmax(0,1fr) 260px !important;
     }
 
 }
 
+@media (max-width:760px) {
 
-@media (max-width: 750px) {
-
-    header {
+    .zk-dashboard-header {
         padding:0 12px !important;
     }
 
-    header > div:nth-last-child(3) {
+    .zk-dashboard-header nav {
         display:none !important;
     }
 
-    main {
-        padding:10px !important;
+    .zk-dashboard-main {
+        width:100% !important;
+        padding:12px !important;
+        grid-template-columns:1fr !important;
+        gap:16px !important;
     }
 
-    main section > div:first-child {
-        flex-direction:column !important;
-        align-items:flex-start !important;
+    .zk-dashboard-header > div:first-of-type {
+        display:none;
     }
 
-    main section > div:first-child > div:last-child {
-        width:100%;
+    .zk-dashboard-module-grid {
+        grid-template-columns:1fr !important;
+    }
+
+    .zk-dashboard-modules {
+        padding:16px !important;
+        border-radius:18px !important;
     }
 
 }
 
+@media (max-width:480px) {
 
-@media (max-width: 600px) {
+    .zk-dashboard-header {
+        height:55px !important;
+    }
 
-    main section section > div:nth-child(2) {
-        grid-template-columns:1fr !important;
+    .zk-dashboard-brand {
+        min-width:auto !important;
+    }
+
+    .zk-dashboard-brand img {
+        width:75px !important;
+        height:75px !important;
+    }
+
+    .zk-dashboard-main {
+        padding:10px !important;
+    }
+
+    .zk-module-card {
+        min-height:145px !important;
+        padding:16px !important;
     }
 
 }
