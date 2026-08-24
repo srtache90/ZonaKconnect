@@ -35,9 +35,10 @@ body.text-on-surface {
     min-height: 100dvh;
     margin: 0;
     color: var(--dc-on-surface) !important;
-    background-color: var(--dc-surface) !important;
+    background:  rgba(219, 201, 174, 0.15 ) !important;
     font-family: var(--dc-font) !important;
     -webkit-font-smoothing: antialiased;
+    padding: 0px 80px 0px 80px;
 }
 
 html.dark body {
@@ -217,12 +218,12 @@ button.btn {
 .zk-invoices-page .text-headline-md,
 .zk-invoices-page .text-on-surface-variant,
 .zk-invoices-page .text-outline {
-    color: #444748 !important;
+    color: #e1dfdf !important;
 }
 
 .zk-invoices-page .text-headline-lg,
 .zk-invoices-page .text-headline-md {
-    color: #1b1b1b !important;
+    color: #f4f3f3 !important;
 }
 
 .zk-invoices-page .zk-invoices-panel .focus\:border-secondary:focus,
