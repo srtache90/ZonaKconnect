@@ -7,12 +7,65 @@
         .plazo-vencido { color: #b71c1c; font-weight: 600; }
         .plazo-por-vencer { color: #e65100; font-weight: 600; }
         .cufe-warn { color: #b71c1c; }
+        .zk-invoices-header {
+            background: #080808 !important;
+            border-bottom-color: #292929 !important;
+        }
+        .zk-invoices-brand {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0;
+            min-width: 14px;
+            color: #ffffff !important;
+            text-decoration: none;
+        }
+        .zk-invoices-logo {
+            display: block;
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+        }
+        .zk-invoices-brand span {
+            color: #dccea9 !important;
+            font-family: "TT Commons", Arial, sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .zk-invoices-menu,
+        .zk-invoices-menu .material-symbols-outlined {
+            color: #ffffff !important;
+        }
+        .text-on-surface-variant {
+            color: #e1dfdf !important;
+        }
     </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
-<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+<header class="zk-invoices-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
+    <div class="flex items-center gap-3">
+        <button class="zk-invoices-menu p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
+            <span class="material-symbols-outlined">menu</span>
+        </button>
+        <a class="zk-invoices-brand" th:href="@{/portal}" aria-label="Zona K Connect">
+            <img th:src="@{/imagen/Zonak1.png}"
+                 src="/imagen/Zonak1.png"
+                 alt="Zona K"
+                 class="zk-invoices-logo">
+            <span>CONNECT</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-4">
+        <a class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-decoration-none" th:href="@{/portal/search}" aria-label="Buscar">
+            <span class="material-symbols-outlined text-on-surface-variant">search</span>
+        </a>
+    </div>
 
+    </header>
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
