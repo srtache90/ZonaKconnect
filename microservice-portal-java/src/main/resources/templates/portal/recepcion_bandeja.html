@@ -207,12 +207,12 @@
                         </th>
                         <th>Proveedor</th>
                         <th>Factura</th>
-                        <th>Punto</th>
+                        <th style="min-width: 170px;">Punto</th>
                         <th>CUFE</th>
                         <th class="text-end">Total</th>
                         <th>Emisión</th>
                         <th>Estado</th>
-                        <th>Plazo tácito</th>
+                        <th style="min-width: 140px;">Plazo tácito</th>
                         <th class="text-end">Documentos</th>
                         <th class="text-end">Eventos</th>
                     </tr>
@@ -299,7 +299,7 @@
                                              (${invoice.plazoStatus.name() == 'POR_VENCER'} ? ' plazo-por-vencer' : '')"
                             th:text="${invoice.plazoLabel}">Plazo</td>
                         <td class="text-center py-4 px-3 align-middle">
-                            <div class="btn-group btn-group-sm shadow-sm inline-flex" role="group" style="border-radius: 8px; overflow: hidden;">
+                            <div class="btn-group btn-group-sm shadow-sm inline-flex" role="group" style="min-width: 140px; border-radius: 8px; overflow: hidden;">
                                 <button type="button"
                                         class="btn btn-outline-secondary px-3 py-2"
                                         data-bs-toggle="tooltip"
@@ -309,10 +309,10 @@
                                         th:data-invoice-number="${invoice.invoiceNumber}"
                                         th:data-pdf-url="@{/portal/recepcion/{id}/representacion-grafica(id=${invoice.id})}"
                                         th:disabled="${!invoice.documentsAvailable}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
-                                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
-                                        <path d="M0 8s3-5.5 8-5.5S8 5.5 8 5.5 5.5 8 0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
-                                    </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+                                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+                                        <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
+                                        </svg>
                                 </button>
                                 <a class="btn btn-outline-secondary px-3 py-2"
                                    data-bs-toggle="tooltip"
@@ -347,21 +347,21 @@
                                         th:disabled="${invoice.estadoDian.name() != 'PENDIENTE' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/acuse-085(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    085
+                                    Pendiente
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-dark"
                                         th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})}"
                                         onclick="postEvent(this, {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'})">
-                                    086
+                                    Acusada
                                 </button>
                                 <button type="button"
                                         class="btn btn-zk"
                                         th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    087
+                                    Aceptada
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-danger"
@@ -370,7 +370,7 @@
                                         data-bs-toggle="modal"
                                         data-bs-target="#rejectModal"
                                         onclick="prepareReject(this)">
-                                    088
+                                    Rechazada
                                 </button>
                             </div>
                         </td>
