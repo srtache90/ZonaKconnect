@@ -19,7 +19,9 @@ WHERE prefijo_nc IS NULL
 
 ALTER TABLE emission_points
     ALTER COLUMN prefijo_nc SET DEFAULT 'NC',
-    ALTER COLUMN prefijo_nd SET DEFAULT 'ND';
+    ALTER COLUMN prefijo_nd SET DEFAULT 'ND',
+    ALTER COLUMN numero_actual_nc SET DEFAULT 0,
+    ALTER COLUMN numero_actual_nd SET DEFAULT 0;
 
 ALTER TABLE emission_points
     ALTER COLUMN prefijo_nc SET NOT NULL,

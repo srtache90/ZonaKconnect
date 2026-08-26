@@ -1,5 +1,6 @@
 package com.zonak.portal.service;
 
+import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.dto.InvoiceResponseDTO;
@@ -42,6 +43,20 @@ public class InvoiceOrchestratorService {
                         .subscribe(
                                 pdfUrl -> log.info("PDF factura generado invoice_id={} url={}", response.id(), pdfUrl),
                                 error -> log.warn("No fue posible generar PDF invoice_id={}: {}", response.id(), error.getMessage())
+                        ))
+                .map(InvoiceResponseDTO::id);
+    }
+
+    public Mono<UUID> processAndPersistCreditNote(
+            CreateCreditNoteRequestDTO requestDTO,
+            String tenantId,
+            String emissionPointId
+    ) {
+        return invoiceClientService.emitCreditNote(requestDTO, tenantId, emissionPointId)
+                .doOnNext(response -> generateAndUploadPdf(response, tenantId)
+                        .subscribe(
+                                pdfUrl -> log.info("PDF NC generado invoice_id={} url={}", response.id(), pdfUrl),
+                                error -> log.warn("No fue posible generar PDF NC invoice_id={}: {}", response.id(), error.getMessage())
                         ))
                 .map(InvoiceResponseDTO::id);
     }

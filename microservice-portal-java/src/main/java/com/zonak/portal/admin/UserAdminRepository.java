@@ -1,5 +1,6 @@
 package com.zonak.portal.admin;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -388,11 +389,38 @@ public class UserAdminRepository {
         if (scopes == null || scopes.isEmpty()) {
             return "Todos los PV de sus sociedades";
         }
-        long all = scopes.stream().filter(UserPointScope::allPointsOfSociety).count();
-        long specific = scopes.size() - all;
-        if (all > 0 && specific == 0) {
-            return "Todos los PV (" + all + " sociedad/es)";
+        List<String> parts = new ArrayList<>();
+        for (UserPointScope scope : scopes) {
+            if (scope == null || scope.sociedadId() == null) {
+                continue;
+            }
+            if (scope.allPointsOfSociety() || scope.emissionPointId() == null) {
+                String sociedad = jdbcTemplate.query(
+                        "SELECT razon_social FROM sociedades WHERE id = ?",
+                        (rs, rowNum) -> rs.getString("razon_social"),
+                        scope.sociedadId()
+                ).stream().findFirst().orElse(scope.sociedadId().toString());
+                parts.add("★ Todos · " + sociedad);
+            } else {
+                String label = jdbcTemplate.query(
+                        """
+                                SELECT ep.codigo || ' - ' || ep.nombre || ' (' || s.razon_social || ')'
+                                FROM emission_points ep
+                                JOIN sociedades s ON s.id = ep.company_id
+                                WHERE ep.id = ?
+                                """,
+                        (rs, rowNum) -> rs.getString(1),
+                        scope.emissionPointId()
+                ).stream().findFirst().orElse(scope.emissionPointId().toString());
+                parts.add(label);
+            }
         }
-        return specific + " punto(s) específico(s)" + (all > 0 ? " + acceso total en " + all : "");
+        if (parts.isEmpty()) {
+            return "Todos los PV de sus sociedades";
+        }
+        if (parts.size() <= 3) {
+            return String.join("; ", parts);
+        }
+        return parts.size() + " alcances: " + String.join("; ", parts.subList(0, 2)) + "…";
     }
 }

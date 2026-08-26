@@ -177,10 +177,34 @@
                 </form>
             </div>
 
+            <div class="d-flex flex-wrap align-items-center gap-2 px-4 pb-3" id="bulkActionsBar">
+                <span class="small text-muted me-1">
+                    Seleccionadas: <strong id="bulkSelectedCount">0</strong>
+                </span>
+                <span class="text-muted small d-none d-md-inline">|</span>
+                <span class="small text-muted">Masivo:</span>
+                <button type="button" class="btn btn-sm btn-outline-dark" id="bulk085" disabled
+                        onclick="runBulkEvent('085')">085 Acuse</button>
+                <button type="button" class="btn btn-sm btn-outline-dark" id="bulk086" disabled
+                        onclick="runBulkEvent('086')">086 Recibo</button>
+                <button type="button" class="btn btn-sm btn-zk" id="bulk087" disabled
+                        onclick="runBulkEvent('087')">087 Aceptar</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="bulk088" disabled
+                        onclick="prepareBulkReject()">088 Rechazar</button>
+            </div>
+
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                     <tr class="text-muted small text-uppercase">
+                        <th class="ps-4" style="width: 2.5rem;">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="selectAllInvoices"
+                                   title="Seleccionar todas"
+                                   aria-label="Seleccionar todas"
+                                   onchange="toggleSelectAll(this)">
+                        </th>
                         <th>Proveedor</th>
                         <th>Factura</th>
                         <th>Punto</th>
@@ -195,13 +219,27 @@
                     </thead>
                     <tbody>
                     <tr th:if="${#lists.isEmpty(invoices)}">
-                        <td colspan="10" class="text-center text-muted py-5">
+                        <td colspan="11" class="text-center text-muted py-5">
                             No hay facturas abiertas para
                             <span class="fw-semibold" th:text="${selectedSociedadNombre}">esta empresa</span>.
                             Sincronice IMAP, importe XML o revise el histórico.
                         </td>
                     </tr>
-                    <tr th:each="invoice : ${invoices}">
+                    <tr th:each="invoice : ${invoices}"
+                        th:attr="data-invoice-id=${invoice.id},
+                                 data-invoice-number=${invoice.invoiceNumber},
+                                 data-estado=${invoice.estadoDian.name()},
+                                 data-cufe-valid=${invoice.cufeValid},
+                                 data-url085=@{/api/v1/recepcion/{id}/acuse-085(id=${invoice.id})},
+                                 data-url086=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})},
+                                 data-url087=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})},
+                                 data-url088=@{/api/v1/recepcion/{id}/rechazo-088(id=${invoice.id})}">
+                        <td class="ps-4">
+                            <input class="form-check-input invoice-select"
+                                   type="checkbox"
+                                   th:attr="aria-label=${'Seleccionar ' + invoice.invoiceNumber}"
+                                   onchange="updateBulkSelectionUi()">
+                        </td>
                         <td>
                             <a class="fw-semibold text-decoration-none"
                                th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
@@ -358,8 +396,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted">Seleccione el motivo legal DIAN para rechazar la factura <strong id="rejectInvoiceNumber"></strong>.</p>
+                <p class="text-muted" id="rejectModalHint">
+                    Seleccione el motivo legal DIAN para rechazar la factura <strong id="rejectInvoiceNumber"></strong>.
+                </p>
                 <input type="hidden" id="rejectInvoiceId">
+                <input type="hidden" id="rejectBulkMode" value="0">
                 <label class="form-label" for="motivoRechazo">Motivo de rechazo</label>
                 <select class="form-select" id="motivoRechazo" required>
                     <option value="">Seleccione...</option>
@@ -370,7 +411,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-zk rounded-pill px-4" onclick="submitReject()">Transmitir 088</button>
+                <button type="button" class="btn btn-zk rounded-pill px-4" id="rejectSubmitBtn" onclick="submitReject()">Transmitir 088</button>
             </div>
         </div>
     </div>
@@ -385,11 +426,58 @@
     const receivedPdfTitle = document.getElementById('receivedPdfTitle');
     const receivedPdfOpenTab = document.getElementById('receivedPdfOpenTab');
     let receivedPdfBlobUrl = null;
+    let bulkRunning = false;
+
+    const EVENT_RULES = {
+        '085': { requiredEstado: 'PENDIENTE', urlKey: 'url085', label: '085 Acuse' },
+        '086': { requiredEstado: 'ACUSADA_085', urlKey: 'url086', label: '086 Recibo', body: {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'} },
+        '087': { requiredEstado: 'RECIBIDA_086', urlKey: 'url087', label: '087 Aceptar' },
+        '088': { requiredEstado: 'RECIBIDA_086', urlKey: 'url088', label: '088 Rechazar' }
+    };
 
     function showAlert(message, success) {
         alertBox.textContent = message;
         alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
         alertBox.classList.add(success ? 'alert-success' : 'alert-danger');
+    }
+
+    function selectedInvoiceRows() {
+        return Array.from(document.querySelectorAll('tr[data-invoice-id]'))
+            .filter(row => row.querySelector('.invoice-select')?.checked);
+    }
+
+    function toggleSelectAll(master) {
+        document.querySelectorAll('.invoice-select').forEach(cb => {
+            cb.checked = master.checked;
+        });
+        updateBulkSelectionUi();
+    }
+
+    function updateBulkSelectionUi() {
+        const rows = selectedInvoiceRows();
+        const count = rows.length;
+        const countEl = document.getElementById('bulkSelectedCount');
+        if (countEl) {
+            countEl.textContent = String(count);
+        }
+        const master = document.getElementById('selectAllInvoices');
+        const all = document.querySelectorAll('.invoice-select');
+        if (master && all.length) {
+            master.checked = count > 0 && count === all.length;
+            master.indeterminate = count > 0 && count < all.length;
+        }
+        const disabled = bulkRunning || count === 0;
+        ['bulk085', 'bulk086', 'bulk087', 'bulk088'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = disabled;
+            }
+        });
+    }
+
+    function setBulkButtonsBusy(busy) {
+        bulkRunning = busy;
+        updateBulkSelectionUi();
     }
 
     async function postEvent(button, body) {
@@ -418,10 +506,133 @@
         }
     }
 
+    async function sendEventRequest(url, body, motivoRechazo) {
+        let finalUrl = url;
+        const headers = {};
+        let payload;
+        if (motivoRechazo) {
+            finalUrl = url + (url.includes('?') ? '&' : '?') + 'motivo_rechazo=' + encodeURIComponent(motivoRechazo);
+        } else if (body) {
+            headers['Content-Type'] = 'application/json';
+            payload = JSON.stringify(body);
+        }
+        const response = await fetch(finalUrl, { method: 'POST', headers, body: payload });
+        const text = await response.text();
+        return { ok: response.ok, text };
+    }
+
+    async function runBulkEvent(eventCode, motivoRechazo) {
+        const rule = EVENT_RULES[eventCode];
+        if (!rule) {
+            return;
+        }
+        const selected = selectedInvoiceRows();
+        if (!selected.length) {
+            showAlert('Seleccione al menos una factura.', false);
+            return;
+        }
+
+        const eligible = [];
+        const skipped = [];
+        selected.forEach(row => {
+            const estado = row.dataset.estado;
+            const number = row.dataset.invoiceNumber || row.dataset.invoiceId;
+            const cufeValid = row.dataset.cufeValid === 'true';
+            if (estado === rule.requiredEstado && cufeValid) {
+                eligible.push(row);
+            } else {
+                const reason = !cufeValid ? 'CUFE inválido' : estado;
+                skipped.push(number + ' (' + reason + ')');
+            }
+        });
+
+        if (!eligible.length) {
+            showAlert(
+                'Ninguna factura seleccionada admite ' + rule.label +
+                '. Requerido: ' + rule.requiredEstado + ' + CUFE válido.',
+                false
+            );
+            alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            return;
+        }
+
+        if (!window.confirm(
+            'Transmitir ' + rule.label + ' a ' + eligible.length + ' factura(s)' +
+            (skipped.length ? ' (se omiten ' + skipped.length + ' por estado/CUFE)' : '') + '?'
+        )) {
+            return;
+        }
+
+        setBulkButtonsBusy(true);
+        let ok = 0;
+        let fail = 0;
+        const errors = [];
+
+        for (let i = 0; i < eligible.length; i++) {
+            const row = eligible[i];
+            const number = row.dataset.invoiceNumber || row.dataset.invoiceId;
+            const url = row.dataset[rule.urlKey];
+            showAlert('Masivo ' + rule.label + ': ' + (i + 1) + '/' + eligible.length + ' — ' + number + '…', true);
+            try {
+                const result = await sendEventRequest(url, rule.body, motivoRechazo);
+                if (result.ok) {
+                    ok++;
+                } else {
+                    fail++;
+                    errors.push(number + ': ' + result.text);
+                }
+            } catch (error) {
+                fail++;
+                errors.push(number + ': ' + error.message);
+            }
+        }
+
+        const parts = [
+            'Masivo ' + rule.label + ': ' + ok + ' OK, ' + fail + ' error(es)',
+            skipped.length ? skipped.length + ' omitida(s)' : null
+        ].filter(Boolean);
+        if (errors.length) {
+            parts.push(errors.slice(0, 5).join(' | '));
+            if (errors.length > 5) {
+                parts.push('(+ ' + (errors.length - 5) + ' más)');
+            }
+        }
+        showAlert(parts.join('. '), fail === 0);
+        alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        setBulkButtonsBusy(false);
+        if (ok > 0) {
+            window.setTimeout(() => window.location.reload(), 1200);
+        }
+    }
+
     function prepareReject(button) {
+        document.getElementById('rejectBulkMode').value = '0';
         document.getElementById('rejectInvoiceId').value = button.dataset.id;
         document.getElementById('rejectInvoiceNumber').textContent = button.dataset.number;
+        document.getElementById('rejectModalHint').innerHTML =
+            'Seleccione el motivo legal DIAN para rechazar la factura <strong id="rejectInvoiceNumber">' +
+            (button.dataset.number || '') + '</strong>.';
+        document.getElementById('rejectSubmitBtn').textContent = 'Transmitir 088';
         document.getElementById('motivoRechazo').value = '';
+    }
+
+    function prepareBulkReject() {
+        const eligible = selectedInvoiceRows().filter(row =>
+            row.dataset.estado === 'RECIBIDA_086' && row.dataset.cufeValid === 'true'
+        );
+        if (!eligible.length) {
+            showAlert('Ninguna factura seleccionada admite 088 (RECIBIDA_086 + CUFE válido).', false);
+            alertBox.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            return;
+        }
+        document.getElementById('rejectBulkMode').value = '1';
+        document.getElementById('rejectInvoiceId').value = '';
+        document.getElementById('rejectModalHint').textContent =
+            'Seleccione el motivo legal DIAN para rechazar ' + eligible.length +
+            ' factura(s) seleccionada(s) en estado RECIBIDA_086.';
+        document.getElementById('rejectSubmitBtn').textContent = 'Transmitir 088 masivo';
+        document.getElementById('motivoRechazo').value = '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectModal')).show();
     }
 
     function clearReceivedPdfViewer() {
@@ -463,12 +674,21 @@
     });
 
     async function submitReject() {
-        const invoiceId = document.getElementById('rejectInvoiceId').value;
         const reason = document.getElementById('motivoRechazo').value;
         if (!reason) {
             showAlert('Debe seleccionar un motivo legal DIAN para el evento 088.', false);
             return;
         }
+        const bulkMode = document.getElementById('rejectBulkMode').value === '1';
+        if (bulkMode) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+            if (modal) {
+                modal.hide();
+            }
+            await runBulkEvent('088', reason);
+            return;
+        }
+        const invoiceId = document.getElementById('rejectInvoiceId').value;
         const url = `/api/v1/recepcion/${invoiceId}/rechazo-088?motivo_rechazo=${encodeURIComponent(reason)}`;
         const response = await fetch(url, {method: 'POST'});
         const text = await response.text();
@@ -477,6 +697,8 @@
             window.setTimeout(() => window.location.reload(), 900);
         }
     }
+
+    updateBulkSelectionUi();
 </script>
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>

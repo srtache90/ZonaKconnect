@@ -1,12 +1,17 @@
 package com.zonak.portal.integration;
 
+import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
+import com.zonak.portal.integration.pos.PosTicketRequest;
 import com.zonak.portal.integration.sap.SapEnviarDocumento;
 import com.zonak.portal.integration.simphony.SimphonyTicketRequest;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 public class IngestInvoiceMapper {
@@ -82,6 +87,81 @@ public class IngestInvoiceMapper {
         );
     }
 
+    public CreateInvoiceRequestDTO fromPos(PosTicketRequest ticket) {
+        if (ticket == null) {
+            throw new IllegalArgumentException("JSON POS vacío");
+        }
+        List<PosTicketRequest.Item> rawItems = safeList(ticket.items());
+        if (rawItems.isEmpty()) {
+            throw new IllegalArgumentException("items requiere al menos un item POS");
+        }
+
+        List<CreateInvoiceRequestDTO.ItemDTO> items = mapPosItems(rawItems, ticket);
+
+        BigDecimal tip = parseDecimal(ticket.propina());
+        Map<String, Object> totals = posTotals(ticket, items, tip);
+
+        return new CreateInvoiceRequestDTO(
+                "Habilitacion",
+                mapPosCustomer(ticket.cliente()),
+                items,
+                "",
+                totals
+        );
+    }
+
+    public CreateCreditNoteRequestDTO fromPosCreditNote(PosTicketRequest ticket) {
+        if (ticket == null) {
+            throw new IllegalArgumentException("JSON POS vacío");
+        }
+        PosTicketRequest.FacturaReferencia ref = ticket.facturaReferencia();
+        if (ref == null
+                || !StringUtils.hasText(ref.numeroDocumento())
+                || !StringUtils.hasText(ref.cufe())) {
+            throw new IllegalArgumentException(
+                    "Nota crédito POS requiere factura_referencia con numeroDocumento y cufe."
+            );
+        }
+        List<PosTicketRequest.Item> rawItems = safeList(ticket.items());
+        if (rawItems.isEmpty()) {
+            throw new IllegalArgumentException("items requiere al menos un item POS");
+        }
+
+        List<CreateInvoiceRequestDTO.ItemDTO> items = mapPosItems(rawItems, ticket);
+        List<CreateCreditNoteRequestDTO.ConceptoCorreccionDTO> conceptos = safeList(ticket.conceptosCorreccion())
+                .stream()
+                .map(c -> new CreateCreditNoteRequestDTO.ConceptoCorreccionDTO(
+                        valueOrDefault(c.referenceId(), "1"),
+                        valueOrDefault(c.codigo(), "2"),
+                        valueOrDefault(c.descripcion(), "Anulación de factura electrónica")
+                ))
+                .toList();
+        if (conceptos.isEmpty()) {
+            conceptos = List.of(new CreateCreditNoteRequestDTO.ConceptoCorreccionDTO(
+                    "1",
+                    "2",
+                    "Anulación de factura electrónica"
+            ));
+        }
+
+        return new CreateCreditNoteRequestDTO(
+                "Habilitacion",
+                valueOrDefault(ticket.customizationId(), "20"),
+                valueOrDefault(ticket.creditNoteTypeCode(), "91"),
+                mapPosCustomer(ticket.cliente()),
+                new CreateCreditNoteRequestDTO.FacturaReferenciaDTO(
+                        valueOrDefault(ref.tipoDocumento(), "FV"),
+                        ref.numeroDocumento().trim(),
+                        normalizeFechaEmision(ref.fechaEmision()),
+                        ref.cufe().trim(),
+                        valueOrDefault(ref.schemeName(), "CUFE-SHA384")
+                ),
+                conceptos,
+                items,
+                posTotals(ticket, items, parseDecimal(ticket.propina()))
+        );
+    }
+
     private CreateInvoiceRequestDTO.ItemDTO mapSapItem(SapEnviarDocumento.Detalle detalle) {
         return new CreateInvoiceRequestDTO.ItemDTO(
                 valueOrDefault(detalle.getCodigoproducto(), "SAP-SIN-CODIGO"),
@@ -100,6 +180,124 @@ public class IngestInvoiceMapper {
                 valueOrDefault(item.precioUnitario(), BigDecimal.ZERO),
                 valueOrDefault(item.descuento(), BigDecimal.ZERO)
         );
+    }
+
+    private List<CreateInvoiceRequestDTO.ItemDTO> mapPosItems(
+            List<PosTicketRequest.Item> rawItems,
+            PosTicketRequest ticket
+    ) {
+        List<CreateInvoiceRequestDTO.ItemDTO> items = new ArrayList<>();
+        int index = 1;
+        for (PosTicketRequest.Item item : rawItems) {
+            items.add(mapPosItem(item, index++));
+        }
+        BigDecimal tip = parseDecimal(ticket.propina());
+        if (tip.compareTo(BigDecimal.ZERO) > 0 && !ticket.hasExplicitPropinaCargo()) {
+            items.add(new CreateInvoiceRequestDTO.ItemDTO(
+                    "PROPINA",
+                    "Propina",
+                    BigDecimal.ONE,
+                    tip,
+                    BigDecimal.ZERO
+            ));
+        }
+        return items;
+    }
+
+    private CreateInvoiceRequestDTO.CustomerDTO mapPosCustomer(PosTicketRequest.Cliente cliente) {
+        return new CreateInvoiceRequestDTO.CustomerDTO(
+                valueOrDefault(cliente != null ? cliente.tipoIdentificacion() : null, "13"),
+                valueOrDefault(cliente != null ? cliente.numeroIdentificacion() : null, "222222222222"),
+                valueOrDefault(cliente != null ? cliente.razonSocial() : null, "CONSUMIDOR FINAL"),
+                cliente != null ? cliente.email() : null
+        );
+    }
+
+    private Map<String, Object> posTotals(
+            PosTicketRequest ticket,
+            List<CreateInvoiceRequestDTO.ItemDTO> items,
+            BigDecimal tip
+    ) {
+        BigDecimal itemsTotal = sumItems(items);
+        BigDecimal declaredTotal = parseDecimal(ticket.total());
+        if (declaredTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            declaredTotal = itemsTotal;
+        }
+        Map<String, Object> totals = new LinkedHashMap<>();
+        totals.put("origen", "POS");
+        totals.put("tipo_documento", valueOrDefault(ticket.tipoDocumento(), "FV"));
+        totals.put("invoice_type_code", valueOrDefault(ticket.invoiceTypeCode(), ticket.codigoFiscal()));
+        totals.put("credit_note_type_code", valueOrDefault(ticket.creditNoteTypeCode(), ""));
+        totals.put("numero_ticket", valueOrDefault(ticket.numeroTicket(), ""));
+        totals.put("check_id", valueOrDefault(ticket.checkId(), ""));
+        totals.put("harmony_id", valueOrDefault(ticket.harmonyId(), ""));
+        totals.put("caja_wsid", valueOrDefault(ticket.cajaWsid(), ""));
+        totals.put("guid_transaccion", valueOrDefault(ticket.guidTransaccion(), ""));
+        totals.put("codigo_fiscal", valueOrDefault(ticket.codigoFiscal(), "48"));
+        totals.put("condicion_venta", valueOrDefault(ticket.condicionVenta(), "01"));
+        totals.put("resolucion", valueOrDefault(ticket.resolucion(), ""));
+        totals.put("prefijo", valueOrDefault(ticket.prefijo(), ""));
+        totals.put("restaurante", valueOrDefault(ticket.restaurante(), ""));
+        totals.put("workstation", valueOrDefault(ticket.workstation(), ""));
+        totals.put("empleado", valueOrDefault(ticket.empleado(), ""));
+        totals.put("fecha_hora", valueOrDefault(ticket.fechaHora(), ""));
+        totals.put("propina", tip);
+        totals.put("cargos", ticket.cargos() == null ? List.of() : ticket.cargos());
+        totals.put("pagos", ticket.pagos() == null ? List.of() : ticket.pagos());
+        totals.put("impuestos", ticket.impuestos() == null ? List.of() : ticket.impuestos());
+        totals.put("subtotal", itemsTotal.subtract(ticket.hasExplicitPropinaCargo() ? BigDecimal.ZERO : tip.max(BigDecimal.ZERO)));
+        totals.put("total", declaredTotal);
+        return totals;
+    }
+
+    private CreateInvoiceRequestDTO.ItemDTO mapPosItem(PosTicketRequest.Item item, int index) {
+        String name = firstText(item != null ? item.descripcion() : null, item != null ? item.nombre() : null, "Item POS");
+        String code = valueOrDefault(item != null ? item.codigo() : null, "POS-" + index);
+        BigDecimal qty = parseDecimal(item != null ? item.cantidad() : null);
+        if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+            qty = BigDecimal.ONE;
+        }
+        BigDecimal unit = parseDecimal(item != null ? item.precio() : null);
+        if (unit.compareTo(BigDecimal.ZERO) == 0) {
+            BigDecimal subtotal = parseDecimal(item != null ? item.subtotal() : null);
+            unit = subtotal.divide(qty, 2, java.math.RoundingMode.HALF_UP);
+        }
+        BigDecimal discount = parseDecimal(item != null ? item.descuento() : null);
+        return new CreateInvoiceRequestDTO.ItemDTO(code, name, qty, unit, discount);
+    }
+
+    private String normalizeFechaEmision(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return java.time.OffsetDateTime.now(java.time.ZoneOffset.ofHours(-5)).toString();
+        }
+        String value = raw.trim();
+        if (value.length() == 10 && value.charAt(4) == '-' && value.charAt(7) == '-') {
+            return value + "T00:00:00-05:00";
+        }
+        return value;
+    }
+
+    private String firstText(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
+    private BigDecimal parseDecimal(String value) {
+        if (value == null || value.isBlank()) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            return new BigDecimal(value.trim().replace(",", ""));
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Valor numérico inválido: " + value);
+        }
     }
 
     private BigDecimal sumSapTaxes(List<SapEnviarDocumento.Impuesto> impuestos) {

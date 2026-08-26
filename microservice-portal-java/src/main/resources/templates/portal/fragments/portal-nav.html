@@ -98,7 +98,7 @@
                     <a th:href="@{/portal/admin/usuarios}"
                        th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'usuarios' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined">group</span>
-                        <span>Usuarios</span>
+                        <span>Usuarios y roles</span>
                     </a>
                     <a th:href="@{/portal/admin/proveedores-punto}"
                        th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'proveedores-punto' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
@@ -278,7 +278,7 @@
             <a th:href="@{/portal/admin/usuarios}"
                th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'usuarios' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
                 <span class="material-symbols-outlined">group</span>
-                <span class="font-label-sm text-label-sm mt-1">Usuarios</span>
+                <span class="font-label-sm text-label-sm mt-1">Roles</span>
             </a>
             <a th:href="@{/portal/admin/proveedores-punto}"
                th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'proveedores-punto' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
