@@ -71,7 +71,7 @@ data-theme="light">
 
         ">
          <span  style="
-         color:#dccea9; 
+         color:#bcb9b3; 
          width: 10px; 
          height: 10px;
          font-size: 10px;
@@ -169,7 +169,7 @@ data-theme="light">
 
         <i class="bi bi-search"
            style="
-               color:#f6e3b2;
+               color:#dedbd5;
                margin-right:9px;
                font-size:14px;
            ">
@@ -222,7 +222,7 @@ data-theme="light">
 
             <small style="
                 display:block;
-                color:#f8e7bd;
+                color:#c1bfb9;
                 font-size:9px;
             "
             th:text="${tenantId != null ? 'NIT: ' + tenantId : 'Zona K'}">
@@ -236,7 +236,7 @@ data-theme="light">
             width:32px;
             height:32px;
             border-radius:50%;
-            background:#efe2c3cd;
+            background:#f5f2e9cd;
             color:#352311;
             display:flex;
             align-items:center;
@@ -402,121 +402,44 @@ data-theme="light">
                 ">
 
 
-                <a class="zk-module-card" th:href="@{/portal/invoices}"
-                   style="
-                       min-height:158px;
-                       background:#ffffff;
-                       border:1px solid #e4dfd7;
-                       border-radius:20px;
-                       box-shadow: 0 2px 8px rgba(30,30,30,.025);
-                       padding:20px;
-                       box-sizing:border-box;
-                       text-decoration:none;
-                       color:#171717;
-                       display:flex;
-                       flex-direction:column;
-                   ">
+              <a class="zk-module-card text-decoration-none shadow-sm" 
+   th:href="@{/portal/invoices}"
+   onfocus="this.style.boxShadow='0 18px 20px -6px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.3)'; this.style.transform='translateY(-6px)'; this.style.borderColor='#bfae96';"
+   onblur="this.style.boxShadow='none'; this.style.transform='translateY(0)'; this.style.borderColor='#e4dfd7';"
+   style="
+       min-height:158px;
+       background:#ffffff;
+       border:1px solid #e4dfd7;
+       border-radius:20px;
+       padding:20px;
+       box-sizing:border-box;
+       color:#171717;
+       display:flex;
+       flex-direction:column;
+       outline: none;
+       /* Controla que la animación de la sombra sea fluida al hacer clic */
+       transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+   ">
 
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        justify-content:space-between;
-                        gap:8px;
-                    ">
+    <!-- El contenido interno (divs, p, etc.) se queda exactamente igual -->
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <strong style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:1.25; color:#181818;">
+                Emisión de Facturación
+            </strong>
+        </div>
+    </div>
+    <p style="margin:14px 0 0 0; font-size:12px; line-height:1.45; color:#444444;">
+        Facturas electrónicas, documentos DIAN y representación gráfica.
+    </p>
+    <div style="margin-top:auto; padding-top:10px; border-top:1px solid #e7e2da; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#555555; gap:10px;">
+        <span th:if="${actividadReciente == null or #lists.isEmpty(actividadReciente)}">
+            Sin documentos
+        </span>
+    </div>
 
-                        <div style="
-                            display:flex;
-                            align-items:center;
-                            gap:10px;
-                        ">
+</a>
 
-                            <span style="
-                                width:38px;
-                                height:38px;
-                                background:#faf9f6;
-                                border:1px solid #eee9e0;
-                                border-radius:12px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#a18457;
-                                font-size:12px;
-                                font-weight:700;
-                                flex-shrink:0;
-                                
-                            ">
-                                01
-                            </span>
-
-                            <strong style="
-                                font-family:Arial, Helvetica, sans-serif;
-                                font-size:14px;
-                                line-height:1.25;
-                                color:#181818;
-                            ">
-                                Emisión de Facturación
-                            </strong>
-
-                        </div>
-
-                        <span style="
-                            background:#202020;
-                            border:1px solid #202020;
-                            color:#ffffff;
-                            border-radius:5px;
-                            padding:4px 8px;
-                            font-size:8px;
-                            font-weight:700;
-                            white-space: nowrap;
-                        ">
-                            ACTIVO
-                        </span>
-
-                    </div>
-
-
-                    <p style="
-                        margin:14px 0 0 0;
-                        font-size:12px;
-                        line-height:1.45;
-                        color:#444444;
-                    ">
-                        Facturas electrónicas, documentos DIAN y representación gráfica.
-                    </p>
-
-
-                    <div style="
-                        margin-top:auto;
-                        padding-top:10px;
-                        border-top:1px solid #e7e2da;
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        font-size:10px;
-                        color:#555555;
-                        gap:10px;
-                    ">
-
-                        <span th:if="${actividadReciente != null and !#lists.isEmpty(actividadReciente)}"
-                              th:text="${'Último doc: ' + actividadReciente[0].documentNumber()}">
-                            Último doc: -
-                        </span>
-
-                        <span th:if="${actividadReciente == null or #lists.isEmpty(actividadReciente)}">
-                            Sin documentos
-                        </span>
-
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                            white-space:nowrap;
-                        ">
-                            Acceder →
-                        </span>
-
-                    </div>
-
-                </a>
 
                 <a class="zk-module-card" th:href="@{/portal/emision/reportes}"
                    style="
@@ -545,23 +468,6 @@ data-theme="light">
                             gap:10px;
                         ">
 
-                            <span style="
-                                width:38px;
-                                height:38px;
-                                background:#ad9167e3;
-                                border:1px solid #c6b7a06d;
-                                border-radius:12px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#3e3a30;
-                                font-size:12px;
-                                font-weight:700;
-                                flex-shrink:0;
-                            ">
-                                R1
-                            </span>
-
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -573,18 +479,7 @@ data-theme="light">
 
                         </div>
 
-                        <span style="
-                            background:#202020;
-                            border:1px solid #202020;
-                            color:#ffffff;
-                            border-radius:5px;
-                            padding:4px 8px;
-                            font-size:8px;
-                            font-weight:700;
-                            white-space: nowrap;
-                        ">
-                            ACTIVO
-                        </span>
+
 
                     </div>
 
@@ -610,29 +505,17 @@ data-theme="light">
                         color:#555555;
                     ">
 
-                        <span>
-                            Consulta de información
-                        </span>
-
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                        ">
-                            Acceder →
-                        </span>
-
                     </div>
 
                 </a>
 
 
-                <!-- RECEPCIÓN -->
 
                 <a class="zk-module-card" th:href="@{/portal/recepcion}"
                    style="
                        min-height:150px;
                        background:#ffffff;
-                       border:1px solid #d8d1c5;
+                       border:1px solid #e2e2e2;
                        border-radius:4px;
                        padding:15px;
                        box-sizing:border-box;
@@ -655,22 +538,6 @@ data-theme="light">
                             gap:10px;
                         ">
 
-                            <span style="
-                                width:38px;
-                                height:38px;
-                                background:#faf9f6;
-                                border:1px solid #eee9e0;
-                                border-radius:12px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#a18457;
-                                font-size:12px;
-                                font-weight:700;
-                                flex-shrink:0;
-                            ">
-                                02
-                            </span>
 
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
@@ -683,18 +550,7 @@ data-theme="light">
 
                         </div>
 
-                        <span style="
-                            background:#202020;
-                            border:1px solid #202020;
-                            color:#ffffff;
-                            border-radius:5px;
-                            padding:4px 8px;
-                            font-size:8px;
-                            font-weight:700;
-                            white-space:nowrap;
-                        ">
-                            PENDIENTES
-                        </span>
+
 
                     </div>
 
@@ -720,16 +576,7 @@ data-theme="light">
                         color:#555555;
                     ">
 
-                        <span>
-                            Consulta de recepción
-                        </span>
 
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                        ">
-                            Acceder →
-                        </span>
 
                     </div>
 
@@ -765,22 +612,6 @@ data-theme="light">
                             gap:10px;
                         ">
 
-                            <span style="
-                                width:38px;
-                                height:38px;
-                                background:#faf9f6;
-                                border:1px solid #eee9e0;
-                                border-radius:12px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#a18457;
-                                font-size:12px;
-                                font-weight:700;
-                                flex-shrink:0;
-                            ">
-                                03
-                            </span>
 
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
@@ -793,18 +624,7 @@ data-theme="light">
 
                         </div>
 
-                        <span style="
-                            background:#202020;
-                            border:1px solid #202020;
-                            color:#ffffff;
-                            border-radius:5px;
-                            padding:4px 8px;
-                            font-size:8px;
-                            font-weight:700;
-                            white-space: nowrap;
-                        ">
-                            ACTIVO
-                        </span>
+
 
                     </div>
 
@@ -830,16 +650,6 @@ data-theme="light">
                         color:#555555;
                     ">
 
-                        <span>
-                            Resolución vigente
-                        </span>
-
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                        ">
-                            Acceder →
-                        </span>
 
                     </div>
 
@@ -875,22 +685,7 @@ data-theme="light">
                             gap:10px;
                         ">
 
-                            <span style="
-                                width:38px;
-                                height:38px;
-                                background:#faf9f6;
-                                border:1px solid #eee9e0;
-                                border-radius:12px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                color:#a18457;
-                                font-size:12px;
-                                font-weight:700;
-                                flex-shrink:0;
-                            ">
-                                04
-                            </span>
+                            
 
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
@@ -902,18 +697,6 @@ data-theme="light">
                             </strong>
 
                         </div>
-
-                        <span style="
-                            background:#202020;
-                            border:1px solid #202020;
-                            color:#ffffff;
-                            border-radius:5px;
-                            padding:4px 8px;
-                            font-size:8px;
-                            font-weight:700;
-                        ">
-                            INACTIVO
-                        </span>
 
                     </div>
 
@@ -939,16 +722,7 @@ data-theme="light">
                         color:#555555;
                     ">
 
-                        <span>
-                            Requiere configuración
-                        </span>
 
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                        ">
-                            Configurar →
-                        </span>
 
                     </div>
 
@@ -984,22 +758,7 @@ data-theme="light">
                             gap:10px;
                         ">
 
-                            <span style="
-                                        width:38px;
-                                        height:38px;
-                                        background:#faf9f6;
-                                        border:1px solid #eee9e0;
-                                        border-radius:12px;
-                                        display:flex;
-                                        align-items:center;
-                                        justify-content:center;
-                                        color:#a18457;
-                                        font-size:12px;
-                                        font-weight:700;
-                                        flex-shrink:0;
-                            ">
-                                05
-                            </span>
+                          
 
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
@@ -1012,17 +771,7 @@ data-theme="light">
 
                         </div>
 
-                        <span style="
-                            background:#faf7ed;
-                            border:1px solid #d9cba5;
-                            color:#806522;
-                            border-radius:2px;
-                            padding:4px 6px;
-                            font-size:8px;
-                            font-weight:700;
-                        ">
-                            ADMIN
-                        </span>
+
 
                     </div>
 
@@ -1048,16 +797,6 @@ data-theme="light">
                         color:#555555;
                     ">
 
-                        <span>
-                            Administración
-                        </span>
-
-                        <span style="
-                            color:#956f0e;
-                            font-weight:700;
-                        ">
-                            Acceder →
-                        </span>
 
                     </div>
 
@@ -1226,7 +965,7 @@ data-theme="light">
                 <div style="
                     width:0%;
                     height:100%;
-                    background:#8f6a0e;
+                    background:#d0ceca;
                     border-radius:10px;
                 "></div>
 
@@ -1288,7 +1027,7 @@ data-theme="light">
                        display:block;
                        font-size:24px;
                        margin-bottom:8px;
-                       color:#b0a99d;
+                       color:#a2a1a0;
                    ">
                 </i>
 
@@ -1301,7 +1040,7 @@ data-theme="light">
                      display:flex;
                      gap:10px;
                      padding:12px 0;
-                     border-bottom:1px solid #eeeae3;
+                     border-bottom:1px solid #cac9c9;
                  ">
 
 
@@ -1311,9 +1050,9 @@ data-theme="light">
                     height:29px;
                     flex-shrink:0;
                     border-radius:50%;
-                    border:1px solid #d7d0c4;
+                    border:1px solid #b9b8b8;
                     background:#f7f5f0;
-                    color:#806521;
+                    color:#b9b9b7;
                     display:flex;
                     align-items:center;
                     justify-content:center;
@@ -1351,7 +1090,7 @@ data-theme="light">
                         display:block;
                         font-size:10px;
                         line-height:1.4;
-                        color:#555555;
+                        color:#8a8888;
                     ">
 
                         Estado DIAN:
@@ -1444,6 +1183,7 @@ data-theme="light">
         width:100% !important;
         padding:18px !important;
         grid-template-columns:minmax(0,1fr) 260px !important;
+        background: #ffffff;
     }
 
 }

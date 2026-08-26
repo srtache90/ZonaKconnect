@@ -1,6 +1,7 @@
 <!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <link rel="stylesheet" href="https://jsdelivr.net">
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción RADIAN | DIAN Connect')}"></th:block>
     <style>
         .zk-invoices-header {
@@ -43,7 +44,8 @@
         .text-on-surface-variant {
             color: #e1dfdf !important;
         }
-        .form-select rounded-3
+
+
     </style>
 </head>
 <body class="text-on-surface">
@@ -139,14 +141,14 @@
                 <table class="table align-middle mb-0">
                     <thead>
                     <tr class="text-muted small text-uppercase">
-                        <th>Proveedor</th>
-                        <th>Factura</th>
-                        <th>CUFE</th>
-                        <th class="text-end">Total</th>
-                        <th>Emisión</th>
+                        <th class="py-4 align-middle text-center">Proveedor</th>
+                        <th class="py-4 align-middle text-center">Factura</th>
+                        <th class="py-4 align-middle text-center">CUFE</th>
+                        <th class="text-end py-4 align-middle text-center">Total</th>
+                        <th class="py-4 align-middle text_center">Emisión</th>
                         <th>Estado</th>
-                        <th class="text-end">Documentos</th>
-                        <th class="text-end">Eventos</th>
+                        <th class="text-end py-4 align-middle text-center">Documentos</th>
+                        <th class="text-end py-4-middle text-center">Eventos</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -172,10 +174,10 @@
                                   th:text="${invoice.cufe}">CUFE</span>
                             <span th:if="${invoice.cufe == null or #strings.isEmpty(invoice.cufe)}">—</span>
                         </td>
-                        <td class="text-end zk-data" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
-                        <td class="zk-data" th:text="${invoice.fechaEmision}">2026-06-12</td>
+                        <td class="text-center zk-data text-nowrap  py-4 px-3" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+                        <td class="zk-data text-nowrap text-center py-4 px-3 align-middle" th:text="${invoice.fechaEmision}">2026-06-12</td>
                         <td>
-                            <span class="badge badge-soft rounded-pill px-3 py-2"
+                            <span class="badge badge-soft rounded-pill px-5 py-2.5"
                                   th:classappend="${invoice.estadoDian.name() == 'PENDIENTE'} ? ' badge-pendiente' :
                                                   (${invoice.estadoDian.name() == 'ACUSADA_085'} ? ' badge-085' :
                                                   (${invoice.estadoDian.name() == 'RECIBIDA_086'} ? ' badge-086' :
@@ -184,53 +186,71 @@
                                 PENDIENTE
                             </span>
                         </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
+                       <td class="text-center py-4 px-3 align-middle">
+                        <div class="btn-group btn-group-sm shadow-sm inline-flex" role="group" style="border-radius: 8px; overflow: hidden;">
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary px-3 py-2"
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top"
+                                    title="Ver PDF"
+                                    data-action="open-received-pdf"
+                                    th:data-invoice-number="${invoice.invoiceNumber}"
+                                    th:data-pdf-url="@{/portal/recepcion/{id}/representacion-grafica(id=${invoice.id})}"
+                                    th:disabled="${!invoice.documentsAvailable}">
+                        <svg xmlns="http://w3.org" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+                        <path d="M0 8s3-5.5 8-5.5s8 5.5 8 5.5s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+                        </svg>
+                            </button>
+
+                            <a class="btn btn-outline-secondary px-3 py-2"
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top"
+                            title="Descargar XML"
+                            th:href="@{/portal/recepcion/{id}/xml(id=${invoice.id})}"
+                            th:classappend="${!invoice.documentsAvailable} ? ' disabled'">
+                        <svg xmlns="http://w3.org" width="16" height="16" fill="currentColor" class="bi bi-code-slash" viewBox="0 0 16 16">
+                <path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294l4-13zM4.854 4.146a.5.5 0 1 0-.708-.708L1.146 6.5a.5.5 0 0 0 0 .708l3 3a.5.5 0 0 0 .708-.708L2.207 7l2.647-2.854zm6.292 0a.5.5 0 0 1 .708-.708L14.854 6.5a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L13.793 7l-2.647-2.854z"/>
+                        </svg>            
+                    </a>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary px-3 py-2"
+                                    data-bs-toggle="tooltip" 
+                                    data-bs-placement="top"
+                                    title="Envio por correo"
+                                    data-action="open-resend-received-mail"
+                                    th:attr="data-invoice-number=${invoice.invoiceNumber},
+                                            data-proveedor=${invoice.proveedorName},
+                                            data-send-url=@{/portal/recepcion/{id}/reenviar-correo(id=${invoice.id})}"
+                                    th:disabled="${!invoice.documentsAvailable}">
+                                <svg xmlns="http://w3.org" width="16" height="16" fill="currentColor" class="bi bi-envelope-fill" viewBox="0 0 16 16">
+                                    <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555zM0 4.697v7.104l5.803-3.558L0 4.697zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757zm5.903-.532L16 11.801V4.697l-3.336 2.132z"/>
+                                </svg>                            
+                            </button>
+
+                        </div>
+                    </td>
+
+                        <td class="text-center py-5 px-2.5 ">
+                            <div class="btn-group px-5 py-2.5 justify-content-center gap-1 btn-group-sm" role="group">
                                 <button type="button"
-                                        class="btn btn-outline-dark"
-                                        title="Ver representación gráfica"
-                                        data-action="open-received-pdf"
-                                        th:data-invoice-number="${invoice.invoiceNumber}"
-                                        th:data-pdf-url="@{/portal/recepcion/{id}/representacion-grafica(id=${invoice.id})}"
-                                        th:disabled="${!invoice.documentsAvailable}">
-                                    Ver PDF
-                                </button>
-                                <a class="btn btn-outline-dark"
-                                   title="Descargar XML"
-                                   th:href="@{/portal/recepcion/{id}/xml(id=${invoice.id})}"
-                                   th:classappend="${!invoice.documentsAvailable} ? ' disabled'">
-                                    XML
-                                </a>
-                                <button type="button"
-                                        class="btn btn-outline-dark"
-                                        title="Reenviar por correo"
-                                        data-action="open-resend-received-mail"
-                                        th:attr="data-invoice-number=${invoice.invoiceNumber},
-                                                 data-proveedor=${invoice.proveedorName},
-                                                 data-send-url=@{/portal/recepcion/{id}/reenviar-correo(id=${invoice.id})}"
-                                        th:disabled="${!invoice.documentsAvailable}">
-                                    Correo
-                                </button>
-                            </div>
-                        </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button"
-                                        class="btn btn-outline-dark"
+                                        class="btn btn-outline-dark px-5 py-2.5"
                                         th:disabled="${invoice.estadoDian.name() != 'PENDIENTE'}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/acuse-085(id=${invoice.id})}"
                                         onclick="postEvent(this)">
                                     085 Acuse
                                 </button>
                                 <button type="button"
-                                        class="btn btn-outline-dark"
+                                        class="btn btn-outline-dark "
                                         th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085'}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})}"
                                         onclick="postEvent(this, {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'})">
                                     086 Recibo
                                 </button>
                                 <button type="button"
-                                        class="btn btn-zk"
+                                        class="btn btn-zk px-5 py-2.5"
                                         th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086'}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})}"
                                         onclick="postEvent(this)">
@@ -474,6 +494,10 @@
             window.setTimeout(() => window.location.reload(), 900);
         }
     }
+</script>
+<script>
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 </script>
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>

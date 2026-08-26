@@ -70,9 +70,9 @@ body.zk-body {
     margin: 8px !important;
     min-height: calc(100vh - 16px);
     overflow-x: hidden;
-    background: #f7f3eb !important;
+    background: #ffffff !important;
     color: #202020;
-    border: 8px solid #aeb4bb;
+    border: 8px solid #c9caca;
     border-radius: 20px;
     box-sizing: border-box;
 }
@@ -136,6 +136,7 @@ body.zk-body {
 .zk-module-card {
     min-height: 146px !important;
     padding: 15px !important;
+
 }
 
 .zk-module-card p {
@@ -212,9 +213,9 @@ body.zk-body {
 
 .zk-module-card:hover,
 .zk-module-card:focus-visible {
-    border-color: #b89a56 !important;
-    box-shadow: 0 10px 24px rgba(54, 43, 20, .12);
-    transform: translateY(-2px);
+    border-color: #b89b5600 !important;
+    box-shadow: 0 10px 24px rgba(45, 44, 44, 0.442);
+    transform: translateY(-8px);
 }
 
 .zk-module-card:hover::after,
@@ -267,7 +268,7 @@ body.zk-body {
     min-height: 100vh !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: #f7f3eb !important;
+    background: #fdfdfc !important;
     font-family: Arial, Helvetica, sans-serif !important;
 }
 
@@ -310,7 +311,7 @@ body.zk-body {
     min-height: 122px !important;
     padding: 26px 28px !important;
     border-radius: 14px !important;
-    border-color: #d6d0c5 !important;
+    border-color: #fffffe !important;
     box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
 }
 
@@ -327,8 +328,8 @@ body.zk-body {
     height: 44px !important;
     padding: 0 20px !important;
     border-radius: 6px !important;
-    background: #e6dcc46b !important;
-    border-color: #504a3c41!important;
+    background: #f7f6f5a7 !important;
+    border-color: #b6b4aecc!important;
 }
 
 .zk-dashboard-modules {
@@ -349,8 +350,8 @@ body.zk-body {
     min-height: 176px !important;
     padding: 20px !important;
     border-radius: 14px !important;
-    border-color: #e0d8ca !important;
-    background: #fffdfa !important;
+    border-color: #d7d7d7 !important;
+    background: #ffffff !important;
 }
 
 .zk-module-card > div:first-child > div:first-child > span {
@@ -365,7 +366,7 @@ body.zk-body {
 .zk-dashboard-main > aside > section {
     padding: 22px !important;
     border-radius: 14px !important;
-    border-color: #d6d0c5 !important;
+    border-color: #dddddd !important;
     background: #ffffff !important;
     box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
 }
@@ -387,9 +388,8 @@ body.zk-body {
     }
 }
 
-/* Locked reference composition for the Dashboard. */
 .zk-dashboard-shell {
-    background: #f9f3e7b8 !important;
+    background: #ffffff !important;
 }
 
 .zk-dashboard-main {
@@ -414,8 +414,9 @@ body.zk-body {
 .zk-module-card {
     min-height: 172px !important;
     padding: 22px !important;
-    background: #fffdfa !important;
+    background: #ffffff !important;
     border-radius: 14px !important;
+    
 }
 
 .zk-module-card p {
@@ -932,7 +933,7 @@ body.zk-body {
     --page-bg: #171716;
     --panel-bg: rgba(34, 34, 33, .84);
     --panel-solid: #222221;
-    --text-main: #f7f3ea;
+    --text-main: #fffdf9;
     --text-muted: #b9b0a2;
     --hairline: rgba(198, 163, 91, .18);
     --shadow-soft: 0 24px 70px rgba(0, 0, 0, .28);
