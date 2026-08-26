@@ -1,0 +1,67 @@
+{
+  "numero_factura": 1,
+  "fecha_procesamiento": "2026-08-21T11:23:27.739059",
+  "numero_ticket": "34770",
+  "check_id": "HPL000019389",
+  "harmony_id": "209274",
+  "caja_wsid": "17401",
+  "fecha_hora": "2025-11-02T13:46:47.7094508-05:00",
+  "condicion_venta": "01",
+  "codigo_fiscal": "48",
+  "guid_transaccion": "491b88e4785e4a5180898e36e3c0bccf00017388",
+  "Resolucion": "18764089669852",
+  "ResolucionIni": "2025-02-28",
+  "ResolucionFin": "2026-02-28",
+  "FechaResolucion": "2025-02-28",
+  "propina": "13611.00",
+  "total": "160611.00",
+  "restaurante": "Pravda",
+  "workstation": "Aux1Pravda",
+  "empleado": "Roa, Cristian ",
+  "impuestos": [
+    {
+      "codigo_impuesto": "04",
+      "nombre_impuesto": "INC 8%",
+      "numero_impuesto": "1",
+      "porcentaje_impuesto": "8"
+    }
+  ],
+  "items": [
+    {
+      "nombre": "ClubColombia",
+      "cantidad": "4",
+      "precio": "13800.00",
+      "subtotal": "55200.00"
+    },
+    {
+      "nombre": "AgManan600",
+      "cantidad": "1",
+      "precio": "8800.00",
+      "subtotal": "8800.00"
+    },
+    {
+      "nombre": "ArepaQueso",
+      "cantidad": "1",
+      "precio": "11800.00",
+      "subtotal": "11800.00"
+    },
+    {
+      "nombre": "Pancakes",
+      "cantidad": "2",
+      "precio": "22800.00",
+      "subtotal": "45600.00"
+    },
+    {
+      "nombre": "JgMango",
+      "cantidad": "1",
+      "precio": "11800.00",
+      "subtotal": "11800.00"
+    },
+    {
+      "nombre": "ClubColombia",
+      "cantidad": "1",
+      "precio": "13800.00",
+      "subtotal": "13800.00"
+    }
+  ]
+}

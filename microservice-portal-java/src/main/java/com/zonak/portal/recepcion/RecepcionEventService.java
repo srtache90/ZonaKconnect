@@ -25,18 +25,27 @@ public class RecepcionEventService {
     private final ObjectMapper objectMapper;
     private final RadianDianClient radianDianClient;
     private final SensitiveDataCryptoService cryptoService;
+    private final ReceivedInvoiceRepository receivedInvoiceRepository;
+    private final RadianEventRepository radianEventRepository;
+    private final RadianSupplierNotifyService radianSupplierNotifyService;
     private final Boolean auditTableExists;
 
     public RecepcionEventService(
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
             RadianDianClient radianDianClient,
-            SensitiveDataCryptoService cryptoService
+            SensitiveDataCryptoService cryptoService,
+            ReceivedInvoiceRepository receivedInvoiceRepository,
+            RadianEventRepository radianEventRepository,
+            RadianSupplierNotifyService radianSupplierNotifyService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.radianDianClient = radianDianClient;
         this.cryptoService = cryptoService;
+        this.receivedInvoiceRepository = receivedInvoiceRepository;
+        this.radianEventRepository = radianEventRepository;
+        this.radianSupplierNotifyService = radianSupplierNotifyService;
         this.auditTableExists = detectAuditTable();
     }
 
@@ -117,11 +126,24 @@ public class RecepcionEventService {
         if (!allowedFrom.contains(normalized)) {
             throw new IllegalStateException(invalidTransitionMessage(normalized, targetState));
         }
-        if (!StringUtils.hasText(current.cufe()) || !StringUtils.hasText(current.invoiceNumber())) {
+        if (!StringUtils.hasText(current.invoiceNumber())) {
             throw new IllegalStateException(
-                    "La factura recibida no tiene CUFE o número de documento; no se puede enviar el evento a la DIAN."
+                    "La factura recibida no tiene número de documento; no se puede enviar el evento a la DIAN."
             );
         }
+        RecepcionCufeValidator.requireValidCufeOrThrow(current.cufe());
+        if (StringUtils.hasText(current.sociedadNit()) && StringUtils.hasText(current.receptorNit())
+                && !RecepcionCufeValidator.sameNit(current.sociedadNit(), current.receptorNit())) {
+            throw new IllegalStateException(
+                    "NIT receptor del XML (" + current.receptorNit() + ") no coincide con la sociedad ("
+                            + current.sociedadNit() + "). Corrija el documento antes de transmitir RADIAN."
+            );
+        }
+        receivedInvoiceRepository.findDuplicateByCufe(companyId, current.cufe(), invoiceId).ifPresent(dup -> {
+            throw new IllegalStateException(
+                    "CUFE duplicado en otra factura recibida (" + dup + "). No se transmite el evento."
+            );
+        });
 
         Map<String, Object> request = new HashMap<>();
         request.put("ambiente", current.ambiente());
@@ -190,16 +212,24 @@ public class RecepcionEventService {
             );
         }
 
+        String eventJson = buildTimelineEventJson(eventCode, action, successLabel, dianResponse, payload);
+        String mergePatch = buildDianPayload(eventCode, dianResponse, payload);
         int updated = jdbcTemplate.update(
                 """
-                        UPDATE invoices
+                        UPDATE received_invoices
                         SET estado_dian = ?,
-                            dian_response_jsonb = COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb,
+                            dian_response_jsonb = (
+                                COALESCE(dian_response_jsonb, '{}'::jsonb) || ?::jsonb
+                            ) || jsonb_build_object(
+                                'radian_events',
+                                COALESCE(dian_response_jsonb->'radian_events', '[]'::jsonb) || ?::jsonb
+                            ),
                             updated_at = now()
-                        WHERE id = ? AND company_id = ? AND emission_point_id IS NULL
+                        WHERE id = ? AND company_id = ?
                         """,
                 targetState,
-                buildDianPayload(eventCode, dianResponse, payload),
+                mergePatch,
+                eventJson,
                 invoiceId,
                 companyId
         );
@@ -210,6 +240,43 @@ public class RecepcionEventService {
         insertAudit(companyId, invoiceId, action, dianResponse);
         String track = text(dianResponse, "trackID", text(dianResponse, "trackId", ""));
         String cude = text(dianResponse, "cune", text(dianResponse, "cufeCune", ""));
+
+        String dianJson;
+        try {
+            dianJson = objectMapper.writeValueAsString(dianResponse == null ? Map.of() : dianResponse);
+        } catch (Exception ex) {
+            dianJson = "{}";
+        }
+        UUID eventId = radianEventRepository.insert(
+                companyId,
+                invoiceId,
+                eventCode,
+                action,
+                successLabel,
+                current.cufe(),
+                current.invoiceNumber(),
+                current.supplierName(),
+                current.supplierNit(),
+                current.supplierEmail(),
+                "ENVIADO",
+                track,
+                cude,
+                current.ambiente(),
+                dianJson
+        );
+        radianSupplierNotifyService.notifyIfPossible(
+                companyId.toString(),
+                companyId,
+                eventId,
+                current.supplierEmail(),
+                successLabel,
+                eventCode,
+                current.invoiceNumber(),
+                current.cufe(),
+                track,
+                "ENVIADO"
+        );
+
         return successLabel + " enviado a DIAN (" + current.ambiente() + "). TrackID="
                 + (StringUtils.hasText(track) ? track : "n/d")
                 + (StringUtils.hasText(cude) ? (" CUDE=" + cude.substring(0, Math.min(16, cude.length())) + "…") : "")
@@ -224,9 +291,39 @@ public class RecepcionEventService {
             if (localPayload != null) {
                 root.set("radian_request", objectMapper.valueToTree(localPayload));
             }
+            if ("086".equals(eventCode)) {
+                root.put(
+                        "recibo_086_at",
+                        java.time.LocalDate.now(RecepcionBusinessDays.BOGOTA).toString()
+                );
+            }
             return objectMapper.writeValueAsString(root);
         } catch (Exception ex) {
             return "{}";
+        }
+    }
+
+    private String buildTimelineEventJson(
+            String eventCode,
+            String action,
+            String label,
+            JsonNode dianResponse,
+            Object localPayload
+    ) {
+        try {
+            ObjectNode event = objectMapper.createObjectNode();
+            event.put("code", eventCode);
+            event.put("action", action);
+            event.put("label", label);
+            event.put("at", java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString());
+            event.put("trackId", text(dianResponse, "trackID", text(dianResponse, "trackId", "")));
+            event.put("cude", text(dianResponse, "cune", text(dianResponse, "cufeCune", "")));
+            if (localPayload != null) {
+                event.set("request", objectMapper.valueToTree(localPayload));
+            }
+            return "[" + objectMapper.writeValueAsString(event) + "]";
+        } catch (Exception ex) {
+            return "[]";
         }
     }
 
@@ -235,16 +332,27 @@ public class RecepcionEventService {
             return jdbcTemplate.queryForObject(
                     """
                             SELECT i.estado_dian,
-                                   COALESCE(i.uuid_cude, i.raw_dian_payload_jsonb->>'cufe', '') AS cufe,
+                                   COALESCE(i.cufe, i.raw_payload_jsonb->>'cufe', '') AS cufe,
                                    COALESCE(
-                                       NULLIF(i.raw_dian_payload_jsonb->>'invoice_number', ''),
-                                       NULLIF(i.prefijo, '') || i.numero::text,
+                                       NULLIF(i.invoice_number, ''),
+                                       NULLIF(i.raw_payload_jsonb->>'invoice_number', ''),
                                        ''
                                    ) AS invoice_number,
                                    COALESCE(c.razon_social, s.razon_social, '') AS sender_name,
                                    COALESCE(c.nit, s.nit, '') AS sender_nit,
-                                   COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
-                                   COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
+                                   COALESCE(i.supplier_name, i.raw_payload_jsonb->'proveedor'->>'razon_social', '') AS receiver_name,
+                                   COALESCE(i.supplier_nit, i.raw_payload_jsonb->'proveedor'->>'nit', '') AS receiver_nit,
+                                   COALESCE(
+                                       NULLIF(i.supplier_email, ''),
+                                       NULLIF(i.raw_payload_jsonb->'proveedor'->>'email', ''),
+                                       ''
+                                   ) AS supplier_email,
+                                   COALESCE(
+                                       NULLIF(i.raw_payload_jsonb->>'receptor_nit', ''),
+                                       NULLIF(i.raw_payload_jsonb->'receptor'->>'nit', ''),
+                                       ''
+                                   ) AS receptor_nit,
+                                   COALESCE(NULLIF(s.nit, ''), NULLIF(c.nit, ''), '') AS sociedad_nit,
                                    COALESCE(
                                        NULLIF(c.dian_config->>'ambiente', ''),
                                        NULLIF(s.dian_ambiente, ''),
@@ -253,14 +361,15 @@ public class RecepcionEventService {
                                    COALESCE(c.dian_config->>'software_id', '') AS software_id,
                                    COALESCE(c.dian_config->>'pin', '') AS software_pin,
                                    COALESCE(
-                                       NULLIF(i.raw_dian_payload_jsonb->>'fecha_emision', ''),
+                                       NULLIF(to_char(i.issue_date, 'YYYY-MM-DD'), ''),
+                                       NULLIF(i.raw_payload_jsonb->>'fecha_emision', ''),
                                        to_char((i.created_at AT TIME ZONE 'America/Bogota')::date, 'YYYY-MM-DD'),
                                        ''
                                    ) AS invoice_issue_date
-                            FROM invoices i
+                            FROM received_invoices i
                             LEFT JOIN companies c ON c.id = i.company_id
                             LEFT JOIN sociedades s ON s.id = i.company_id
-                            WHERE i.id = ? AND i.company_id = ? AND i.emission_point_id IS NULL
+                            WHERE i.id = ? AND i.company_id = ?
                             """,
                     (rs, rowNum) -> new ReceivedInvoiceContext(
                             rs.getString("estado_dian"),
@@ -270,6 +379,9 @@ public class RecepcionEventService {
                             rs.getString("sender_nit"),
                             rs.getString("receiver_name"),
                             rs.getString("receiver_nit"),
+                            rs.getString("supplier_email"),
+                            rs.getString("receptor_nit"),
+                            rs.getString("sociedad_nit"),
                             rs.getString("ambiente"),
                             rs.getString("software_id"),
                             rs.getString("software_pin"),
@@ -292,7 +404,7 @@ public class RecepcionEventService {
             jdbcTemplate.update(
                     """
                             INSERT INTO audit_events (company_id, entity_type, entity_id, action, payload)
-                            VALUES (?, 'invoice', ?, ?, ?::jsonb)
+                            VALUES (?, 'received_invoice', ?, ?, ?::jsonb)
                             """,
                     companyId,
                     invoiceId,
@@ -364,6 +476,7 @@ public class RecepcionEventService {
             case "086" -> "RECIBIDA_086";
             case "087" -> "ACEPTADA_087";
             case "088", "RECHAZADO" -> "RECHAZADA_088";
+            case "TACITA", "ACEPTACION_TACITA" -> "ACEPTADA_TACITA";
             default -> value;
         };
     }
@@ -388,11 +501,21 @@ public class RecepcionEventService {
             String senderNit,
             String receiverName,
             String receiverNit,
+            String supplierEmail,
+            String receptorNit,
+            String sociedadNit,
             String ambiente,
             String softwareId,
             String softwarePin,
             String invoiceIssueDate
     ) {
+        String supplierName() {
+            return receiverName;
+        }
+
+        String supplierNit() {
+            return receiverNit;
+        }
     }
 
     private record SociedadCertificate(String pfxBase64, String password) {

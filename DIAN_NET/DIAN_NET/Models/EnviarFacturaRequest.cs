@@ -14,6 +14,12 @@ namespace DIAN_NET.Models
         public string Ambiente { get; set; } = "Habilitacion";
         public NotaCreditoDto NotaCredito { get; set; }
     }
+
+    public class EnviarNotaDebitoRequest
+    {
+        public string Ambiente { get; set; } = "Habilitacion";
+        public NotaDebitoDto NotaDebito { get; set; }
+    }
     
     public class EnviarDocumentoSoporteRequest
     {

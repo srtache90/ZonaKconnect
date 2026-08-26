@@ -20,10 +20,15 @@ public record DianFiscalContext(
 ) {
     public enum DocumentKind {
         INVOICE,
-        CREDIT_NOTE
+        CREDIT_NOTE,
+        DEBIT_NOTE
     }
 
     public boolean isCreditNote() {
         return documentKind == DocumentKind.CREDIT_NOTE;
+    }
+
+    public boolean isDebitNote() {
+        return documentKind == DocumentKind.DEBIT_NOTE;
     }
 }

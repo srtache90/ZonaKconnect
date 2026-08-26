@@ -217,13 +217,17 @@ public class InvoiceReportRepository {
                 ? signedXml.documentKind()
                 : inferDocumentKind(rawPayload);
         String uniqueCode = firstString(signedXml.uniqueCode(), persistedUniqueCode);
-        String uniqueCodeLabel = kind == DianFiscalContext.DocumentKind.CREDIT_NOTE ? "CUDE" : "CUFE";
-        String title = kind == DianFiscalContext.DocumentKind.CREDIT_NOTE
-                ? "Nota Crédito Electrónica"
-                : "Factura Electrónica de Venta";
-        String templateName = kind == DianFiscalContext.DocumentKind.CREDIT_NOTE
-                ? "reports/nota-credito-template"
-                : "reports/factura-template";
+        String uniqueCodeLabel = (kind == DianFiscalContext.DocumentKind.CREDIT_NOTE
+                || kind == DianFiscalContext.DocumentKind.DEBIT_NOTE) ? "CUDE" : "CUFE";
+        String title = switch (kind) {
+            case CREDIT_NOTE -> "Nota Crédito Electrónica";
+            case DEBIT_NOTE -> "Nota Débito Electrónica";
+            default -> "Factura Electrónica de Venta";
+        };
+        String templateName = switch (kind) {
+            case CREDIT_NOTE, DEBIT_NOTE -> "reports/nota-credito-template";
+            default -> "reports/factura-template";
+        };
         LocalDate issueDate = signedXml.issueDate() != null
                 ? signedXml.issueDate()
                 : fallbackIssueDate(rawPayload);
@@ -504,9 +508,11 @@ public class InvoiceReportRepository {
             Document document = factory.newDocumentBuilder()
                     .parse(new ByteArrayInputStream(xmlBytes));
             Element root = document.getDocumentElement();
-            DianFiscalContext.DocumentKind kind = "CreditNote".equals(root.getLocalName())
-                    ? DianFiscalContext.DocumentKind.CREDIT_NOTE
-                    : DianFiscalContext.DocumentKind.INVOICE;
+            DianFiscalContext.DocumentKind kind = switch (root.getLocalName()) {
+                case "CreditNote" -> DianFiscalContext.DocumentKind.CREDIT_NOTE;
+                case "DebitNote" -> DianFiscalContext.DocumentKind.DEBIT_NOTE;
+                default -> DianFiscalContext.DocumentKind.INVOICE;
+            };
             Element uuid = firstElement(document, "UUID");
             return new SignedXmlMetadata(
                     kind,
@@ -560,9 +566,13 @@ public class InvoiceReportRepository {
     }
 
     private DianFiscalContext.DocumentKind inferDocumentKind(JsonNode rawPayload) {
-        return rawPayload.has("credit_note_type_code") || rawPayload.has("factura_referencia")
-                ? DianFiscalContext.DocumentKind.CREDIT_NOTE
-                : DianFiscalContext.DocumentKind.INVOICE;
+        if (rawPayload.has("debit_note_type_code")) {
+            return DianFiscalContext.DocumentKind.DEBIT_NOTE;
+        }
+        if (rawPayload.has("credit_note_type_code") || rawPayload.has("factura_referencia")) {
+            return DianFiscalContext.DocumentKind.CREDIT_NOTE;
+        }
+        return DianFiscalContext.DocumentKind.INVOICE;
     }
 
     private InvoicePdfData.Customer mapCustomer(JsonNode customerNode) {

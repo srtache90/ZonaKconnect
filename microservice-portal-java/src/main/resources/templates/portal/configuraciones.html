@@ -67,18 +67,26 @@
         </div>
     </section>
 
-    <section class="grid md:grid-cols-3 gap-6">
+    <section class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/sociedades}">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Sociedades</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Crear y editar sociedades, NIT, correos y credenciales SMTP.</p>
+            <p class="font-body-md text-on-surface-variant mb-0">Crear y editar sociedades, NIT, correos y credenciales SMTP/IMAP.</p>
         </a>
         <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/puntos-venta}">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Puntos de venta</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Prefijo, resolución DIAN, clave técnica y rangos de numeración.</p>
+            <p class="font-body-md text-on-surface-variant mb-0">Prefijo, resolución DIAN, clave técnica y rangos FE/NC/ND.</p>
         </a>
         <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/certificados}">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Certificados digitales</h3>
             <p class="font-body-md text-on-surface-variant mb-0">Cargar certificados .pfx/.p12 y controlar vigencia por sociedad.</p>
+        </a>
+        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/usuarios}">
+            <h3 class="font-headline-md text-headline-md text-primary mb-2">Usuarios y roles</h3>
+            <p class="font-body-md text-on-surface-variant mb-0">ADMIN, EMISOR, RECEPTOR, CONSULTA; sociedades y alcance por punto de venta.</p>
+        </a>
+        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/proveedores-punto}">
+            <h3 class="font-headline-md text-headline-md text-primary mb-2">Proveedor → Punto</h3>
+            <p class="font-body-md text-on-surface-variant mb-0">Enruta facturas recibidas al PV según NIT del proveedor.</p>
         </a>
     </section>
 </main>

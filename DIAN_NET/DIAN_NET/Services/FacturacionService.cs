@@ -152,6 +152,37 @@ namespace DIAN_NET.Services
             }
         }
 
+        public async Task<EnviarFacturaResponse> EnviarNotaDebitoAsync(EnviarNotaDebitoRequest request)
+        {
+            try
+            {
+                ValidarNotaDebito(request.NotaDebito, request.Ambiente);
+                var xmlSinFirma = _xmlTransformService.GenerarXmlNotaDebito(request.NotaDebito);
+                var cude = _cufeQrService.CalcularCUDE(request.NotaDebito, request.Ambiente);
+                var qrCode = _cufeQrService.GenerarQRCode(
+                    cude,
+                    request.NotaDebito.Emisor.Nit,
+                    request.NotaDebito.NumeroDocumento,
+                    request.NotaDebito.Totales.Total,
+                    request.NotaDebito.FechaEmision);
+
+                var nombreArchivo = $"{request.NotaDebito.TipoDocumento}_{request.NotaDebito.Emisor.Nit}_{request.NotaDebito.NumeroDocumento}.xml";
+                return await FirmarZipYEnviarAsync(
+                    xmlSinFirma,
+                    cude,
+                    "CUDE-SHA384",
+                    qrCode,
+                    nombreArchivo,
+                    request.Ambiente,
+                    "NotaDebito",
+                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
+            }
+            catch (Exception ex)
+            {
+                return CrearRespuestaError("Error al procesar la nota débito", ex, _lastDebugXmlId);
+            }
+        }
+
         public async Task<EnviarFacturaResponse> EnviarDocumentoSoporteAsync(EnviarDocumentoSoporteRequest request)
         {
             try
@@ -431,6 +462,62 @@ namespace DIAN_NET.Services
             if (string.IsNullOrWhiteSpace(notaCredito.ConfiguracionDian.TipoAmbiente))
             {
                 notaCredito.ConfiguracionDian.TipoAmbiente = string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase) ||
+                                                            string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
+                    ? "1"
+                    : "2";
+            }
+        }
+
+        private static void ValidarNotaDebito(NotaDebitoDto notaDebito, string ambiente)
+        {
+            if (notaDebito == null)
+            {
+                throw new ArgumentException("La nota débito es requerida.", nameof(notaDebito));
+            }
+            if (string.IsNullOrWhiteSpace(notaDebito.NumeroDocumento) || notaDebito.NumeroDocumento.Length > 20 || notaDebito.NumeroDocumento.Any(char.IsWhiteSpace))
+            {
+                throw new ArgumentException("El número de nota débito DIAN debe tener 1 a 20 caracteres y no contener espacios.");
+            }
+            if (!string.Equals(notaDebito.Moneda, "COP", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("La nota débito local debe usar moneda COP.");
+            }
+            if (notaDebito.FacturaReferencia == null ||
+                string.IsNullOrWhiteSpace(notaDebito.FacturaReferencia.NumeroDocumento) ||
+                string.IsNullOrWhiteSpace(notaDebito.FacturaReferencia.CUFE))
+            {
+                throw new ArgumentException("La nota débito debe referenciar la factura afectada con número y CUFE.");
+            }
+            if (notaDebito.ConceptosCorreccion == null || notaDebito.ConceptosCorreccion.Count == 0 ||
+                notaDebito.ConceptosCorreccion.Any(c => string.IsNullOrWhiteSpace(c.Codigo) || string.IsNullOrWhiteSpace(c.Descripcion)))
+            {
+                throw new ArgumentException("La nota débito debe incluir concepto de corrección con código y descripción.");
+            }
+            if (notaDebito.Items == null || notaDebito.Items.Count == 0)
+            {
+                throw new ArgumentException("La nota débito debe tener al menos una línea.");
+            }
+            foreach (var item in notaDebito.Items)
+            {
+                if (item.Cantidad <= 0)
+                {
+                    throw new ArgumentException("La cantidad de cada línea de la nota débito debe ser mayor a 0.00.");
+                }
+                if (item.PrecioUnitario < 0 || item.Descuento < 0 || item.Subtotal < 0 || item.Total < 0)
+                {
+                    throw new ArgumentException("Los valores monetarios de la nota débito no pueden ser negativos.");
+                }
+                ValidarImpuestos(item.Impuestos);
+            }
+            if (notaDebito.ConfiguracionDian == null ||
+                string.IsNullOrWhiteSpace(notaDebito.ConfiguracionDian.SoftwareId) ||
+                string.IsNullOrWhiteSpace(notaDebito.ConfiguracionDian.Pin))
+            {
+                throw new ArgumentException("La configuración DIAN de la nota débito debe incluir SoftwareID y PIN.");
+            }
+            if (string.IsNullOrWhiteSpace(notaDebito.ConfiguracionDian.TipoAmbiente))
+            {
+                notaDebito.ConfiguracionDian.TipoAmbiente = string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase) ||
                                                             string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
                     ? "1"
                     : "2";

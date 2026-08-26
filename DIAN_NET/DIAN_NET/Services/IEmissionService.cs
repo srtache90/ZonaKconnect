@@ -7,6 +7,7 @@ namespace DIAN_NET.Services
     {
         Task<EmitDocumentResponse> EmitInvoiceAsync(EmitInvoiceRequest request);
         Task<EmitDocumentResponse> EmitCreditNoteAsync(EmitCreditNoteRequest request);
+        Task<EmitDocumentResponse> EmitDebitNoteAsync(EmitDebitNoteRequest request);
         Task<EmitDocumentResponse> EmitSupportDocumentAsync(EmitSupportDocumentRequest request);
         Task<EmitDocumentResponse> EmitPayrollAsync(EmitPayrollRequest request);
     }

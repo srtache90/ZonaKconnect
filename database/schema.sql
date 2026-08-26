@@ -29,6 +29,10 @@ CREATE TABLE emission_points (
     rango_desde BIGINT NOT NULL,
     rango_hasta BIGINT NOT NULL,
     numero_actual BIGINT NOT NULL,
+    prefijo_nc VARCHAR(12) NOT NULL DEFAULT 'NC',
+    numero_actual_nc BIGINT NOT NULL DEFAULT 0,
+    prefijo_nd VARCHAR(12) NOT NULL DEFAULT 'ND',
+    numero_actual_nd BIGINT NOT NULL DEFAULT 0,
     vigencia_desde DATE NOT NULL,
     vigencia_hasta DATE NOT NULL,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -72,6 +76,68 @@ CREATE TABLE invoices (
     UNIQUE (company_id, prefijo, numero),
     UNIQUE (company_id, uuid_cude)
 );
+
+-- Recepción: tabla separada (no comparte numeración ni filas con emisión)
+CREATE TABLE received_invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    supplier_name VARCHAR(255) NOT NULL DEFAULT 'Proveedor',
+    supplier_nit VARCHAR(32) NOT NULL DEFAULT '—',
+    supplier_email VARCHAR(255),
+    invoice_number VARCHAR(80) NOT NULL,
+    cufe VARCHAR(160),
+    issue_date DATE,
+    total_amount NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    estado_dian VARCHAR(40) NOT NULL DEFAULT 'PENDIENTE',
+    source VARCHAR(80) NOT NULL DEFAULT 'UNKNOWN',
+    xml_s3_url TEXT,
+    pdf_s3_url TEXT,
+    raw_payload_jsonb JSONB NOT NULL DEFAULT '{}'::jsonb,
+    dian_response_jsonb JSONB NOT NULL DEFAULT '{}'::jsonb,
+    assigned_emission_point_id UUID,
+    assignment_source VARCHAR(40) NOT NULL DEFAULT 'UNASSIGNED',
+    assigned_at TIMESTAMPTZ,
+    assigned_by_user_id UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX uq_received_invoices_tenant_cufe
+    ON received_invoices (company_id, cufe)
+    WHERE cufe IS NOT NULL AND cufe <> '';
+
+CREATE INDEX idx_received_invoices_tenant_created
+    ON received_invoices (company_id, created_at DESC);
+
+CREATE INDEX idx_received_invoices_tenant_estado
+    ON received_invoices (company_id, estado_dian, created_at DESC);
+
+-- Eventos RADIAN enviados (vista unificada del módulo recepción)
+CREATE TABLE radian_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    received_invoice_id UUID,
+    event_code VARCHAR(8) NOT NULL,
+    event_action VARCHAR(40) NOT NULL,
+    event_label VARCHAR(160) NOT NULL,
+    cufe VARCHAR(160) NOT NULL,
+    invoice_number VARCHAR(80) NOT NULL,
+    supplier_name VARCHAR(255),
+    supplier_nit VARCHAR(32),
+    supplier_email VARCHAR(255),
+    estado VARCHAR(40) NOT NULL DEFAULT 'ENVIADO',
+    track_id VARCHAR(120),
+    cude VARCHAR(160),
+    ambiente VARCHAR(40),
+    dian_response_jsonb JSONB NOT NULL DEFAULT '{}'::jsonb,
+    notify_status VARCHAR(40) NOT NULL DEFAULT 'OMITIDO',
+    notify_detail TEXT,
+    notified_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_radian_events_tenant_created
+    ON radian_events (company_id, created_at DESC);
 
 CREATE TABLE audit_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

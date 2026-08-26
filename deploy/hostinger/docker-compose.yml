@@ -135,6 +135,13 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
       DIAN_API_URL: http://dian-net:8080
+      JWT_SECRET: ${JWT_SECRET}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-}
+      RECEPTION_S3_BUCKET: ${RECEPTION_S3_BUCKET:-}
+      S3_BUCKET: ${S3_BUCKET:-}
     depends_on:
       postgres:
         condition: service_healthy

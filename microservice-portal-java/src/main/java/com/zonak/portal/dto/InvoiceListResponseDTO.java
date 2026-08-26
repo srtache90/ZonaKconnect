@@ -25,8 +25,10 @@ public record InvoiceListResponseDTO(
             @JsonProperty("dian_error_code") String dianErrorCode,
             @JsonProperty("dian_error_description") String dianErrorDescription,
             @JsonProperty("dian_status_message") String dianStatusMessage,
+            @JsonProperty("dian_errores") String dianErrores,
             @JsonProperty("dian_track_id") String dianTrackId,
-            @JsonProperty("customer_email") String customerEmail
+            @JsonProperty("customer_email") String customerEmail,
+            @JsonProperty("document_kind") String documentKind
     ) {
     }
 }

@@ -1,95 +1,244 @@
 <!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios y roles | DIAN Connect')}"></th:block>
+    <style>
+        .role-badge-ADMIN { background: #e8eaf6; color: #1a237e; }
+        .role-badge-EMISOR { background: #e3f2fd; color: #0d47a1; }
+        .role-badge-RECEPTOR { background: #e8f5e9; color: #1b5e20; }
+        .role-badge-CONSULTA { background: #fff8e1; color: #f57f17; }
+        .role-badge-OPERADOR { background: #eceff1; color: #37474f; }
+        .perm-yes { color: #1b5e20; font-weight: 600; }
+        .perm-no { color: #9e9e9e; }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
-        <h1 class="dc-page-title">Administración de Usuarios</h1>
-        <p class="dc-page-subtitle">Roles ADMIN, OPERADOR y CONSULTA con acceso multi-sociedad</p>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Configuración / Acceso</p>
+        <h1 class="dc-page-title">Usuarios y roles</h1>
+        <p class="dc-page-subtitle">
+            Alta de operadores, rol por capacidad (emisión / recepción / consulta), sociedades multi-tenant
+            y alcance por punto de venta.
+        </p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">Crear o editar usuario</div>
+    <section class="grid md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+        <div class="zk-filter-card p-3">
+            <div class="small text-muted mb-1">ADMIN</div>
+            <div class="fw-semibold mb-1">Administración</div>
+            <p class="small text-muted mb-0">Sociedades, PV, certificados, usuarios y toda la configuración.</p>
+        </div>
+        <div class="zk-filter-card p-3">
+            <div class="small text-muted mb-1">EMISOR</div>
+            <div class="fw-semibold mb-1">Emisión</div>
+            <p class="small text-muted mb-0">Facturas, NC/ND y reportes de emisión en sus sociedades/PV.</p>
+        </div>
+        <div class="zk-filter-card p-3">
+            <div class="small text-muted mb-1">RECEPTOR</div>
+            <div class="fw-semibold mb-1">Recepción</div>
+            <p class="small text-muted mb-0">Bandeja RADIAN, eventos 085–088, asignación de punto y sync correo.</p>
+        </div>
+        <div class="zk-filter-card p-3">
+            <div class="small text-muted mb-1">CONSULTA</div>
+            <div class="fw-semibold mb-1">Solo lectura</div>
+            <p class="small text-muted mb-0">Ve recepción e histórico; no transmite eventos ni muta datos.</p>
+        </div>
+    </section>
+
+    <section class="card zk-card mb-4">
+        <div class="card-body p-0">
+            <div class="px-4 py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h2 class="h5 mb-0">Matriz de capacidades</h2>
+                    <p class="small text-muted mb-0">Qué puede hacer cada rol en el portal.</p>
+                </div>
+                <a class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                   th:href="@{/portal/admin/proveedores-punto}">Proveedor → Punto</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 small">
+                    <thead>
+                    <tr class="text-muted text-uppercase">
+                        <th>Capacidad</th>
+                        <th class="text-center">ADMIN</th>
+                        <th class="text-center">EMISOR</th>
+                        <th class="text-center">RECEPTOR</th>
+                        <th class="text-center">CONSULTA</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Configuración / sociedades / certificados</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-no">—</td>
+                        <td class="text-center perm-no">—</td>
+                        <td class="text-center perm-no">—</td>
+                    </tr>
+                    <tr>
+                        <td>Emitir FE / NC / ND</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-no">—</td>
+                        <td class="text-center perm-no">—</td>
+                    </tr>
+                    <tr>
+                        <td>Ver bandeja de recepción</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-no">—</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-yes">Sí</td>
+                    </tr>
+                    <tr>
+                        <td>Transmitir eventos RADIAN / asignar PV</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-no">—</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-no">—</td>
+                    </tr>
+                    <tr>
+                        <td>Alcance filtrado por punto de venta</td>
+                        <td class="text-center text-muted">Todos</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-yes">Sí</td>
+                        <td class="text-center perm-yes">Sí</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card zk-card mb-4">
         <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1" id="formTitle">Crear o editar usuario</h2>
+                    <p class="small text-muted mb-0">Asigne rol, sociedades y alcance de puntos. Sin sociedades = acceso a todas.</p>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button" onclick="limpiarFormulario()">Nuevo</button>
+            </div>
             <form th:action="@{/portal/admin/usuarios}" method="post" class="row g-3">
                 <input type="hidden" name="id" id="usuarioId">
 
                 <div class="col-md-4">
                     <label class="form-label" for="username">Usuario</label>
-                    <input class="form-control" id="username" name="username" required autocomplete="username">
+                    <input class="form-control rounded-3" id="username" name="username" required autocomplete="username">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="password">Contraseña</label>
-                    <input class="form-control" id="password" name="password" type="password"
+                    <input class="form-control rounded-3" id="password" name="password" type="password"
                            autocomplete="new-password"
                            placeholder="Obligatoria en alta; vacía conserva en edición">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="rol">Rol</label>
-                    <select class="form-select" id="rol" name="rol" required>
+                    <select class="form-select rounded-3" id="rol" name="rol" required>
                         <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ADMIN</option>
                     </select>
                 </div>
-                <div class="col-12">
+                <div class="col-md-6">
                     <label class="form-label" for="sociedadIds">Sociedades</label>
-                    <select class="form-select" id="sociedadIds" name="sociedadIds" multiple size="6">
+                    <select class="form-select rounded-3" id="sociedadIds" name="sociedadIds" multiple size="7">
                         <option th:each="sociedad : ${sociedades}"
                                 th:value="${sociedad.id}"
                                 th:text="${sociedad.razonSocial + ' (' + sociedad.nit + ')'}">
                             Sociedad
                         </option>
                     </select>
-                    <div class="form-text">Sin selección = acceso a todas las sociedades. Ctrl/Cmd para multi-selección.</div>
+                    <div class="form-text">Ctrl/Cmd + clic para múltiple. Vacío = todas las sociedades.</div>
                 </div>
-                <div class="col-12 text-end">
-                    <button class="btn btn-outline-secondary me-2" type="button" onclick="limpiarFormulario()">Limpiar</button>
-                    <button class="btn btn-primary" type="submit">Guardar usuario</button>
+                <div class="col-md-6">
+                    <label class="form-label" for="pointScopes">Puntos de venta (alcance)</label>
+                    <select class="form-select rounded-3" id="pointScopes" name="pointScopes" multiple size="7">
+                        <option th:each="sociedad : ${sociedades}"
+                                th:value="${sociedad.id + ':*'}"
+                                th:text="${'★ Todos los PV · ' + sociedad.razonSocial}">
+                            Todos
+                        </option>
+                        <option th:each="punto : ${puntosVenta}"
+                                th:value="${punto.sociedadId + ':' + punto.id}"
+                                th:text="${punto.codigo + ' - ' + punto.nombre + ' · ' + punto.sociedadRazonSocial + ' (' + punto.prefijo + ')'}">
+                            PV
+                        </option>
+                    </select>
+                    <div class="form-text">
+                        Vacío = todos los PV de sus sociedades. Use ★ para forzar acceso total por sociedad.
+                    </div>
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <button class="btn btn-outline-secondary rounded-pill px-4" type="button" onclick="limpiarFormulario()">Limpiar</button>
+                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar usuario</button>
                 </div>
             </form>
         </div>
     </section>
 
-    <section class="card shadow-sm">
-        <div class="card-header bg-white">Usuarios registrados</div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Sociedades</th>
-                    <th class="text-end">Acción</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="usuario : ${usuarios}">
-                    <td th:text="${usuario.username()}">admin</td>
-                    <td>
-                        <span class="badge text-bg-secondary" th:text="${usuario.rol()}">ADMIN</span>
-                    </td>
-                    <td th:text="${usuario.sociedadesLabel()}">Todas</td>
-                    <td class="text-end">
-                        <button type="button"
-                                class="btn btn-sm btn-outline-primary"
-                                th:attr="data-id=${usuario.id()},data-username=${usuario.username()},data-rol=${usuario.rol()},data-sociedades=${usuario.sociedadIdsCsv()}"
-                                onclick="editarUsuario(this)">
-                            Editar
-                        </button>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(usuarios)}">
-                    <td colspan="4" class="text-center text-muted py-4">No hay usuarios registrados.</td>
-                </tr>
-                </tbody>
-            </table>
+    <section class="card zk-card">
+        <div class="card-body p-0">
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom flex-wrap gap-2">
+                <div>
+                    <h2 class="h5 mb-0">Usuarios registrados</h2>
+                    <p class="small text-muted mb-0">Rol, sociedades y alcance de puntos vigentes.</p>
+                </div>
+                <span class="badge rounded-pill text-bg-light border zk-data"
+                      th:text="'Total: ' + ${#lists.size(usuarios)}">Total: 0</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                    <tr class="text-muted small text-uppercase">
+                        <th class="ps-4">Usuario</th>
+                        <th>Rol</th>
+                        <th>Sociedades</th>
+                        <th>Alcance PV</th>
+                        <th class="text-end pe-4">Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="usuario : ${usuarios}">
+                        <td class="ps-4">
+                            <div class="fw-semibold" th:text="${usuario.username()}">admin</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill px-3 py-2"
+                                  th:classappend="' role-badge-' + ${usuario.rol()}"
+                                  th:text="${usuario.rol()}">ADMIN</span>
+                        </td>
+                        <td>
+                            <span class="small"
+                                  th:text="${#strings.isEmpty(usuario.sociedadesLabel()) ? 'Todas las sociedades' : usuario.sociedadesLabel()}">
+                                Todas
+                            </span>
+                        </td>
+                        <td>
+                            <span class="small" th:text="${usuario.puntosLabel()}">Todos</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-dark rounded-pill px-3"
+                                    th:attr="data-id=${usuario.id()},
+                                             data-username=${usuario.username()},
+                                             data-rol=${usuario.rol()},
+                                             data-sociedades=${usuario.sociedadIdsCsv()},
+                                             data-puntos=${usuario.pointScopesCsv()}"
+                                    onclick="editarUsuario(this)">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(usuarios)}">
+                        <td colspan="5" class="text-center text-muted py-5">No hay usuarios registrados.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 </main>
@@ -99,23 +248,30 @@
         document.getElementById('usuarioId').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
-        document.getElementById('rol').value = 'OPERADOR';
-        const select = document.getElementById('sociedadIds');
-        Array.from(select.options).forEach(opt => opt.selected = false);
+        document.getElementById('rol').value = 'EMISOR';
+        document.getElementById('formTitle').textContent = 'Crear usuario';
+        Array.from(document.getElementById('sociedadIds').options).forEach(opt => opt.selected = false);
+        Array.from(document.getElementById('pointScopes').options).forEach(opt => opt.selected = false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function editarUsuario(button) {
         document.getElementById('usuarioId').value = button.dataset.id || '';
         document.getElementById('username').value = button.dataset.username || '';
         document.getElementById('password').value = '';
-        document.getElementById('rol').value = button.dataset.rol || 'OPERADOR';
-        const selected = (button.dataset.sociedades || '')
-            .split(',')
-            .map(v => v.trim())
-            .filter(Boolean);
-        const select = document.getElementById('sociedadIds');
-        Array.from(select.options).forEach(opt => {
-            opt.selected = selected.includes(opt.value);
+        let rol = button.dataset.rol || 'EMISOR';
+        if (rol === 'OPERADOR') {
+            rol = 'EMISOR';
+        }
+        document.getElementById('rol').value = rol;
+        document.getElementById('formTitle').textContent = 'Editar usuario: ' + (button.dataset.username || '');
+        const selectedSoc = (button.dataset.sociedades || '').split(',').map(v => v.trim()).filter(Boolean);
+        Array.from(document.getElementById('sociedadIds').options).forEach(opt => {
+            opt.selected = selectedSoc.includes(opt.value);
+        });
+        const selectedPts = (button.dataset.puntos || '').split(',').map(v => v.trim()).filter(Boolean);
+        Array.from(document.getElementById('pointScopes').options).forEach(opt => {
+            opt.selected = selectedPts.includes(opt.value);
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }

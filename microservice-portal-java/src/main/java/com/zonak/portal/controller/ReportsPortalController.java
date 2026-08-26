@@ -4,12 +4,15 @@ import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
 import com.zonak.portal.dto.DocumentKindInvoiceRow;
 import com.zonak.portal.dto.SalesDetailReportRow;
+import com.zonak.portal.recepcion.RadianEventRepository;
+import com.zonak.portal.recepcion.RadianEventRow;
 import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
 import com.zonak.portal.reports.DocumentKindInvoiceRepository;
 import com.zonak.portal.reports.DocumentKindReportCsvExporter;
 import com.zonak.portal.reports.MagneticMediaExportService;
 import com.zonak.portal.reports.MagneticMediaFormat;
+import com.zonak.portal.reports.RadianEventsReportCsvExporter;
 import com.zonak.portal.reports.ReceptionReportCsvExporter;
 import com.zonak.portal.reports.SalesReportCsvExporter;
 import com.zonak.portal.reports.SalesReportRepository;
@@ -34,6 +37,7 @@ public class ReportsPortalController {
     private final SalesReportRepository salesReportRepository;
     private final MagneticMediaExportService magneticMediaExportService;
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
+    private final RadianEventRepository radianEventRepository;
     private final DocumentKindInvoiceRepository documentKindInvoiceRepository;
 
     public ReportsPortalController(
@@ -41,12 +45,14 @@ public class ReportsPortalController {
             SalesReportRepository salesReportRepository,
             MagneticMediaExportService magneticMediaExportService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
+            RadianEventRepository radianEventRepository,
             DocumentKindInvoiceRepository documentKindInvoiceRepository
     ) {
         this.portalSessionService = portalSessionService;
         this.salesReportRepository = salesReportRepository;
         this.magneticMediaExportService = magneticMediaExportService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
+        this.radianEventRepository = radianEventRepository;
         this.documentKindInvoiceRepository = documentKindInvoiceRepository;
     }
 
@@ -161,15 +167,17 @@ public class ReportsPortalController {
             @RequestParam(required = false) String sociedadId,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String eventCode,
             @RequestParam(required = false) String estadoDian,
             HttpSession session,
             Model model
     ) {
         ReceptionFilters filters = resolveReceptionFilters(session, sociedadId, fromDate, toDate);
-        List<ReceivedInvoiceRow> rows = receivedInvoiceRepository.findReceived(
+        List<RadianEventRow> rows = radianEventRepository.find(
                 filters.tenantId(),
                 filters.fromDate(),
                 filters.toDate(),
+                eventCode,
                 estadoDian
         );
 
@@ -178,6 +186,7 @@ public class ReportsPortalController {
         model.addAttribute("selectedSociedadId", filters.tenantId().toString());
         model.addAttribute("fromDate", filters.fromDate().toString());
         model.addAttribute("toDate", filters.toDate().toString());
+        model.addAttribute("eventCode", eventCode);
         model.addAttribute("estadoDian", estadoDian);
         model.addAttribute("rows", rows);
         model.addAttribute("totalRegistros", rows.size());
@@ -191,18 +200,20 @@ public class ReportsPortalController {
             @RequestParam(required = false) String sociedadId,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String eventCode,
             @RequestParam(required = false) String estadoDian,
             HttpSession session
     ) {
         ReceptionFilters filters = resolveReceptionFilters(session, sociedadId, fromDate, toDate);
-        List<ReceivedInvoiceRow> rows = receivedInvoiceRepository.findReceived(
+        List<RadianEventRow> rows = radianEventRepository.find(
                 filters.tenantId(),
                 filters.fromDate(),
                 filters.toDate(),
+                eventCode,
                 estadoDian
         );
-        byte[] csv = ReceptionReportCsvExporter.export(rows);
-        String filename = "reporte-recepcion-%s-%s.csv".formatted(filters.fromDate(), filters.toDate());
+        byte[] csv = RadianEventsReportCsvExporter.export(rows);
+        String filename = "eventos-radian-%s-%s.csv".formatted(filters.fromDate(), filters.toDate());
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

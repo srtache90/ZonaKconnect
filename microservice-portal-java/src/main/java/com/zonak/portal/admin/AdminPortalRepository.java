@@ -378,9 +378,10 @@ public class AdminPortalRepository {
                         INSERT INTO emission_points (
                             id, company_id, codigo, nombre, direccion, prefijo,
                             resolucion_dian, clave_tecnica, rango_desde, rango_hasta,
-                            numero_actual, vigencia_desde, vigencia_hasta, is_active
+                            numero_actual, prefijo_nc, numero_actual_nc, prefijo_nd, numero_actual_nd,
+                            vigencia_desde, vigencia_hasta, is_active
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NC', GREATEST(? - 1, 0), 'ND', GREATEST(? - 1, 0), ?, ?, ?)
                         ON CONFLICT (id) DO UPDATE SET
                             company_id = EXCLUDED.company_id,
                             codigo = EXCLUDED.codigo,
@@ -408,6 +409,8 @@ public class AdminPortalRepository {
                 rangoDesde,
                 rangoHasta,
                 numeroActual,
+                rangoDesde,
+                rangoDesde,
                 vigenciaDesde,
                 vigenciaHasta,
                 activo

@@ -1,13 +1,21 @@
 package com.zonak.portal.controller;
 
+import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
 import com.zonak.portal.mail.InvoiceMailDispatchService;
 import com.zonak.portal.mail.MailReceptionSyncService;
+import com.zonak.portal.recepcion.ReceivedInvoiceAssignmentService;
+import com.zonak.portal.recepcion.ReceivedInvoiceDetail;
+import com.zonak.portal.recepcion.ReceivedInvoiceFilter;
 import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
-import com.zonak.portal.service.InvoiceOrchestratorService;
+import com.zonak.portal.recepcion.RecepcionEstadoDian;
+import com.zonak.portal.recepcion.RecepcionTacitAcceptanceService;
+import com.zonak.portal.security.PortalRoles;
 import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,22 +37,25 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class RecepcionPortalController {
     private final PortalSessionService portalSessionService;
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
-    private final InvoiceOrchestratorService invoiceOrchestratorService;
     private final MailReceptionSyncService mailReceptionSyncService;
     private final InvoiceMailDispatchService invoiceMailDispatchService;
+    private final RecepcionTacitAcceptanceService recepcionTacitAcceptanceService;
+    private final ReceivedInvoiceAssignmentService receivedInvoiceAssignmentService;
 
     public RecepcionPortalController(
             PortalSessionService portalSessionService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
-            InvoiceOrchestratorService invoiceOrchestratorService,
             MailReceptionSyncService mailReceptionSyncService,
-            InvoiceMailDispatchService invoiceMailDispatchService
+            InvoiceMailDispatchService invoiceMailDispatchService,
+            RecepcionTacitAcceptanceService recepcionTacitAcceptanceService,
+            ReceivedInvoiceAssignmentService receivedInvoiceAssignmentService
     ) {
         this.portalSessionService = portalSessionService;
         this.receivedInvoiceRepository = receivedInvoiceRepository;
-        this.invoiceOrchestratorService = invoiceOrchestratorService;
         this.mailReceptionSyncService = mailReceptionSyncService;
         this.invoiceMailDispatchService = invoiceMailDispatchService;
+        this.recepcionTacitAcceptanceService = recepcionTacitAcceptanceService;
+        this.receivedInvoiceAssignmentService = receivedInvoiceAssignmentService;
     }
 
     @GetMapping("/portal/recepcion")
@@ -54,36 +66,97 @@ public class RecepcionPortalController {
     @GetMapping("/portal/recepcion/bandeja")
     public String bandeja(
             @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String estadoDian,
+            @RequestParam(required = false) String proveedor,
+            @RequestParam(required = false) String cufe,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String emissionPointId,
             HttpSession session,
             Model model
     ) {
+        return renderList(
+                "portal/recepcion_bandeja",
+                "bandeja",
+                true,
+                sociedadId,
+                estadoDian,
+                proveedor,
+                cufe,
+                fromDate,
+                toDate,
+                null,
+                null,
+                emissionPointId,
+                session,
+                model
+        );
+    }
+
+    @GetMapping("/portal/recepcion/historico")
+    public String historico(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String eventCode,
+            @RequestParam(required = false) String estadoDian,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            HttpSession session,
+            Model model
+    ) {
+        // Histórico = misma vista unificada de eventos RADIAN enviados
+        return "redirect:/portal/recepcion/reportes"
+                + (sociedadId != null ? "?sociedadId=" + sociedadId : "");
+    }
+
+    @GetMapping("/portal/recepcion/{id}/detalle")
+    public String detalle(
+            @PathVariable UUID id,
+            HttpSession session,
+            Model model
+    ) {
+        UUID tenantId = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+        ReceivedInvoiceDetail detail = receivedInvoiceRepository.findDetail(tenantId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+
         List<Sociedad> sociedades = portalSessionService.resolveSociedades(session);
-        if (sociedades.isEmpty()) {
-            model.addAttribute("sociedades", sociedades);
-            model.addAttribute("invoices", List.of());
-            model.addAttribute("selectedSociedadId", "");
-            model.addAttribute("selectedSociedadNombre", "Sin sociedad");
-            model.addAttribute("navModule", "recepcion");
-            model.addAttribute("navActive", "bandeja");
-            return "portal/recepcion_bandeja";
-        }
-
-        String selectedSociedadId = resolveSociedadId(sociedadId, session, sociedades);
-        UUID tenantUuid = UUID.fromString(selectedSociedadId);
-        Sociedad selectedSociedad = sociedades.stream()
-                .filter(s -> s.id().equals(tenantUuid))
+        Sociedad selected = sociedades.stream()
+                .filter(s -> s.id().equals(tenantId))
                 .findFirst()
-                .orElse(sociedades.getFirst());
+                .orElse(null);
 
-        List<ReceivedInvoiceRow> invoices = receivedInvoiceRepository.findBySociedad(tenantUuid);
-
+        model.addAttribute("detail", detail);
         model.addAttribute("sociedades", sociedades);
-        model.addAttribute("invoices", invoices);
-        model.addAttribute("selectedSociedadId", selectedSociedadId);
-        model.addAttribute("selectedSociedadNombre", selectedSociedad.razonSocial());
+        model.addAttribute("selectedSociedadId", tenantId.toString());
+        model.addAttribute("selectedSociedadNombre", selected == null ? "Sociedad" : selected.razonSocial());
         model.addAttribute("navModule", "recepcion");
         model.addAttribute("navActive", "bandeja");
-        return "portal/recepcion_bandeja";
+        return "portal/recepcion/detalle";
+    }
+
+    @PostMapping("/portal/recepcion/aplicar-aceptacion-tacita")
+    public String aplicarAceptacionTacita(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false, defaultValue = "bandeja") String returnTo,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
+        try {
+            RecepcionTacitAcceptanceService.TacitResult result =
+                    recepcionTacitAcceptanceService.applyDue(UUID.fromString(tenantId));
+            redirectAttributes.addFlashAttribute("success", result.summary());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "No fue posible aplicar aceptación tácita: " + ex.getMessage()
+            );
+        }
+        if ("historico".equalsIgnoreCase(returnTo)) {
+            return "redirect:/portal/recepcion/historico?sociedadId=" + tenantId;
+        }
+        return bandejaRedirect(tenantId);
     }
 
     @PostMapping("/portal/recepcion/sincronizar-correo")
@@ -95,7 +168,11 @@ public class RecepcionPortalController {
         String tenantId = resolveSociedadId(sociedadId, session, portalSessionService.resolveSociedades(session));
         try {
             MailReceptionSyncService.SyncResult result = mailReceptionSyncService.syncInbox(UUID.fromString(tenantId));
-            redirectAttributes.addFlashAttribute("success", result.summary());
+            int assigned = receivedInvoiceAssignmentService.assignPendingForCompany(UUID.fromString(tenantId));
+            redirectAttributes.addFlashAttribute(
+                    "success",
+                    result.summary() + (assigned > 0 ? " Asignadas a PV por NIT: " + assigned + "." : "")
+            );
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
                     "error",
@@ -123,9 +200,11 @@ public class RecepcionPortalController {
                     archivo.getOriginalFilename(),
                     "XML_UPLOAD"
             );
+            int assigned = receivedInvoiceAssignmentService.assignPendingForCompany(UUID.fromString(tenantId));
             redirectAttributes.addFlashAttribute(
                     "success",
-                    "XML importado para la sociedad activa. Documentos nuevos: " + imported + "."
+                    "XML importado para la sociedad activa. Documentos nuevos: " + imported
+                            + (assigned > 0 ? ". Asignadas a PV: " + assigned : "") + "."
             );
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
@@ -145,26 +224,17 @@ public class RecepcionPortalController {
                 .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
         byte[] storedPdf = receivedInvoiceRepository.findPdfBase(tenantId, id).orElse(null);
-        byte[] pdfBytes = storedPdf;
-        if (pdfBytes == null || pdfBytes.length == 0) {
-            try {
-                pdfBytes = invoiceOrchestratorService.downloadOrGeneratePdf(tenantId, id).block();
-            } catch (Exception ex) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "PDF no disponible. Vuelva a sincronizar el correo o importe el ZIP con la representación gráfica. "
-                                + ex.getMessage()
-                );
-            }
-        }
-        if (pdfBytes == null || pdfBytes.length == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PDF no disponible para la factura recibida");
+        if (storedPdf == null || storedPdf.length == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "PDF no disponible. Vuelva a sincronizar el correo o importe el ZIP con la representación gráfica."
+            );
         }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"factura-recibida-" + id + ".pdf\"")
-                .body(pdfBytes);
+                .body(storedPdf);
     }
 
     @GetMapping("/portal/recepcion/{id}/xml")
@@ -191,9 +261,25 @@ public class RecepcionPortalController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        String tenantId = portalSessionService.resolveTenantId(session);
+        UUID tenantUuid = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
         try {
-            String message = invoiceMailDispatchService.sendInvoiceDocuments(tenantId, id, recipientEmail);
+            var detail = receivedInvoiceRepository.findDetail(tenantUuid, id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+            byte[] pdf = receivedInvoiceRepository.findPdfBase(tenantUuid, id).orElse(null);
+            String xml = receivedInvoiceRepository.findXmlBase(tenantUuid, id).orElse(null);
+            byte[] xmlBytes = StringUtils.hasText(xml)
+                    ? xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                    : null;
+            String message = invoiceMailDispatchService.sendReceivedDocuments(
+                    tenantUuid.toString(),
+                    id,
+                    detail.invoiceNumber(),
+                    recipientEmail,
+                    pdf,
+                    xmlBytes
+            );
             redirectAttributes.addFlashAttribute("success", message);
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute(
@@ -201,7 +287,148 @@ public class RecepcionPortalController {
                     "No fue posible reenviar el correo: " + ex.getMessage()
             );
         }
-        return bandejaRedirect(tenantId);
+        return "redirect:/portal/recepcion/" + id + "/detalle";
+    }
+
+    @PostMapping("/portal/recepcion/{id}/asignar-punto")
+    public String asignarPunto(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String emissionPointId,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false) String sociedadId,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (!PortalRoles.canMutateReception(portalSessionService.resolveRole(session))) {
+            redirectAttributes.addFlashAttribute("error", "No tiene permiso para asignar puntos en recepción.");
+            return bandejaRedirect(sociedadId);
+        }
+        UUID tenantUuid = receivedInvoiceRepository
+                .findOwnedCompanyId(id, portalSessionService.resolveSociedadIds(session))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura recibida no encontrada"));
+        UUID userId = portalSessionService.resolveUserId(session);
+        UUID pointId = null;
+        if (StringUtils.hasText(emissionPointId)) {
+            pointId = UUID.fromString(emissionPointId.trim());
+            List<UUID> allowed = portalSessionService.resolveAllowedEmissionPointIds(session, tenantUuid);
+            if (!allowed.contains(pointId)) {
+                redirectAttributes.addFlashAttribute("error", "El punto seleccionado no está en su alcance.");
+                return bandejaRedirect(sociedadId != null ? sociedadId : tenantUuid.toString());
+            }
+        }
+        try {
+            receivedInvoiceAssignmentService.assignManually(tenantUuid, id, pointId, userId, reason);
+            redirectAttributes.addFlashAttribute("success", "Punto de recepción actualizado.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        }
+        return bandejaRedirect(sociedadId != null ? sociedadId : tenantUuid.toString());
+    }
+
+    private String renderList(
+            String view,
+            String navActive,
+            boolean openOnly,
+            String sociedadId,
+            String estadoDian,
+            String proveedor,
+            String cufe,
+            String fromDate,
+            String toDate,
+            String minTotal,
+            String maxTotal,
+            String emissionPointId,
+            HttpSession session,
+            Model model
+    ) {
+        List<Sociedad> sociedades = portalSessionService.resolveSociedades(session);
+        if (sociedades.isEmpty()) {
+            model.addAttribute("sociedades", sociedades);
+            model.addAttribute("invoices", List.of());
+            model.addAttribute("selectedSociedadId", "");
+            model.addAttribute("selectedSociedadNombre", "Sin sociedad");
+            model.addAttribute("estados", RecepcionEstadoDian.values());
+            model.addAttribute("alerts", new RecepcionTacitAcceptanceService.AlertsSummary(0, 0, 0));
+            model.addAttribute("navModule", "recepcion");
+            model.addAttribute("navActive", navActive);
+            return view;
+        }
+
+        String selectedSociedadId = resolveSociedadId(sociedadId, session, sociedades);
+        UUID tenantUuid = UUID.fromString(selectedSociedadId);
+        Sociedad selectedSociedad = sociedades.stream()
+                .filter(s -> s.id().equals(tenantUuid))
+                .findFirst()
+                .orElse(sociedades.getFirst());
+
+        List<UUID> allowedPoints = portalSessionService.resolveAllowedEmissionPointIds(session, tenantUuid);
+        boolean includeUnassigned = portalSessionService.canSeeUnassignedReceived(session, tenantUuid);
+        UUID filterPoint = null;
+        boolean onlyUnassigned = "UNASSIGNED".equalsIgnoreCase(emissionPointId);
+        if (!onlyUnassigned && StringUtils.hasText(emissionPointId)) {
+            filterPoint = UUID.fromString(emissionPointId.trim());
+            if (!allowedPoints.contains(filterPoint) && !PortalRoles.isAdmin(portalSessionService.resolveRole(session))) {
+                filterPoint = null;
+            }
+        }
+        ReceivedInvoiceFilter filter;
+        if (onlyUnassigned) {
+            filter = new ReceivedInvoiceFilter(
+                    tenantUuid,
+                    parseDate(fromDate),
+                    parseDate(toDate),
+                    blankToNull(estadoDian),
+                    blankToNull(proveedor),
+                    blankToNull(cufe),
+                    parseDecimal(minTotal),
+                    parseDecimal(maxTotal),
+                    openOnly ? Boolean.TRUE : null,
+                    List.of(),
+                    true,
+                    null
+            );
+        } else {
+            filter = new ReceivedInvoiceFilter(
+                    tenantUuid,
+                    parseDate(fromDate),
+                    parseDate(toDate),
+                    blankToNull(estadoDian),
+                    blankToNull(proveedor),
+                    blankToNull(cufe),
+                    parseDecimal(minTotal),
+                    parseDecimal(maxTotal),
+                    openOnly ? Boolean.TRUE : null,
+                    filterPoint == null ? allowedPoints : null,
+                    includeUnassigned,
+                    filterPoint
+            );
+        }
+        List<ReceivedInvoiceRow> invoices = receivedInvoiceRepository.findReceived(filter);
+        RecepcionTacitAcceptanceService.AlertsSummary alerts =
+                recepcionTacitAcceptanceService.summarizeAlerts(invoices);
+        List<PuntoVenta> puntosVenta = portalSessionService.resolvePuntosVenta(session).stream()
+                .filter(p -> p.sociedadId().equals(tenantUuid))
+                .toList();
+
+        model.addAttribute("sociedades", sociedades);
+        model.addAttribute("puntosVenta", puntosVenta);
+        model.addAttribute("selectedEmissionPointId", emissionPointId);
+        model.addAttribute("canAssignPoint", PortalRoles.canMutateReception(portalSessionService.resolveRole(session)));
+        model.addAttribute("invoices", invoices);
+        model.addAttribute("selectedSociedadId", selectedSociedadId);
+        model.addAttribute("selectedSociedadNombre", selectedSociedad.razonSocial());
+        model.addAttribute("estadoDian", estadoDian);
+        model.addAttribute("proveedor", proveedor);
+        model.addAttribute("cufe", cufe);
+        model.addAttribute("fromDate", fromDate);
+        model.addAttribute("toDate", toDate);
+        model.addAttribute("minTotal", minTotal);
+        model.addAttribute("maxTotal", maxTotal);
+        model.addAttribute("estados", RecepcionEstadoDian.values());
+        model.addAttribute("alerts", alerts);
+        model.addAttribute("navModule", "recepcion");
+        model.addAttribute("navActive", navActive);
+        return view;
     }
 
     private String bandejaRedirect(String sociedadId) {
@@ -225,5 +452,31 @@ public class RecepcionPortalController {
             }
         }
         return portalSessionService.resolveSelectedSociedadId(session, sociedades);
+    }
+
+    private static LocalDate parseDate(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static BigDecimal parseDecimal(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim().replace(",", "."));
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }
