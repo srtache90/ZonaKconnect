@@ -1,7 +1,6 @@
 <!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <link rel="stylesheet" href="https://jsdelivr.net">
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción RADIAN | DIAN Connect')}"></th:block>
     <style>
         .badge-tacita { background: #e8f5e9; color: #1b5e20; }
@@ -439,7 +438,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/vendor/bootstrap/bootstrap.bundle.min.js}"></script>
 <script>
     const alertBox = document.getElementById('eventAlert');
     const receivedPdfModal = document.getElementById('receivedPdfModal');
