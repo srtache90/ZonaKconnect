@@ -586,17 +586,24 @@ body.zk-body {
 .zk-metric-card,
 .zk-table-card,
 .zk-form-card {
+    width: 130
+    0px;
     background: rgba(255, 255, 255, .96);
     border: 1px solid var(--zk-line);
     border-radius: 8px;
     box-shadow: var(--zk-shadow);
+    position:relative;
+    left: -75px;
+
 }
 
 .zk-card {
     height: 100%;
-    padding: 2rem;
+    padding: 3rem;
     text-decoration: none;
     transition: transform .18s ease, box-shadow .18s ease;
+    font-size: 11px;
+    width: 1135px;
 }
 
 .zk-card:hover {
