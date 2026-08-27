@@ -355,14 +355,14 @@
                                         th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})}"
                                         onclick="postEvent(this, {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'})">
-                                    Recibida
+                                    Recibo
                                 </button>
                                 <button type="button"
                                         class="btn btn-zk"
                                         th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    Aceptada
+                                    Aceptar
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-danger"
@@ -371,7 +371,7 @@
                                         data-bs-toggle="modal"
                                         data-bs-target="#rejectModal"
                                         onclick="prepareReject(this)">
-                                    Rechazada
+                                    Rechazar
                                 </button>
                             </div>
                         </td>
