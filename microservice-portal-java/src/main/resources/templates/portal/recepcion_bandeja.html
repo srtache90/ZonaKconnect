@@ -245,7 +245,8 @@
                                th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
                                th:text="${invoice.proveedorName}">Proveedor</a>
                             <div class="text-muted small zk-data" th:text="${invoice.proveedorNit}">900000000</div>
-                            <div class="small text-danger" th:if="${!#lists.isEmpty(invoice.validationIssues)}"
+                            <div class="small text-danger " style="font-size:20px "
+                                 th:if="${!#lists.isEmpty(invoice.validationIssues)}"
                                  th:text="${#strings.listJoin(invoice.validationIssues, ' · ')}">Validación</div>
                         </td>
                         <td>
@@ -347,14 +348,14 @@
                                         th:disabled="${invoice.estadoDian.name() != 'PENDIENTE' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/acuse-085(id=${invoice.id})}"
                                         onclick="postEvent(this)">
-                                    Pendiente
+                                    Acuse
                                 </button>
                                 <button type="button"
                                         class="btn btn-outline-dark"
                                         th:disabled="${invoice.estadoDian.name() != 'ACUSADA_085' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/recibo-bienes-086(id=${invoice.id})}"
                                         onclick="postEvent(this, {recibidoPor: 'Operador Zona K', documentoRecibidor: 'N/A'})">
-                                    Acusada
+                                    Recibida
                                 </button>
                                 <button type="button"
                                         class="btn btn-zk"
