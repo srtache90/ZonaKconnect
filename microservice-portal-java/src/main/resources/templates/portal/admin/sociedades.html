@@ -80,6 +80,9 @@
                     <label class="form-label" for="passwordImap">Password IMAP</label>
                     <input class="form-control" id="passwordImap" name="passwordImap" type="password" autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
                 </div>
+                <div class="col-12">
+                    <h2 class="h6 border-bottom pb-2 mb-0">Configuración DIAN</h2>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label" for="dianAmbiente">Web Service DIAN</label>
                     <select class="form-select" id="dianAmbiente" name="dianAmbiente">
@@ -87,6 +90,16 @@
                         <option value="Habilitacion">Pruebas / Habilitación</option>
                         <option value="Produccion">Producción</option>
                     </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="dianSoftwareId">ID Software DIAN</label>
+                    <input class="form-control" id="dianSoftwareId" name="dianSoftwareId"
+                           autocomplete="off" placeholder="UUID asignado por la DIAN">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="dianSoftwarePin">PIN Software DIAN</label>
+                    <input class="form-control" id="dianSoftwarePin" name="dianSoftwarePin" type="password"
+                           autocomplete="new-password" placeholder="Dejar vacío conserva el actual">
                 </div>
                 <div class="col-12 text-end">
                     <button class="btn btn-primary" type="submit">Guardar Sociedad</button>
@@ -109,6 +122,7 @@
                     <th>Correo saliente</th>
                     <th>Correo entrante</th>
                     <th>DIAN</th>
+                    <th>Software</th>
                     <th class="text-end">Acción</th>
                 </tr>
                 </thead>
@@ -138,6 +152,17 @@
                             Pruebas
                         </span>
                     </td>
+                    <td>
+                        <div class="small">
+                            <span class="text-muted">ID:</span>
+                            <span th:text="${sociedad.dianSoftwareId != null and !#strings.isEmpty(sociedad.dianSoftwareId)} ? ${sociedad.dianSoftwareId} : 'Sin configurar'">Sin configurar</span>
+                        </div>
+                        <span class="badge"
+                              th:classappend="${sociedad.dianSoftwarePinConfigured} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${sociedad.dianSoftwarePinConfigured} ? 'PIN configurado' : 'PIN pendiente'">
+                            PIN pendiente
+                        </span>
+                    </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
                             <button
@@ -150,7 +175,7 @@
                             <button
                                     type="button"
                                     class="btn btn-sm btn-outline-primary"
-                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente}"
+                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-software-id=${sociedad.dianSoftwareId}"
                                     onclick="editarSociedad(this)">
                                 Editar
                             </button>
@@ -165,7 +190,7 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(sociedades)}">
-                        <td colspan="9" class="text-center text-muted py-4">No hay sociedades registradas.</td>
+                        <td colspan="10" class="text-center text-muted py-4">No hay sociedades registradas.</td>
                 </tr>
                 </tbody>
             </table>
@@ -197,6 +222,8 @@
         document.getElementById('usuarioImap').value = button.dataset.usuarioImap || '';
         document.getElementById('passwordImap').value = '';
         document.getElementById('dianAmbiente').value = button.dataset.ambiente || 'Habilitacion';
+        document.getElementById('dianSoftwareId').value = button.dataset.softwareId || '';
+        document.getElementById('dianSoftwarePin').value = '';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 

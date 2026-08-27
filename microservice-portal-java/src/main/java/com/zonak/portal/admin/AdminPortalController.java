@@ -70,6 +70,12 @@ public class AdminPortalController {
         String passwordImapEnc = StringUtils.hasText(form.getPasswordImap())
                 ? cryptoService.encrypt(form.getPasswordImap())
                 : null;
+        String dianSoftwarePinPlaintext = StringUtils.hasText(form.getDianSoftwarePin())
+                ? form.getDianSoftwarePin().trim()
+                : null;
+        String dianSoftwarePinEnc = dianSoftwarePinPlaintext != null
+                ? cryptoService.encrypt(dianSoftwarePinPlaintext)
+                : null;
 
         try {
             adminPortalRepository.saveSociedad(
@@ -87,7 +93,10 @@ public class AdminPortalController {
                     form.getPuertoImap(),
                     trimToNull(form.getUsuarioImap()),
                     passwordImapEnc,
-                    form.getDianAmbiente()
+                    form.getDianAmbiente(),
+                    trimToNull(form.getDianSoftwareId()),
+                    dianSoftwarePinEnc,
+                    dianSoftwarePinPlaintext
             );
         } catch (DataIntegrityViolationException ex) {
             redirectAttributes.addFlashAttribute("error", mapSociedadSaveError(ex));
@@ -249,6 +258,8 @@ public class AdminPortalController {
         private String usuarioImap;
         private String passwordImap;
         private String dianAmbiente = "Habilitacion";
+        private String dianSoftwareId;
+        private String dianSoftwarePin;
 
         public String getId() {
             return id;
@@ -368,6 +379,22 @@ public class AdminPortalController {
 
         public void setDianAmbiente(String dianAmbiente) {
             this.dianAmbiente = dianAmbiente;
+        }
+
+        public String getDianSoftwareId() {
+            return dianSoftwareId;
+        }
+
+        public void setDianSoftwareId(String dianSoftwareId) {
+            this.dianSoftwareId = dianSoftwareId;
+        }
+
+        public String getDianSoftwarePin() {
+            return dianSoftwarePin;
+        }
+
+        public void setDianSoftwarePin(String dianSoftwarePin) {
+            this.dianSoftwarePin = dianSoftwarePin;
         }
     }
 

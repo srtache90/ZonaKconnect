@@ -199,6 +199,8 @@ CREATE TABLE IF NOT EXISTS sociedades (
     password_imap_enc TEXT,
     dian_ambiente VARCHAR(20) NOT NULL DEFAULT 'Habilitacion'
         CHECK (dian_ambiente IN ('Habilitacion', 'Produccion', 'Mock')),
+    dian_software_id VARCHAR(64),
+    dian_software_pin_enc TEXT,
     creado_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

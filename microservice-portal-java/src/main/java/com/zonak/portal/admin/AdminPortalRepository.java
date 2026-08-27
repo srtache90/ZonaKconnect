@@ -26,11 +26,20 @@ public class AdminPortalRepository {
     public List<Sociedad> findSociedades() {
         return jdbcTemplate.query(
                 """
-                        SELECT id, razon_social, nit, api_key, correo_emision, correo_recepcion,
-                               host_smtp, puerto_smtp, usuario_smtp,
-                               host_imap, puerto_imap, usuario_imap, dian_ambiente
-                        FROM sociedades
-                        ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, razon_social ASC
+                        SELECT s.id, s.razon_social, s.nit, s.api_key, s.correo_emision, s.correo_recepcion,
+                               s.host_smtp, s.puerto_smtp, s.usuario_smtp,
+                               s.host_imap, s.puerto_imap, s.usuario_imap, s.dian_ambiente,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_software_id), ''),
+                                   NULLIF(TRIM(c.dian_config->>'software_id'), '')
+                               ) AS dian_software_id,
+                               (
+                                   s.dian_software_pin_enc IS NOT NULL
+                                   OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
+                               ) AS dian_software_pin_configured
+                        FROM sociedades s
+                        LEFT JOIN companies c ON c.id = s.id
+                        ORDER BY CASE WHEN s.id = ? THEN 0 ELSE 1 END, s.razon_social ASC
                         """,
                 (rs, rowNum) -> new Sociedad(
                         rs.getObject("id", UUID.class),
@@ -45,7 +54,9 @@ public class AdminPortalRepository {
                         rs.getString("host_imap"),
                         rs.getObject("puerto_imap", Integer.class),
                         rs.getString("usuario_imap"),
-                        rs.getString("dian_ambiente")
+                        rs.getString("dian_ambiente"),
+                        rs.getString("dian_software_id"),
+                        rs.getBoolean("dian_software_pin_configured")
                 ),
                 PROTECTED_SOCIEDAD_ID
         );
@@ -59,12 +70,21 @@ public class AdminPortalRepository {
         String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
         return jdbcTemplate.query(
                 """
-                        SELECT id, razon_social, nit, api_key, correo_emision, correo_recepcion,
-                               host_smtp, puerto_smtp, usuario_smtp,
-                               host_imap, puerto_imap, usuario_imap, dian_ambiente
-                        FROM sociedades
-                        WHERE id IN (%s)
-                        ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, razon_social ASC
+                        SELECT s.id, s.razon_social, s.nit, s.api_key, s.correo_emision, s.correo_recepcion,
+                               s.host_smtp, s.puerto_smtp, s.usuario_smtp,
+                               s.host_imap, s.puerto_imap, s.usuario_imap, s.dian_ambiente,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_software_id), ''),
+                                   NULLIF(TRIM(c.dian_config->>'software_id'), '')
+                               ) AS dian_software_id,
+                               (
+                                   s.dian_software_pin_enc IS NOT NULL
+                                   OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
+                               ) AS dian_software_pin_configured
+                        FROM sociedades s
+                        LEFT JOIN companies c ON c.id = s.id
+                        WHERE s.id IN (%s)
+                        ORDER BY CASE WHEN s.id = ? THEN 0 ELSE 1 END, s.razon_social ASC
                         """.formatted(placeholders),
                 (rs, rowNum) -> new Sociedad(
                         rs.getObject("id", UUID.class),
@@ -79,7 +99,9 @@ public class AdminPortalRepository {
                         rs.getString("host_imap"),
                         rs.getObject("puerto_imap", Integer.class),
                         rs.getString("usuario_imap"),
-                        rs.getString("dian_ambiente")
+                        rs.getString("dian_ambiente"),
+                        rs.getString("dian_software_id"),
+                        rs.getBoolean("dian_software_pin_configured")
                 ),
                 append(ids, PROTECTED_SOCIEDAD_ID)
         );
@@ -109,7 +131,10 @@ public class AdminPortalRepository {
             Integer puertoImap,
             String usuarioImap,
             String passwordImapEnc,
-            String dianAmbiente
+            String dianAmbiente,
+            String dianSoftwareId,
+            String dianSoftwarePinEnc,
+            String dianSoftwarePinPlaintext
     ) {
         jdbcTemplate.update(
                 """
@@ -117,9 +142,9 @@ public class AdminPortalRepository {
                             id, razon_social, nit, api_key, correo_emision, correo_recepcion,
                             host_smtp, puerto_smtp, usuario_smtp, password_smtp_enc,
                             host_imap, puerto_imap, usuario_imap, password_imap_enc,
-                            dian_ambiente
+                            dian_ambiente, dian_software_id, dian_software_pin_enc
                         )
-                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)
                         ON CONFLICT (id) DO UPDATE SET
                             razon_social = EXCLUDED.razon_social,
                             nit = EXCLUDED.nit,
@@ -134,7 +159,9 @@ public class AdminPortalRepository {
                             puerto_imap = EXCLUDED.puerto_imap,
                             usuario_imap = EXCLUDED.usuario_imap,
                             password_imap_enc = COALESCE(EXCLUDED.password_imap_enc, sociedades.password_imap_enc),
-                            dian_ambiente = EXCLUDED.dian_ambiente
+                            dian_ambiente = EXCLUDED.dian_ambiente,
+                            dian_software_id = COALESCE(NULLIF(EXCLUDED.dian_software_id, ''), sociedades.dian_software_id),
+                            dian_software_pin_enc = COALESCE(EXCLUDED.dian_software_pin_enc, sociedades.dian_software_pin_enc)
                         """,
                 id,
                 razonSocial,
@@ -150,10 +177,12 @@ public class AdminPortalRepository {
                 puertoImap,
                 usuarioImap,
                 passwordImapEnc,
-                normalizeDianAmbiente(dianAmbiente)
+                normalizeDianAmbiente(dianAmbiente),
+                dianSoftwareId,
+                dianSoftwarePinEnc
         );
         ensureCompanyForSociedad(id);
-        syncCompanyDianAmbiente(id, normalizeDianAmbiente(dianAmbiente));
+        syncCompanyDianConfig(id, dianSoftwarePinPlaintext);
     }
 
     public void updateImapPassword(UUID sociedadId, String passwordImapEnc) {
@@ -207,7 +236,7 @@ public class AdminPortalRepository {
                 normalized,
                 sociedadId
         );
-        syncCompanyDianAmbiente(sociedadId, normalized);
+        syncCompanyDianConfig(sociedadId, null);
     }
 
     public List<CertificadoDigital> findCertificados() {
@@ -424,38 +453,77 @@ public class AdminPortalRepository {
                             id, nit, dv, razon_social, email, direccion, dian_config, is_active
                         )
                         SELECT id, nit, '0', razon_social, correo_emision, '{}'::jsonb,
-                               jsonb_build_object('ambiente', dian_ambiente), true
+                               jsonb_build_object(
+                                   'ambiente', dian_ambiente
+                               )
+                               || CASE
+                                   WHEN NULLIF(dian_software_id, '') IS NOT NULL
+                                       THEN jsonb_build_object('software_id', dian_software_id)
+                                   ELSE '{}'::jsonb
+                               END,
+                               true
                         FROM sociedades
                         WHERE id = ?
                         ON CONFLICT (id) DO UPDATE SET
                             nit = EXCLUDED.nit,
                             razon_social = EXCLUDED.razon_social,
                             email = EXCLUDED.email,
-                            dian_config = jsonb_set(
-                                COALESCE(companies.dian_config, '{}'::jsonb),
-                                '{ambiente}',
-                                EXCLUDED.dian_config -> 'ambiente',
-                                true
-                            ),
+                            dian_config = COALESCE(companies.dian_config, '{}'::jsonb)
+                                || jsonb_build_object(
+                                    'ambiente', EXCLUDED.dian_config -> 'ambiente'
+                                )
+                                || CASE
+                                    WHEN NULLIF(EXCLUDED.dian_config ->> 'software_id', '') IS NOT NULL
+                                        THEN jsonb_build_object(
+                                            'software_id', EXCLUDED.dian_config ->> 'software_id'
+                                        )
+                                    ELSE '{}'::jsonb
+                                END,
                             updated_at = now()
                         """,
                 sociedadId
         );
     }
 
-    private void syncCompanyDianAmbiente(UUID sociedadId, String dianAmbiente) {
+    private void syncCompanyDianConfig(UUID sociedadId, String dianSoftwarePinPlaintext) {
+        if (dianSoftwarePinPlaintext != null) {
+            jdbcTemplate.update(
+                    """
+                            UPDATE companies c
+                            SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
+                                || jsonb_build_object('ambiente', s.dian_ambiente)
+                                || CASE
+                                    WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
+                                        THEN jsonb_build_object('software_id', s.dian_software_id)
+                                    ELSE '{}'::jsonb
+                                END
+                                || jsonb_build_object('pin', ?::text),
+                                updated_at = now()
+                            FROM sociedades s
+                            WHERE c.id = s.id
+                              AND s.id = ?
+                            """,
+                    dianSoftwarePinPlaintext,
+                    sociedadId
+            );
+            return;
+        }
+
         jdbcTemplate.update(
                 """
-                        UPDATE companies
-                        SET dian_config = jsonb_set(
-                            COALESCE(dian_config, '{}'::jsonb),
-                            '{ambiente}',
-                            to_jsonb(?::text),
-                            true
-                        )
-                        WHERE id = ?
+                        UPDATE companies c
+                        SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
+                            || jsonb_build_object('ambiente', s.dian_ambiente)
+                            || CASE
+                                WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
+                                    THEN jsonb_build_object('software_id', s.dian_software_id)
+                                ELSE '{}'::jsonb
+                            END,
+                            updated_at = now()
+                        FROM sociedades s
+                        WHERE c.id = s.id
+                          AND s.id = ?
                         """,
-                dianAmbiente,
                 sociedadId
         );
     }
