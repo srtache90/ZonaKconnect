@@ -47,7 +47,7 @@ body.text-on-surface {
     min-height: 100dvh;
     margin: 0;
     color: var(--dc-on-surface) !important;
-    background:  rgba(219, 201, 174, 0.15 ) !important;
+    background:  rgba(247, 246, 246, 0.978) !important;
     font-family: var(--dc-font) !important;
     -webkit-font-smoothing: antialiased;
     padding: 0px 80px 0px 80px;
@@ -106,7 +106,8 @@ main.pt-24 {
     border: 2px solid #ffffff00 !important;
     border-radius: 26px !important;
     box-shadow: 0 20px 30px 0 !important;
-    color: #5656501f !important;
+    color: #62625b1f !important;
+    font-size:11px;
 }
 
 .card-header,
@@ -219,17 +220,8 @@ small.text-muted {
 .zk-invoices-brand span {
     color: #dccea9 !important;
     font-family: var(--dc-font);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    line-height: 1;
-}
-
-.zk-invoices-menu,
-.zk-invoices-menu .material-symbols-outlined {
-    color: #ffffff !important;
-}
+    font-weight: 500;
+    border-radius: var(--dc-radius-sm) !important;}
 
 .zk-invoices-page {
     background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(249,247,243,.18));

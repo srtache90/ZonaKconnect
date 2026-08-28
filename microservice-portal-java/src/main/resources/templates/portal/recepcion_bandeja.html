@@ -7,11 +7,108 @@
         .plazo-vencido { color: #b71c1c; font-weight: 600; }
         .plazo-por-vencer { color: #e65100; font-weight: 600; }
         .cufe-warn { color: #b71c1c; }
+
+        .zk-invoices-header {
+            background: #080808 !important;
+            border-bottom-color: #292929 !important;
+        }
+        .zk-invoices-brand {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0;
+            min-width: 14px;
+            color: #ffffff !important;
+            text-decoration: none;
+        }
+        .zk-invoices-logo {
+            display: block;
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+        }
+        .zk-invoices-brand span {
+            color: #dccea9 !important;
+            font-family: "TT Commons", Arial, sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .zk-invoices-menu,
+        .zk-invoices-menu .material-symbols-outlined {
+            color: #ffffff !important;
+        }
+        .text-on-surface-variant {
+            color: #e1dfdf !important;
+        }
+        .mi-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .mi-tooltip .mi-tooltip-texto {
+            visibility: hidden;
+            background-color: #f7f7f7; 
+            color: #f51313;           
+            text-align: center;
+            padding: 9px 1px;
+            border-radius: 8px;        
+            font-size: 9px;
+            font-family: sans-serif;
+            line-height: 1.4;
+            position: absolute;
+            z-index: 100;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 200px;
+            max-width: 300px;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .mi-tooltip .mi-tooltip-texto::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333333 transparent transparent transparent;
+        }
+        .mi-tooltip:hover .mi-tooltip-texto {
+            visibility: visible;
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
-<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<header class="zk-invoices-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
+    <div class="flex items-center gap-3 ">
+        <button class="zk-invoices-menu p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
+            <span class="material-symbols-outlined">menu</span>
+        </button>
+        <a class="zk-invoices-brand" th:href="@{/portal}" aria-label="Zona K Connect">
+            <img th:src="@{/imagen/Zonak1.png}"
+                 src="/imagen/Zonak1.png"
+                 alt="Zona K"
+                 class="zk-invoices-logo">
+            <span>CONNECT</span>
+        </a>
+    </div>
+    <div class="flex items-center gap-4">
+        <a class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-decoration-none" th:href="@{/portal/search}" aria-label="Buscar">
+            <span class="material-symbols-outlined text-on-surface-variant">search</span>
+        </a>
+    </div>
+
+    </header>
+>>>>>>> 6068c8bad39cd64354af46f44414cc277d1ca696
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
@@ -22,20 +119,6 @@
     <div class="alert alert-success rounded-4" id="flashSuccess" role="alert" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" id="flashError" role="alert" th:if="${error != null}" th:text="${error}"></div>
     <div class="alert d-none rounded-4" id="eventAlert" role="alert"></div>
-
-    <section class="alert alert-warning rounded-4 mb-4" th:if="${alerts != null and alerts.hasAlerts()}">
-        <div class="fw-semibold mb-1">Alertas de recepción</div>
-        <ul class="mb-2 small">
-            <li th:if="${alerts.vencidos() > 0}" th:text="'Plazo tácito vencido: ' + ${alerts.vencidos()} + ' factura(s) en 086 sin 087/088.'"></li>
-            <li th:if="${alerts.porVencer() > 0}" th:text="'Por vencer (≤1 día hábil): ' + ${alerts.porVencer()} + ' factura(s).'"></li>
-            <li th:if="${alerts.conValidacion() > 0}" th:text="'Con observaciones de CUFE/NIT: ' + ${alerts.conValidacion()} + ' factura(s).'"></li>
-        </ul>
-        <form class="d-inline" method="post" th:action="@{/portal/recepcion/aplicar-aceptacion-tacita}" th:if="${alerts.vencidos() > 0}">
-            <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
-            <input type="hidden" name="returnTo" value="bandeja">
-            <button class="btn btn-sm btn-outline-dark rounded-pill px-3" type="submit">Aplicar aceptaciones tácitas vencidas</button>
-        </form>
-    </section>
 
     <section class="zk-filter-card p-4 mb-4">
         <form class="row g-3 align-items-end" method="get" th:action="@{/portal/recepcion/bandeja}">
@@ -95,7 +178,7 @@
 
     <section class="card zk-card">
         <div class="card-body p-0">
-            <div class="d-flex justify-content-between align-items-center px-4 py-4 gap-3 flex-wrap">
+            <div class="d-flex justify-content-between align-items-center px-4 py-4 gap-3  flex-wrap">
                 <div>
                     <h2 class="h3 mb-1">Facturas recibidas (abiertas)</h2>
                     <p class="text-muted mb-0">Secuencia legal: 085 → 086 → 087/088. Tras 086, 3 días hábiles → tácita.</p>
@@ -151,16 +234,14 @@
                                    aria-label="Seleccionar todas"
                                    onchange="toggleSelectAll(this)">
                         </th>
-                        <th>Proveedor</th>
-                        <th>Factura</th>
-                        <th style="min-width: 170px;">Punto</th>
-                        <th>CUFE</th>
-                        <th class="text-end">Total</th>
-                        <th>Emisión</th>
-                        <th>Estado</th>
-                        <th style="min-width: 140px;">Plazo tácito</th>
-                        <th class="text-end">Documentos</th>
-                        <th class="text-end">Eventos</th>
+                        <th class="text-center">Proveedor</th>
+                        <th class="text-center">Factura</th>
+                        <th class="text-center" style="min-width: 170px;">Punto</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center">Emisión</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Documentos</th>
+                        <th class="text-center">Eventos</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -186,15 +267,18 @@
                                    th:attr="aria-label=${'Seleccionar ' + invoice.invoiceNumber}"
                                    onchange="updateBulkSelectionUi()">
                         </td>
-                        <td>
-                            <a class="fw-semibold text-decoration-none"
-                               th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
-                               th:text="${invoice.proveedorName}">Proveedor</a>
-                            <div class="text-muted small zk-data" th:text="${invoice.proveedorNit}">900000000</div>
-                            <div class="small text-danger " style="font-size:20px "
-                                 th:if="${!#lists.isEmpty(invoice.validationIssues)}"
-                                 th:text="${#strings.listJoin(invoice.validationIssues, ' · ')}">Validación</div>
-                        </td>
+                            <td>
+                                <a class="fw-semibold text-decoration-none"
+                                th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
+                                th:text="${invoice.proveedorName}">Proveedor</a>
+                                <div class="text-muted small zk-data" th:text="${invoice.proveedorNit}">900000000</div>
+                                <div class="mi-tooltip" th:if="${!#lists.isEmpty(invoice.validationIssues)}">
+                                    <span style="font-size: 20px; color: #dc3545;">&#9888;</span>
+                                    <span class="mi-tooltip-texto" th:text="${#strings.listJoin(invoice.validationIssues, ' · ')}">
+                                        Mensaje de error
+                                    </span>
+                                </div>
+                            </td>
                         <td>
                             <a class="zk-data text-decoration-none"
                                th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
@@ -219,15 +303,6 @@
                                 </select>
                             </form>
                         </td>
-                        <td class="small zk-data">
-                            <span th:classappend="${!invoice.cufeValid} ? ' cufe-warn'">
-                                <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 16}"
-                                      th:text="${#strings.substring(invoice.cufe, 0, 16) + '...'}">CUFE...</span>
-                                <span th:if="${invoice.cufe != null and #strings.length(invoice.cufe) > 0 and #strings.length(invoice.cufe) <= 16}"
-                                      th:text="${invoice.cufe}">CUFE</span>
-                                <span th:if="${invoice.cufe == null or #strings.isEmpty(invoice.cufe)}">—</span>
-                            </span>
-                        </td>
                         <td class="text-center zk-data text-nowrap  py-4 px-3" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
                         <td class="zk-data text-nowrap text-center py-4 px-3 align-middle" th:text="${invoice.fechaEmision}">2026-06-12</td>
                         <td>
@@ -241,10 +316,6 @@
                                 PENDIENTE
                             </span>
                         </td>
-                        <td class="small"
-                            th:classappend="${invoice.plazoStatus.name() == 'VENCIDO'} ? ' plazo-vencido' :
-                                             (${invoice.plazoStatus.name() == 'POR_VENCER'} ? ' plazo-por-vencer' : '')"
-                            th:text="${invoice.plazoLabel}">Plazo</td>
                         <td class="text-center py-4 px-3 align-middle">
                             <div class="btn-group btn-group-sm shadow-sm inline-flex" role="group" style="min-width: 140px; border-radius: 8px; overflow: hidden;">
                                 <button type="button"
