@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción de Facturas | DIAN Connect')}"></th:block>
@@ -7,24 +7,24 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-10">
         <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Recepción de facturas</h2>
         <p class="font-body-md text-on-surface-variant">Bandeja operativa para documentos entrantes y correo de recepción.</p>
     </div>
 
     <section class="grid md:grid-cols-3 gap-6 mb-6">
-        <article class="glass-card rounded-2xl p-6">
+        <article class="card zk-card">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Correos recibidos</h3>
             <p class="font-body-md text-on-surface-variant mb-4">Preparado para sincronizar IMAP/SMTP y procesar adjuntos XML/PDF.</p>
             <span class="inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-label-sm">Pendiente integración IMAP</span>
         </article>
-        <article class="glass-card rounded-2xl p-6">
+        <article class="card zk-card">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Validación DIAN</h3>
             <p class="font-body-md text-on-surface-variant mb-4">Espacio para verificar CUFE/CUNE y estados de documentos recibidos.</p>
             <span class="inline-flex px-3 py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm">En diseño</span>
         </article>
-        <article class="glass-card rounded-2xl p-6">
+        <article class="card zk-card">
             <h3 class="font-headline-md text-headline-md text-primary mb-2">Histórico recibido</h3>
             <p class="font-body-md text-on-surface-variant mb-4">Consulta de documentos recibidos por sociedad y trazabilidad.</p>
             <a class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-container-highest font-label-md text-decoration-none"

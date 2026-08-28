@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Medios magnéticos DIAN | DIAN Connect')}"></th:block>
@@ -7,7 +7,7 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'medios')}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[960px] mx-auto">
+<main class="dc-page dc-page-wide dc-page-narrow px-margin-mobile md:px-margin-desktop">
     <div class="mb-8">
         <a class="inline-flex items-center gap-1 text-on-surface-variant font-label-md mb-3 text-decoration-none" th:href="@{/portal/emision/reportes}">
             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
@@ -17,7 +17,7 @@
         <p class="font-body-md text-on-surface-variant">Generación de archivos para información exógena según formatos DIAN.</p>
     </div>
 
-    <section class="glass-card rounded-2xl p-6 mb-6">
+    <section class="zk-filter-card p-4 mb-4">
         <h3 class="font-headline-md text-headline-md text-primary mb-4">Parámetros de exportación</h3>
         <form method="get" th:action="@{/portal/emision/reportes/medios-magneticos/export}" class="grid md:grid-cols-2 gap-4">
             <div class="md:col-span-2">
@@ -74,7 +74,7 @@
     </section>
 
     <section class="grid md:grid-cols-2 gap-4 mb-6">
-        <article class="glass-card rounded-2xl p-5" th:each="format : ${formats}">
+        <article class="card zk-card" th:each="format : ${formats}">
             <h4 class="font-headline-md text-headline-md text-primary mb-2" th:text="${format.code() + ' - ' + format.title()}">1007</h4>
             <p class="font-body-md text-on-surface-variant mb-0" th:text="${format.description()}">Descripción</p>
         </article>

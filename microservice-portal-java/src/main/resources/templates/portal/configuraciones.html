@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Configuraciones | DIAN Connect')}"></th:block>
@@ -7,87 +7,109 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
-    <div class="mb-8">
-        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Configuraciones</h2>
-        <p class="font-body-md text-on-surface-variant">Administración técnica y multi-tenant de la plataforma.</p>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Configuración</p>
+        <h1 class="dc-page-title">Configuraciones</h1>
+        <p class="dc-page-subtitle">Administración técnica y multi-tenant de la plataforma.</p>
     </div>
 
-    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 mb-6 font-body-md text-emerald-800" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
 
-    <section class="glass-card rounded-2xl overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-surface-container-highest bg-surface-container-low">
-            <h3 class="font-headline-md text-headline-md text-primary mb-1">Web Service DIAN por sociedad</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">
-                Seleccione por sociedad: Mock (sin DIAN real), Habilitación o Producción.
-                El mock solo aplica a la sociedad marcada como Mock.
-            </p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-surface-container-low font-label-sm text-on-surface-variant">
-                <tr>
-                    <th class="text-left px-6 py-3">Sociedad</th>
-                    <th class="text-left px-6 py-3">NIT</th>
-                    <th class="text-left px-6 py-3">Ambiente DIAN</th>
-                    <th class="text-right px-6 py-3">Acciones</th>
+    <section class="card zk-card mb-4">
+        <div class="card-body p-0">
+            <div class="px-4 py-4 border-bottom">
+                <h2 class="h4 mb-1">Web Service DIAN por sociedad</h2>
+                <p class="text-muted small mb-0">
+                    Seleccione por sociedad: Mock (sin DIAN real), Habilitación o Producción.
+                </p>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                <thead>
+                <tr class="text-muted small text-uppercase">
+                    <th class="ps-4">Sociedad</th>
+                    <th>NIT</th>
+                    <th>Ambiente DIAN</th>
+                    <th class="text-end pe-4">Acciones</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="sociedad : ${sociedades}" class="border-t border-surface-container-highest">
-                    <td class="px-6 py-4" th:text="${sociedad.razonSocial}">Sociedad</td>
-                    <td class="px-6 py-4" th:text="${sociedad.nit}">900123456</td>
-                    <td class="px-6 py-4">
+                <tr th:each="sociedad : ${sociedades}">
+                    <td class="ps-4" th:text="${sociedad.razonSocial}">Sociedad</td>
+                    <td th:text="${sociedad.nit}">900123456</td>
+                    <td>
                         <form th:id="'dianForm-' + ${sociedad.id}" th:action="@{/portal/configuraciones/dian-ambiente}" method="post">
                             <input type="hidden" name="sociedadId" th:value="${sociedad.id}">
-                            <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" name="dianAmbiente">
+                            <select class="form-select rounded-3" name="dianAmbiente">
                                 <option value="Mock" th:selected="${sociedad.dianAmbiente == 'Mock'}">Mock (local / sin DIAN)</option>
                                 <option value="Habilitacion" th:selected="${sociedad.dianAmbiente == 'Habilitacion'}">Pruebas / Habilitación</option>
                                 <option value="Produccion" th:selected="${sociedad.dianAmbiente == 'Produccion'}">Producción</option>
                             </select>
                         </form>
                     </td>
-                    <td class="px-6 py-4 text-right">
-                        <button class="px-4 py-2 rounded-xl border border-surface-container-highest font-label-md mr-2"
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1"
                                 type="button"
                                 th:data-url="@{/portal/admin/sociedades/{id}/probar-conexion(id=${sociedad.id})}"
                                 onclick="probarConexionImap(this)">
                             Probar conexión
                         </button>
-                        <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit" th:form="'dianForm-' + ${sociedad.id}">
-                            Guardar ambiente
+                        <button class="btn btn-sm btn-zk rounded-pill px-3" type="submit" th:form="'dianForm-' + ${sociedad.id}">
+                            Guardar
                         </button>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(sociedades)}">
-                    <td class="px-6 py-8 text-center text-on-surface-variant" colspan="4">No hay sociedades configuradas.</td>
+                    <td class="text-center text-muted py-5" colspan="4">No hay sociedades configuradas.</td>
                 </tr>
                 </tbody>
-            </table>
+                </table>
+            </div>
         </div>
     </section>
 
-    <section class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/sociedades}">
-            <h3 class="font-headline-md text-headline-md text-primary mb-2">Sociedades</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Crear y editar sociedades, NIT, correos y credenciales SMTP/IMAP.</p>
-        </a>
-        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/puntos-venta}">
-            <h3 class="font-headline-md text-headline-md text-primary mb-2">Puntos de venta</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Prefijo, resolución DIAN, clave técnica y rangos FE/NC/ND.</p>
-        </a>
-        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/certificados}">
-            <h3 class="font-headline-md text-headline-md text-primary mb-2">Certificados digitales</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Cargar certificados .pfx/.p12 y controlar vigencia por sociedad.</p>
-        </a>
-        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/usuarios}">
-            <h3 class="font-headline-md text-headline-md text-primary mb-2">Usuarios y roles</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">ADMIN, EMISOR, RECEPTOR, CONSULTA; sociedades y alcance por punto de venta.</p>
-        </a>
-        <a class="glass-card rounded-2xl p-6 text-decoration-none text-inherit block hover:shadow-md transition-shadow" th:href="@{/portal/admin/proveedores-punto}">
-            <h3 class="font-headline-md text-headline-md text-primary mb-2">Proveedor → Punto</h3>
-            <p class="font-body-md text-on-surface-variant mb-0">Enruta facturas recibidas al PV según NIT del proveedor.</p>
-        </a>
+    <section class="row g-4">
+        <div class="col-md-6 col-xl-4">
+            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/sociedades}">
+                <div class="card-body">
+                    <h3 class="h5 mb-2">Sociedades</h3>
+                    <p class="text-muted small mb-0">Crear y editar sociedades, NIT, correos y credenciales SMTP/IMAP.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/puntos-venta}">
+                <div class="card-body">
+                    <h3 class="h5 mb-2">Puntos de venta</h3>
+                    <p class="text-muted small mb-0">Prefijo, resolución DIAN, clave técnica y rangos FE/NC/ND.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/certificados}">
+                <div class="card-body">
+                    <h3 class="h5 mb-2">Certificados digitales</h3>
+                    <p class="text-muted small mb-0">Cargar certificados .pfx/.p12 y controlar vigencia por sociedad.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/usuarios}">
+                <div class="card-body">
+                    <h3 class="h5 mb-2">Usuarios y roles</h3>
+                    <p class="text-muted small mb-0">ADMIN, EMISOR, RECEPTOR, CONSULTA; sociedades y alcance por punto de venta.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/proveedores-punto}">
+                <div class="card-body">
+                    <h3 class="h5 mb-2">Proveedor → Punto</h3>
+                    <p class="text-muted small mb-0">Enruta facturas recibidas al PV según NIT del proveedor.</p>
+                </div>
+            </a>
+        </div>
     </section>
 </main>
 

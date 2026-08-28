@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | DIAN Connect')}"></th:block>
@@ -7,18 +7,20 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Configuración / Sociedades</p>
         <h1 class="dc-page-title">Administración de Sociedades</h1>
         <p class="dc-page-subtitle">Configuración multi-tenant, emisión y recepción de correo</p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">Crear o editar Sociedad</div>
+    <section class="card zk-card mb-4">
         <div class="card-body">
+            <h2 class="h4 mb-1">Crear o editar Sociedad</h2>
+            <p class="text-muted small mb-4">Datos fiscales, correo, credenciales DIAN y conectividad IMAP/SMTP.</p>
             <form th:action="@{/portal/admin/sociedades}" method="post" class="row g-3">
                 <input type="hidden" name="id" id="sociedadId">
 
@@ -102,15 +104,19 @@
                            autocomplete="new-password" placeholder="Dejar vacío conserva el actual">
                 </div>
                 <div class="col-12 text-end">
-                    <button class="btn btn-primary" type="submit">Guardar Sociedad</button>
+                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar Sociedad</button>
                 </div>
             </form>
         </div>
     </section>
 
-    <section class="card shadow-sm">
-        <div class="card-header bg-white">Sociedades registradas</div>
-        <div class="table-responsive">
+    <section class="card zk-card">
+        <div class="card-body p-0">
+            <div class="px-4 py-4 border-bottom">
+                <h2 class="h4 mb-1">Sociedades registradas</h2>
+                <p class="text-muted small mb-0">Listado multi-tenant con acceso rápido a edición y prueba IMAP.</p>
+            </div>
+            <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                 <tr>
@@ -147,7 +153,7 @@
                     </td>
                     <td>
                         <span class="badge"
-                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : (${sociedad.dianAmbiente == 'Mock'} ? ' text-bg-warning' : ' text-bg-info')"
+                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : (${sociedad.dianAmbiente == 'Mock'} ? ' text-bg-warning' : ' text-bg-light')"
                               th:text="${sociedad.dianAmbiente == 'Produccion'} ? 'Producción' : (${sociedad.dianAmbiente == 'Mock'} ? 'Mock' : 'Pruebas')">
                             Pruebas
                         </span>

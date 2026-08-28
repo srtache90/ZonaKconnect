@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Reportes Documento Soporte | DIAN Connect')}"></th:block>
@@ -12,13 +12,13 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1400px] mx-auto">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-8">
         <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Reportes de documento soporte</h2>
         <p class="font-body-md text-on-surface-variant">Documentos soporte emitidos y su estado DIAN.</p>
     </div>
 
-    <section class="glass-card rounded-2xl p-6 mb-6">
+    <section class="zk-filter-card p-4 mb-4">
         <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
         <form method="get" th:action="@{/portal/documento-soporte/reportes}" class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
@@ -59,7 +59,7 @@
         </form>
     </section>
 
-    <section class="glass-card rounded-2xl overflow-hidden">
+    <section class="card zk-card">
         <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
             <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
             <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm"

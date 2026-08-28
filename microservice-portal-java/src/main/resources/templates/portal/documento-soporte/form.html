@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Nuevo Documento Soporte | DIAN Connect')}"></th:block>
@@ -7,19 +7,21 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Zona K / Documento soporte</p>
         <h1 class="dc-page-title">Emitir documento soporte</h1>
         <p class="dc-page-subtitle">Payload DIAN_NET con proveedor, ítems y totales.</p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
     <form th:action="@{/portal/documento-soporte/emitir}" method="post" id="supportForm">
-        <section class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">Sociedad y punto de venta</div>
-            <div class="card-body row g-3">
+        <section class="card zk-card mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Sociedad y punto de venta</h2>
+                <div class="row g-3">
                 <div class="col-12" th:if="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
                     <div class="alert alert-warning mb-0">
                         Configure una sociedad y un punto de venta activos antes de emitir.
@@ -49,7 +51,7 @@
             </div>
         </section>
 
-        <section class="card shadow-sm mb-4">
+        <section class="card zk-card mb-4">
             <div class="card-header bg-white">Datos del proveedor / cliente</div>
             <div class="card-body row g-3">
                 <div class="col-md-3">
@@ -80,7 +82,7 @@
             </div>
         </section>
 
-        <section class="card shadow-sm mb-4">
+        <section class="card zk-card mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <span>Ítems</span>
                 <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-item">Agregar ítem</button>
@@ -111,7 +113,7 @@
 
         <div class="d-flex justify-content-between">
             <a class="btn btn-outline-secondary" th:href="@{/portal/documento-soporte}">Volver al listado</a>
-            <button class="btn btn-primary" type="submit">Emitir documento soporte</button>
+            <button class="btn btn-zk rounded-pill px-4" type="submit">Emitir documento soporte</button>
         </div>
     </form>
 </main>

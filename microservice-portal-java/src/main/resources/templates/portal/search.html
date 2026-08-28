@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Búsqueda | DIAN Connect')}"></th:block>
@@ -7,13 +7,12 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
-        <h1 class="dc-page-title">Búsqueda global</h1>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5"><p class="dc-page-subtitle mb-1">Zona K</p><h1 class="dc-page-title">Búsqueda global</h1>
         <p class="dc-page-subtitle">Prefijo, número, CUFE/CUDE, NIT o razón social</p>
     </div>
 
-    <form class="card shadow-sm mb-4" th:action="@{/portal/search}" method="get">
+    <form class="card zk-card mb-4" th:action="@{/portal/search}" method="get">
         <div class="card-body row g-3 align-items-end">
             <div class="col-md-9">
                 <label class="form-label" for="q">Término</label>
@@ -26,11 +25,11 @@
         </div>
     </form>
 
-    <div class="alert alert-info" th:if="${q != null and !#strings.isEmpty(q) and #strings.length(q) &lt; 2}">
+    <div class="alert alert-warning rounded-4" th:if="${q != null and !#strings.isEmpty(q) and #strings.length(q) &lt; 2}">
         Ingrese al menos 2 caracteres.
     </div>
 
-    <section class="card shadow-sm" th:if="${q != null and #strings.length(q) &gt;= 2}">
+    <section class="card zk-card" th:if="${q != null and #strings.length(q) &gt;= 2}">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <span>Resultados</span>
             <span class="text-muted small" th:text="${#lists.size(results)} + ' documento(s)'">0</span>
@@ -51,7 +50,7 @@
                 <tr th:each="row : ${results}">
                     <td>
                         <span class="badge"
-                              th:classappend="${row['tipo'] == 'RECIBIDA'} ? ' text-bg-info' : ' text-bg-primary'"
+                              th:classappend="${row['tipo'] == 'RECIBIDA'} ? ' text-bg-light' : ' text-bg-primary'"
                               th:text="${row['tipo']}">EMITIDA</span>
                     </td>
                     <td>

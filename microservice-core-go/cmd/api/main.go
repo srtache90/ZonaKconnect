@@ -682,6 +682,7 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 
 		if _, err := a.emitInvoiceToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitInvoiceToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
+			a.persistEmissionError(ctx, tenantID, invoiceID, err)
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, nextNumber, req)
 
@@ -805,6 +806,7 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 
 		if _, err := a.emitCreditNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitCreditNoteToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
+			a.persistEmissionError(ctx, tenantID, invoiceID, err)
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, nextNumber, req)
 
@@ -926,6 +928,7 @@ func (a *app) handleCreateDebitNote(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 		if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitDebitNoteToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
+			a.persistEmissionError(ctx, tenantID, invoiceID, err)
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijoND, nextNumber, req)
 
@@ -982,6 +985,7 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 			}
 			if _, err := a.emitCreditNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 				log.Printf("reemit NC invoice_id=%s error=%v", invoiceID, err)
+				a.persistEmissionError(ctx, tenantID, invoiceID, err)
 			}
 			return
 		}
@@ -993,6 +997,7 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 			}
 			if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 				log.Printf("reemit ND invoice_id=%s error=%v", invoiceID, err)
+				a.persistEmissionError(ctx, tenantID, invoiceID, err)
 			}
 			return
 		}
@@ -1003,6 +1008,7 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := a.emitInvoiceToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("reemit FV invoice_id=%s error=%v", invoiceID, err)
+			a.persistEmissionError(ctx, tenantID, invoiceID, err)
 		}
 	}()
 
@@ -1291,6 +1297,32 @@ func (a *app) handleDashboardKpis(w http.ResponseWriter, r *http.Request) {
 		"support_documents":   supportCount,
 		"payroll_documents":   payrollCount,
 	})
+}
+
+func (a *app) persistEmissionError(ctx context.Context, tenantID, invoiceID uuid.UUID, err error) {
+	if err == nil {
+		return
+	}
+	payload, marshalErr := json.Marshal(map[string]any{
+		"exitoso":           false,
+		"estado_dian":       "ERROR_DIAN_NET",
+		"statusDescription": err.Error(),
+		"errores":           []string{err.Error()},
+	})
+	if marshalErr != nil {
+		log.Printf("persistEmissionError marshal invoice_id=%s error=%v", invoiceID, marshalErr)
+		return
+	}
+	if _, execErr := a.db.Exec(ctx, `
+		UPDATE invoices
+		SET estado_dian = 'ERROR_DIAN_NET',
+		    dian_response_jsonb = $3::jsonb,
+		    updated_at = now()
+		WHERE company_id = $1
+		  AND id = $2
+	`, tenantID, invoiceID, payload); execErr != nil {
+		log.Printf("persistEmissionError update invoice_id=%s error=%v", invoiceID, execErr)
+	}
 }
 
 func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointID, invoiceID uuid.UUID, prefijo string, numero int64, invoiceReq createInvoiceRequest) (json.RawMessage, error) {

@@ -22,6 +22,18 @@
     --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     --dc-font: "TT Commons", Arial, sans-serif;
     --dc-header-h: 4rem;
+
+    /* Bootstrap: sin azul — acento negro */
+    --bs-primary: #000000;
+    --bs-primary-rgb: 0, 0, 0;
+    --bs-link-color: #000000;
+    --bs-link-hover-color: #222222;
+    --bs-info: #444748;
+    --bs-info-rgb: 68, 71, 72;
+    --bs-info-text-emphasis: #1c1c1a;
+    --bs-info-bg-subtle: #eceae6;
+    --bs-info-border-subtle: #cfcbc4;
+    --bs-focus-ring-color: rgba(0, 0, 0, 0.2);
 }
 
 html.light,
@@ -136,12 +148,88 @@ small.text-muted {
     color: var(--dc-on-variant) !important;
 }
 
-/* ---- Buttons ---- */
-.btn,
-button.btn {
+/* ---- Module shell (recepción / emisión / admin) ---- */
+.zk-module-header {
+    background: #080808 !important;
+    border-bottom-color: #292929 !important;
+}
+
+.zk-module-brand {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    min-width: 14px;
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+.zk-module-brand-logo {
+    display: block;
+    width: 120px;
+    height: auto;
+    object-fit: contain;
+}
+
+.zk-module-brand span {
+    color: #dccea9 !important;
     font-family: var(--dc-font);
-    font-weight: 500;
-    border-radius: var(--dc-radius-sm) !important;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.zk-module-header-menu,
+.zk-module-header-menu .material-symbols-outlined,
+.zk-module-header-icon {
+    color: #ffffff !important;
+}
+
+.zk-invoices-header,
+.zk-invoices-menu,
+.zk-invoices-brand,
+.zk-invoices-logo {
+    /* alias legacy templates */
+}
+
+.zk-invoices-header {
+    background: #080808 !important;
+    border-bottom-color: #292929 !important;
+}
+
+.zk-invoices-brand {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    min-width: 14px;
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+.zk-invoices-logo {
+    display: block;
+    width: 120px;
+    height: auto;
+    object-fit: contain;
+}
+
+.zk-invoices-brand span {
+    color: #dccea9 !important;
+    font-family: var(--dc-font);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.zk-invoices-menu,
+.zk-invoices-menu .material-symbols-outlined {
+    color: #ffffff !important;
+}
 
 .zk-invoices-page {
     background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(249,247,243,.18));
@@ -278,6 +366,13 @@ button.btn {
         padding: 1.1rem !important;
     }
 }
+
+/* ---- Buttons ---- */
+.btn,
+button.btn {
+    font-family: var(--dc-font);
+    font-weight: 500;
+    border-radius: var(--dc-radius-sm) !important;
     letter-spacing: 0.01em;
 }
 
@@ -301,6 +396,16 @@ button.btn {
 .btn-outline-dark,
 .btn-outline-success,
 .btn-outline-info {
+    --bs-btn-color: #000000;
+    --bs-btn-border-color: #cfcbc4;
+    --bs-btn-hover-color: #000000;
+    --bs-btn-hover-bg: var(--dc-surface-low);
+    --bs-btn-hover-border-color: #000000;
+    --bs-btn-active-color: #000000;
+    --bs-btn-active-bg: var(--dc-surface-low);
+    --bs-btn-active-border-color: #000000;
+    --bs-btn-disabled-color: #747878;
+    --bs-btn-disabled-border-color: #e5e2de;
     background: transparent !important;
     border-color: var(--dc-surface-high) !important;
     color: var(--dc-on-surface) !important;
@@ -421,6 +526,12 @@ textarea.form-control {
     border-color: #ead48a !important;
 }
 
+.alert-info {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-surface) !important;
+    border-color: var(--dc-surface-high) !important;
+}
+
 .badge,
 .badge-soft {
     font-weight: 600;
@@ -437,13 +548,26 @@ textarea.form-control {
     border-color: var(--dc-surface-high) !important;
 }
 
-.badge-085 { background: #e8eef6 !important; color: #2f4d6a !important; }
+.badge-085 { background: #eceae6 !important; color: #1c1c1a !important; }
 .badge-086 { background: #e7f2ea !important; color: #2f5a3a !important; }
 .badge-087 { background: #e6f4ef !important; color: #1f5c48 !important; }
 .badge-088 { background: #f6e8e6 !important; color: #7a3a32 !important; }
 .text-bg-success { background: var(--dc-success-container) !important; color: var(--dc-success) !important; }
 .text-bg-primary { background: #e8e8e8 !important; color: #111 !important; }
+.text-bg-info {
+    background: var(--dc-surface-low) !important;
+    color: var(--dc-on-surface) !important;
+    border: 1px solid var(--dc-surface-high) !important;
+}
 .text-bg-danger { background: var(--dc-error-container) !important; color: #7a0610 !important; }
+
+a:not(.btn):not(.nav-link):not(.zk-module-brand) {
+    color: var(--dc-primary);
+}
+
+a:not(.btn):not(.nav-link):not(.zk-module-brand):hover {
+    color: #222222;
+}
 
 /* ---- Accordion (manual invoice) ---- */
 .accordion-item {

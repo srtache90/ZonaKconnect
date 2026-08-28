@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Puntos de Venta | DIAN Connect')}"></th:block>
@@ -7,17 +7,19 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Configuración / Puntos de venta</p>
         <h1 class="dc-page-title">Puntos de Venta</h1>
         <p class="dc-page-subtitle">Resoluciones, prefijos y numeración DIAN por sociedad.</p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
 
-    <section class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">Crear o editar punto de venta</div>
+    <section class="card zk-card mb-4">
         <div class="card-body">
+            <h2 class="h4 mb-1">Crear o editar punto de venta</h2>
+            <p class="text-muted small mb-4">Resolución, prefijos y rangos de numeración por sociedad.</p>
             <form th:action="@{/portal/admin/puntos-venta}" method="post" class="row g-3">
                 <input type="hidden" name="id" id="puntoVentaId">
 
@@ -84,15 +86,18 @@
                 </div>
 
                 <div class="col-12 text-end">
-                    <button class="btn btn-primary" type="submit">Guardar punto de venta</button>
+                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar punto de venta</button>
                 </div>
             </form>
         </div>
     </section>
 
-    <section class="card shadow-sm">
-        <div class="card-header bg-white">Puntos de venta registrados</div>
-        <div class="table-responsive">
+    <section class="card zk-card">
+        <div class="card-body p-0">
+            <div class="px-4 py-4 border-bottom">
+                <h2 class="h4 mb-1">Puntos de venta registrados</h2>
+            </div>
+            <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                 <tr>

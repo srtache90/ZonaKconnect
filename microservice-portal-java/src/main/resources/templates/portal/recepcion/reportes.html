@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Eventos RADIAN | DIAN Connect')}"></th:block>
@@ -12,41 +12,38 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1400px] mx-auto">
-    <div class="mb-8">
-        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Eventos RADIAN enviados</h2>
-        <p class="font-body-md text-on-surface-variant">
-            Estado unificado de acuses/recibos/aceptaciones/reclamos transmitidos a la DIAN y su notificación al proveedor.
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
+        <h1 class="dc-page-title">Eventos RADIAN enviados</h1>
+        <p class="dc-page-subtitle">
+            Estado unificado de acuses, recibos, aceptaciones y reclamos transmitidos a la DIAN.
         </p>
     </div>
 
-    <section class="glass-card rounded-2xl p-6 mb-6">
-        <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
-        <form method="get" th:action="@{/portal/recepcion/reportes}" class="grid md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div>
-                <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
-                        id="sociedadId" name="sociedadId">
+    <section class="zk-filter-card p-4 mb-4">
+        <h2 class="h5 mb-3">Filtros</h2>
+        <form method="get" th:action="@{/portal/recepcion/reportes}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label text-muted small" for="sociedadId">Sociedad</label>
+                <select class="form-select rounded-3" id="sociedadId" name="sociedadId">
                     <option th:each="sociedad : ${sociedades}"
                             th:value="${sociedad.id}"
                             th:selected="${sociedad.id.toString() == selectedSociedadId}"
                             th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
                 </select>
             </div>
-            <div>
-                <label class="block font-label-md mb-1" for="fromDate">Desde</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
-                       type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="fromDate">Desde</label>
+                <input class="form-control rounded-3" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
             </div>
-            <div>
-                <label class="block font-label-md mb-1" for="toDate">Hasta</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
-                       type="date" id="toDate" name="toDate" th:value="${toDate}">
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="toDate">Hasta</label>
+                <input class="form-control rounded-3" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
-            <div>
-                <label class="block font-label-md mb-1" for="eventCode">Evento</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
-                        id="eventCode" name="eventCode">
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="eventCode">Evento</label>
+                <select class="form-select rounded-3" id="eventCode" name="eventCode">
                     <option value="">Todos</option>
                     <option value="085" th:selected="${eventCode == '085'}">085 Acuse</option>
                     <option value="086" th:selected="${eventCode == '086'}">086 Recibo</option>
@@ -55,15 +52,14 @@
                     <option value="TAC" th:selected="${eventCode == 'TAC'}">Tácita</option>
                 </select>
             </div>
-            <div>
-                <label class="block font-label-md mb-1" for="estadoDian">Estado</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2"
-                       type="text" id="estadoDian" name="estadoDian"
+            <div class="col-md-2">
+                <label class="form-label text-muted small" for="estadoDian">Estado</label>
+                <input class="form-control rounded-3" type="text" id="estadoDian" name="estadoDian"
                        placeholder="ENVIADO" th:value="${estadoDian}">
             </div>
-            <div class="flex items-end gap-2">
-                <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit">Consultar</button>
-                <a class="px-4 py-2 rounded-xl border border-surface-container-highest font-label-md text-decoration-none"
+            <div class="col-md-3 d-flex gap-2 align-items-end">
+                <button class="btn btn-zk rounded-pill px-4" type="submit">Consultar</button>
+                <a class="btn btn-outline-dark rounded-pill px-4 text-decoration-none"
                    th:href="@{/portal/recepcion/reportes/export(
                        sociedadId=${selectedSociedadId},
                        fromDate=${fromDate},
@@ -74,7 +70,7 @@
         </form>
     </section>
 
-    <section class="glass-card rounded-2xl overflow-hidden">
+    <section class="card zk-card">
         <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
             <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
             <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm"

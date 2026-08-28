@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Documento Soporte | DIAN Connect')}"></th:block>
@@ -7,19 +7,19 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
             <h1 class="dc-page-title">Documento soporte</h1>
             <p class="dc-page-subtitle">Emisión y consulta de documentos soporte (DS) por sociedad.</p>
         </div>
-        <a class="btn btn-primary" th:href="@{/portal/documento-soporte/nuevo}">Nuevo documento soporte</a>
+        <a class="btn btn-zk rounded-pill px-4" th:href="@{/portal/documento-soporte/nuevo}">Nuevo documento soporte</a>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card shadow-sm">
+    <section class="card zk-card">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <span>Documentos emitidos</span>
             <span class="badge text-bg-secondary" th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>

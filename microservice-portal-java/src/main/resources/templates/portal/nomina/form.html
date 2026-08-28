@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Nueva Nómina | DIAN Connect')}"></th:block>
@@ -7,19 +7,21 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Zona K / Nómina</p>
         <h1 class="dc-page-title">Emitir nómina electrónica</h1>
         <p class="dc-page-subtitle">Nómina individual con trabajador, periodo, devengados y deducciones.</p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
     <form th:action="@{/portal/nomina-electronica/emitir}" method="post" id="payrollForm">
-        <section class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">Sociedad y periodo</div>
-            <div class="card-body row g-3">
+        <section class="card zk-card mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Sociedad y periodo</h2>
+                <div class="row g-3">
                 <div class="col-12" th:if="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
                     <div class="alert alert-warning mb-0">
                         Configure una sociedad y un punto de venta activos antes de emitir.
@@ -54,7 +56,7 @@
             </div>
         </section>
 
-        <section class="card shadow-sm mb-4">
+        <section class="card zk-card mb-4">
             <div class="card-header bg-white">Trabajador</div>
             <div class="card-body row g-3">
                 <div class="col-md-3">
@@ -85,7 +87,7 @@
             </div>
         </section>
 
-        <section class="card shadow-sm mb-4">
+        <section class="card zk-card mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <span>Devengados</span>
                 <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-devengado">Agregar</button>
@@ -110,7 +112,7 @@
             </div>
         </section>
 
-        <section class="card shadow-sm mb-4">
+        <section class="card zk-card mb-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <span>Deducciones</span>
                 <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-deduccion">Agregar</button>
@@ -137,7 +139,7 @@
 
         <div class="d-flex justify-content-between">
             <a class="btn btn-outline-secondary" th:href="@{/portal/nomina-electronica}">Volver al listado</a>
-            <button class="btn btn-primary" type="submit">Emitir nómina</button>
+            <button class="btn btn-zk rounded-pill px-4" type="submit">Emitir nómina</button>
         </div>
     </form>
 </main>

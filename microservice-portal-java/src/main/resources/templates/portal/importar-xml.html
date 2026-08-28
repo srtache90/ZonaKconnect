@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Importar XML | DIAN Connect')}"></th:block>
@@ -7,29 +7,26 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
-        <h1 class="dc-page-title">Importar XML para firma DIAN</h1>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5"><p class="dc-page-subtitle mb-1">Zona K</p><h1 class="dc-page-title">Importar XML para firma DIAN</h1>
         <p class="dc-page-subtitle">Carga un XML nativo SAP, conviértelo al flujo común y envíalo a firma/envío DIAN.</p>
     </div>
 
     <section class="mb-4">
-        <div class="alert alert-success" role="alert" th:if="${success != null}">
+        <div class="alert alert-success rounded-4" role="alert" th:if="${success != null}">
             XML importado y enviado al proceso DIAN. Factura ID:
             <strong th:text="${success}">invoice-id</strong>
         </div>
 
-        <div class="alert alert-danger" role="alert" th:if="${error != null}">
+        <div class="alert alert-danger rounded-4" role="alert" th:if="${error != null}">
             No fue posible importar el XML:
             <strong th:text="${error}">detalle del error</strong>
         </div>
     </section>
 
-    <section class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            Cargar XML SAP
-        </div>
+    <section class="card zk-card">
         <div class="card-body">
+            <h2 class="h4 mb-3">Cargar XML SAP</h2>
             <form th:action="@{/portal/importar-xml}" method="post" enctype="multipart/form-data" class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label" for="archivoXml">Archivo XML</label>
@@ -39,7 +36,7 @@
                     </div>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
-                    <button class="btn btn-primary w-100" type="submit">
+                    <button class="btn btn-zk rounded-pill px-4 w-100" type="submit">
                         Importar y enviar a DIAN
                     </button>
                 </div>

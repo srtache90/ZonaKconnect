@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Certificados Digitales | DIAN Connect')}"></th:block>
@@ -7,18 +7,20 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
-    <div class="mb-4">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="mb-5">
+        <p class="dc-page-subtitle mb-1">Configuración / Certificados</p>
         <h1 class="dc-page-title">Certificados Digitales</h1>
         <p class="dc-page-subtitle">Carga segura de certificados .pfx/.p12 por sociedad</p>
     </div>
 
-    <div class="alert alert-success" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">Cargar certificado</div>
+    <section class="card zk-card mb-4">
         <div class="card-body">
+            <h2 class="h4 mb-1">Cargar certificado</h2>
+            <p class="text-muted small mb-4">Archivo .pfx o .p12 asociado a una sociedad.</p>
             <form th:action="@{/portal/admin/certificados}" method="post" enctype="multipart/form-data" class="row g-3">
                 <div class="col-md-4">
                     <label for="sociedadId" class="form-label">Sociedad</label>
@@ -58,7 +60,7 @@
         </div>
     </section>
 
-    <section class="card shadow-sm">
+    <section class="card zk-card">
         <div class="card-header bg-white">Certificados registrados</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">

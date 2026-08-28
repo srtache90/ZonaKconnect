@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('XML DIAN_NET | DIAN Connect')}"></th:block>
@@ -7,15 +7,15 @@
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="container py-4 pt-24 pb-32">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-4">
         <h1 class="dc-page-title">XML DIAN_NET</h1>
         <p class="dc-page-subtitle">Consulta el último XML que DIAN_NET intentó firmar.</p>
     </div>
 
-    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card shadow-sm mb-4" th:if="${metadata != null}">
+    <section class="card zk-card mb-4" th:if="${metadata != null}">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">Último intento de firma</h2>
             <span class="badge text-bg-primary" th:text="${metadata['documentKind']}">Factura</span>
@@ -43,7 +43,7 @@
         </div>
     </section>
 
-    <section class="card shadow-sm" th:if="${xml != null}">
+    <section class="card zk-card" th:if="${xml != null}">
         <div class="card-header bg-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
             <div>
                 <h2 class="h5 mb-0">XML consultado</h2>

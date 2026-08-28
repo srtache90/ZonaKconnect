@@ -1,144 +1,39 @@
-<!doctype html>
+﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('DIAN Connect - Emisión de Facturas')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Emisión de Facturas | DIAN Connect')}"></th:block>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e2de; border-radius: 10px; }
-
-        .zk-invoices-header {
-            background: #080808 !important;
-            border-bottom-color: #292929 !important;
-        }
-
-        .zk-invoices-menu,
-        .zk-invoices-menu .material-symbols-outlined {
-            color: #ffffff !important;
-        }
-
-        .zk-invoices-header-icon,
-        .zk-invoices-avatar,
-        .zk-invoices-page .bg-primary {
-            background: #f4ecdad8 !important;
-            border-color: #f7e2b0e1 !important;
-        }
-
-        .zk-invoices-brand {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0;
-            min-width: 14px;
-            color: #ffffff !important;
-            text-decoration: none;
-        }
-
-        .zk-invoices-logo {
-            display: block;
-            width: 120px;
-            height: auto;
-            object-fit: contain;
-        }
-
-        .zk-invoices-brand span {
-            color: #dccea9 !important;
-            font-family: "TT Commons", Arial, sans-serif;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: .16em;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        .zk-invoices-page,
-        .zk-invoices-page-title,
-        .zk-invoices-page [class~="text-primary"],
-        .zk-invoices-page [class~="text-headline-lg"],
-        .zk-invoices-page [class~="text-headline-md"] {
-            color: #1b1b1b !important;
-        }
-
-        .zk-invoices-page {
-            background: rgba(219, 201, 174, 0.4) !important;
-        }
-
-        .zk-invoices-page .text-on-primary {
-            color: #342e23 !important;
-        }
-
-        .zk-invoices-page .border-primary {
-            border-color: #967117 !important;
-        }
-
-        .zk-invoices-page .zk-invoices-panel,
-        .zk-invoices-page .zk-invoices-table {
-            border-color: #d6d0c5 !important;
-            box-shadow: 0 14px 34px rgba(54, 43, 20, .08) !important;
-        }
     </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar('emision', 'emision')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<header class="zk-invoices-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
-    <div class="flex items-center gap-3">
-        <button class="zk-invoices-menu p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-        <a class="zk-invoices-brand" th:href="@{/portal}" aria-label="Zona K Connect">
-            <img th:src="@{/imagen/Zonak1.png}"
-                 src="/imagen/Zonak1.png"
-                 alt="Zona K"
-                 class="zk-invoices-logo">
-            <span>CONNECT</span>
-        </a>
-    </div>
-
-    <div class="flex items-center gap-4">
-        <a class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-decoration-none" th:href="@{/portal/search}" aria-label="Buscar">
-            <span class="material-symbols-outlined text-on-surface-variant">search</span>
-        </a>
-        <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors" id="theme-toggle" type="button">
-            <span class="material-symbols-outlined text-on-surface-variant">contrast</span>
-        </button>
-        <div class="zk-invoices-avatar w-10 h-10 rounded-xl flex items-center justify-center font-semibold">JD</div>
-    </div>
-</header>
-
-<main class="zk-invoices-page pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1280px] mx-auto">
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-5">
         <div>
-            <h2 class="zk-invoices-page-title font-headline-lg text-headline-lg mb-2">Emisión de Facturas</h2>
-            <p class="font-body-md text-on-surface-variant max-w-lg">
-                Gestiona y monitorea tus comprobantes electrónicos en tiempo real con validación directa ante la DIAN.
-            </p>
+            <p class="dc-page-subtitle mb-1">Zona K / Emisión</p>
+            <h1 class="dc-page-title">Emisión de Facturas</h1>
+            <p class="dc-page-subtitle">Gestiona y monitorea comprobantes electrónicos con validación directa ante la DIAN.</p>
         </div>
-        <a class="zk-invoices-primary-action group relative flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-label-md transition-all hover:shadow-xl active:scale-95 overflow-hidden text-decoration-none"
+        <a class="btn btn-zk rounded-pill px-4 text-decoration-none"
            th:href="@{/portal/facturacion/manual}">
-            <span class="material-symbols-outlined text-[20px]">add</span>
-            <span>Nueva Factura</span>
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity border-color: #b3a378b9"></div>
+            Nueva Factura
         </a>
     </div>
 
-    <div class="mb-6 rounded-xl border px-4 py-3 font-body-md"
-         th:if="${success != null}"
-         th:classappend="' bg-emerald-50 border-emerald-200 text-emerald-800'"
-         th:text="${success}">Operación exitosa</div>
-    <div class="mb-6 rounded-xl border px-4 py-3 font-body-md"
-         th:if="${error != null}"
-         th:classappend="' bg-error-container border-error/20 text-on-error-container'"
-         th:text="${error}">Operación con error</div>
+    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="zk-invoices-panel mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
-        <div class="flex flex-col gap-2 mb-5">
-            <h3 class="font-headline-md text-headline-md font-semibold text-primary">Contexto de emisión</h3>
-            <p class="font-body-md text-on-surface-variant">
-                Seleccione la sociedad y el punto de venta para listar las facturas asociadas.
-            </p>
+    <section class="zk-filter-card p-4 mb-4">
+        <div class="mb-3">
+            <h2 class="h5 mb-1">Contexto de emisión</h2>
+            <p class="text-muted small mb-0">Seleccione la sociedad y el punto de venta para listar las facturas asociadas.</p>
         </div>
-        <form class="grid grid-cols-1 md:grid-cols-3 gap-6" id="context-form" method="get" th:action="@{/portal/invoices}">
+        <form class="row g-3 align-items-end" id="context-form" method="get" th:action="@{/portal/invoices}">
             <input name="page" type="hidden" value="1">
             <input name="estado" th:if="${estado != null}" th:value="${estado}" type="hidden">
             <input name="tipo" th:if="${tipo != null}" th:value="${tipo}" type="hidden">
@@ -188,7 +83,7 @@
         </p>
     </section>
 
-    <section class="zk-invoices-panel mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-surface-container-highest">
+    <section class="zk-filter-card p-4 mb-4">
         <form class="grid grid-cols-1 md:grid-cols-4 gap-6" method="get" th:action="@{/portal/invoices}">
             <input name="sociedadId" th:value="${selectedSociedadId}" type="hidden">
             <input name="emissionPointId" th:value="${selectedEmissionPointId}" type="hidden">
@@ -239,7 +134,7 @@
         </form>
     </section>
 
-    <section class="zk-invoices-table bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden border border-surface-container-highest">
+    <section class="card zk-card">
         <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low border-b border-surface-container-highest font-label-sm text-on-surface-variant">
             <div class="col-span-2">No. Factura</div>
             <div class="col-span-3">Documento</div>
@@ -331,13 +226,15 @@
                     </button>
                     <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
                        title="Descargar PDF"
-                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
+                       th:attr="title=${dianValidated} ? 'Descargar PDF' : 'PDF disponible cuando la DIAN valide el documento'"
+                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none' : ''"
                        th:href="@{/portal/invoices/{id}/documents/pdf(id=${invoice.id})}">
                         <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
                     </a>
                     <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
                        title="Descargar XML firmado"
-                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
+                       th:attr="title=${dianValidated} ? 'Descargar XML firmado' : 'XML disponible cuando la DIAN valide el documento'"
+                       th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none' : ''"
                        th:href="@{/portal/invoices/{id}/documents/signed-xml(id=${invoice.id})}">
                         <span class="material-symbols-outlined text-[18px]">code</span>
                     </a>
@@ -578,14 +475,14 @@
     </div>
 
     <section class="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="glass-card p-6 rounded-2xl flex flex-col gap-2">
+        <div class="card zk-card p-4 flex flex-col gap-2">
             <span class="font-label-sm text-on-surface-variant uppercase">Total Registros</span>
             <div class="flex items-end gap-2">
                 <span class="font-display-lg text-primary" th:text="${totalRecords}">0</span>
                 <span class="font-label-sm text-on-surface-variant mb-2">facturas</span>
             </div>
         </div>
-        <div class="glass-card p-6 rounded-2xl flex flex-col gap-2">
+        <div class="card zk-card p-4 flex flex-col gap-2">
             <span class="font-label-sm text-on-surface-variant uppercase">Página Actual</span>
             <div class="flex items-end gap-2">
                 <span class="font-display-lg text-primary" th:text="${page}">1</span>
@@ -675,21 +572,30 @@
             document.body.classList.remove('overflow-hidden');
         }
     };
-    document.getElementById('sidebar-open').addEventListener('click', () => {
-        sidebar.classList.remove('-translate-x-full');
-        backdrop.classList.remove('opacity-0', 'pointer-events-none');
-    });
+    const sidebarOpenBtn = document.getElementById('sidebar-open');
+    const themeToggleBtn = document.getElementById('theme-toggle');
 
-    backdrop.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-        backdrop.classList.add('opacity-0', 'pointer-events-none');
-    });
+    if (sidebarOpenBtn && sidebar && backdrop) {
+        sidebarOpenBtn.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+        });
+    }
 
-    document.getElementById('theme-toggle').addEventListener('click', () => {
-        html.classList.toggle('dark');
-        html.classList.toggle('light');
-        localStorage.setItem('zk-theme', html.classList.contains('dark') ? 'dark' : 'light');
-    });
+    if (backdrop && sidebar) {
+        backdrop.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+        });
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            html.classList.toggle('light');
+            localStorage.setItem('zk-theme', html.classList.contains('dark') ? 'dark' : 'light');
+        });
+    }
 
     if (localStorage.getItem('zk-theme') === 'dark') {
         html.classList.add('dark');
