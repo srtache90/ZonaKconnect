@@ -1,0 +1,161 @@
+<!doctype html>
+<html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Documentos y eventos RADIAN | Zona K e-Docs')}"></th:block>
+    <style>
+        .report-table { font-size: 0.82rem; }
+        .report-table th { white-space: nowrap; }
+        .cufe-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .events-cell { min-width: 260px; max-width: 420px; white-space: normal; }
+    </style>
+</head>
+<body class="text-on-surface">
+<div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'radian')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
+
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1600px] mx-auto">
+    <div class="mb-8">
+        <a class="inline-flex items-center gap-1 text-on-surface-variant font-label-md mb-3 text-decoration-none" th:href="@{/portal/emision/reportes}">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Volver a reportes
+        </a>
+        <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Documentos emitidos y eventos RADIAN</h2>
+        <p class="font-body-md text-on-surface-variant">
+            Facturas, notas crédito y notas débito con CUFE/CUDE, valor total y eventos RADIAN consultados en DIAN (GetDocumentInfo).
+        </p>
+    </div>
+
+    <div th:if="${syncMessage != null}"
+         th:class="'mb-4 rounded-xl px-4 py-3 font-label-md ' + (${syncSuccess} ? 'bg-green-50 text-green-900 border border-green-200' : 'bg-amber-50 text-amber-900 border border-amber-200')"
+         th:text="${syncMessage}">Resultado sincronización</div>
+    <ul th:if="${syncErrors != null && !#lists.isEmpty(syncErrors)}"
+        class="mb-4 rounded-xl px-4 py-3 bg-amber-50 text-amber-900 border border-amber-200 text-sm">
+        <li th:each="error : ${syncErrors}" th:text="${error}">Error</li>
+    </ul>
+
+    <section class="zk-filter-card p-4 mb-4">
+        <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
+        <form method="get" th:action="@{/portal/emision/reportes/documentos-radian}" class="grid md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <div>
+                <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
+                    <option th:each="sociedad : ${sociedades}"
+                            th:value="${sociedad.id}"
+                            th:selected="${sociedad.id.toString() == selectedSociedadId}"
+                            th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="emissionPointId">Punto de venta</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="emissionPointId" name="emissionPointId">
+                    <option value="">Todos</option>
+                    <option th:each="puntoVenta : ${puntosVenta}"
+                            th:value="${puntoVenta.id}"
+                            th:data-sociedad-id="${puntoVenta.sociedadId}"
+                            th:selected="${puntoVenta.id.toString() == selectedEmissionPointId}"
+                            th:text="${puntoVenta.codigo + ' - ' + puntoVenta.nombre}">PV01</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="documentKind">Tipo documento</label>
+                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="documentKind" name="documentKind">
+                    <option value="" th:selected="${documentKind == null || documentKind == ''}">Todos</option>
+                    <option value="INVOICE" th:selected="${documentKind == 'INVOICE'}">Factura</option>
+                    <option value="CREDIT_NOTE" th:selected="${documentKind == 'CREDIT_NOTE'}">Nota crédito</option>
+                    <option value="DEBIT_NOTE" th:selected="${documentKind == 'DEBIT_NOTE'}">Nota débito</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="fromDate">Desde</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="toDate">Hasta</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="toDate" name="toDate" th:value="${toDate}">
+            </div>
+            <div>
+                <label class="block font-label-md mb-1" for="estadoDian">Estado DIAN</label>
+                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="text" id="estadoDian" name="estadoDian" placeholder="Ej: ENVIADO" th:value="${estadoDian}">
+            </div>
+            <div class="flex items-end gap-2 flex-wrap">
+                <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit">Consultar</button>
+                <button class="px-4 py-2 rounded-xl border border-primary text-primary font-label-md"
+                        formaction="/portal/emision/reportes/documentos-radian/sync"
+                        formmethod="post"
+                        type="submit">
+                    Sincronizar DIAN
+                </button>
+                <a class="px-4 py-2 rounded-xl border border-surface-container-highest font-label-md text-decoration-none"
+                   th:href="@{/portal/emision/reportes/documentos-radian/export(
+                       sociedadId=${selectedSociedadId},
+                       emissionPointId=${selectedEmissionPointId},
+                       documentKind=${documentKind},
+                       fromDate=${fromDate},
+                       toDate=${toDate},
+                       estadoDian=${estadoDian})}">CSV</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="card zk-card">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
+            <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
+            <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm" th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full report-table">
+                <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="text-left px-4 py-3">Tipo</th>
+                    <th class="text-left px-4 py-3">Factura</th>
+                    <th class="text-left px-4 py-3">NC</th>
+                    <th class="text-left px-4 py-3">ND</th>
+                    <th class="text-left px-4 py-3">Fecha</th>
+                    <th class="text-left px-4 py-3">CUFE/CUDE</th>
+                    <th class="text-right px-4 py-3">Total</th>
+                    <th class="text-left px-4 py-3">Estado DIAN</th>
+                    <th class="text-left px-4 py-3">Eventos RADIAN</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${rows}" class="border-t border-surface-container-highest align-top">
+                    <td class="px-4 py-3" th:text="${row.documentKindLabel()}">Factura</td>
+                    <td class="px-4 py-3" th:text="${row.facturaNumero()}">EVK528</td>
+                    <td class="px-4 py-3" th:text="${row.notaCreditoNumero()}">EVK3</td>
+                    <td class="px-4 py-3" th:text="${row.notaDebitoNumero()}">—</td>
+                    <td class="px-4 py-3" th:text="${row.fechaEmision()}">2026-08-30</td>
+                    <td class="px-4 py-3 cufe-cell" th:title="${row.cufe()}" th:text="${row.cufe()}">CUFE</td>
+                    <td class="px-4 py-3 text-right" th:text="${#numbers.formatDecimal(row.valorTotal(), 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                    <td class="px-4 py-3" th:text="${row.estadoDian()}">ENVIADO</td>
+                    <td class="px-4 py-3 events-cell">
+                        <span th:if="${#lists.isEmpty(row.radianEvents())}" class="text-on-surface-variant">Sin eventos</span>
+                        <ul th:if="${!#lists.isEmpty(row.radianEvents())}" class="mb-0 ps-3">
+                            <li th:each="event : ${row.radianEvents()}"
+                                th:text="${event.display()}">085 - Acuse (ENVIADO)</li>
+                        </ul>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(rows)}">
+                    <td class="px-4 py-6 text-center text-on-surface-variant" colspan="9">
+                        No hay documentos emitidos para los filtros seleccionados.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav('reportes', 'radian')}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+<script th:inline="javascript">
+    function actualizarPuntosVenta() {
+        const sociedadId = document.getElementById('sociedadId').value;
+        document.querySelectorAll('#emissionPointId option[data-sociedad-id]').forEach(option => {
+            option.hidden = option.dataset.sociedadId !== sociedadId;
+        });
+    }
+    actualizarPuntosVenta();
+</script>
+</body>
+</html>

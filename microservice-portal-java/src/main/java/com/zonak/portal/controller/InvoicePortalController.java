@@ -414,6 +414,12 @@ public class InvoicePortalController {
                         .body(pdfBytes);
             } catch (InvoiceStorageException ex) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, readableError(ex), ex);
+            } catch (RuntimeException ex) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof InvoiceStorageException storageEx) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, readableError(storageEx), storageEx);
+                }
+                throw ex;
             }
         }
 

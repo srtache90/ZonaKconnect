@@ -37,6 +37,37 @@ namespace DIAN_NET.Services
             return BuildSuccessfulResponse($"evento-{Guid.NewGuid():N}.zip");
         }
 
+        public DocumentInfoResponse ConsultarDocumentoInfo(string uuid, string ambiente)
+        {
+            return new DocumentInfoResponse
+            {
+                StatusCode = "00",
+                StatusDescription = "Consulta mock DIAN exitosa",
+                DocumentInfo = new[]
+                {
+                    new Documento
+                    {
+                        UUID = uuid,
+                        Eventos = new[]
+                        {
+                            new Evento
+                            {
+                                Codigo = "030",
+                                Descripcion = "Acuse de recibo de factura electrónica de venta",
+                                UUID = $"MOCK-EVENT-030-{Guid.NewGuid():N}"
+                            },
+                            new Evento
+                            {
+                                Codigo = "032",
+                                Descripcion = "Recibo del bien y/o prestación del servicio",
+                                UUID = $"MOCK-EVENT-032-{Guid.NewGuid():N}"
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
         private static DianResponse BuildSuccessfulResponse(string documentKey)
         {
             var applicationResponseXml = """

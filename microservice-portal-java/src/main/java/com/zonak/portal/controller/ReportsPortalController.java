@@ -2,12 +2,18 @@ package com.zonak.portal.controller;
 
 import com.zonak.portal.admin.PuntoVenta;
 import com.zonak.portal.admin.Sociedad;
+import com.zonak.portal.admin.AdminPortalRepository;
+import com.zonak.portal.admin.SociedadDianContext;
+import com.zonak.portal.dto.EmissionRadianReportRow;
 import com.zonak.portal.dto.DocumentKindInvoiceRow;
 import com.zonak.portal.dto.SalesDetailReportRow;
 import com.zonak.portal.recepcion.RadianEventRepository;
 import com.zonak.portal.recepcion.RadianEventRow;
 import com.zonak.portal.recepcion.ReceivedInvoiceRepository;
 import com.zonak.portal.recepcion.ReceivedInvoiceRow;
+import com.zonak.portal.reports.EmissionRadianReportCsvExporter;
+import com.zonak.portal.reports.EmissionRadianReportRepository;
+import com.zonak.portal.reports.EmissionRadianSyncService;
 import com.zonak.portal.reports.DocumentKindInvoiceRepository;
 import com.zonak.portal.reports.DocumentKindReportCsvExporter;
 import com.zonak.portal.reports.MagneticMediaExportService;
@@ -29,7 +35,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ReportsPortalController {
@@ -39,6 +47,9 @@ public class ReportsPortalController {
     private final ReceivedInvoiceRepository receivedInvoiceRepository;
     private final RadianEventRepository radianEventRepository;
     private final DocumentKindInvoiceRepository documentKindInvoiceRepository;
+    private final EmissionRadianReportRepository emissionRadianReportRepository;
+    private final EmissionRadianSyncService emissionRadianSyncService;
+    private final AdminPortalRepository adminPortalRepository;
 
     public ReportsPortalController(
             PortalSessionService portalSessionService,
@@ -46,7 +57,10 @@ public class ReportsPortalController {
             MagneticMediaExportService magneticMediaExportService,
             ReceivedInvoiceRepository receivedInvoiceRepository,
             RadianEventRepository radianEventRepository,
-            DocumentKindInvoiceRepository documentKindInvoiceRepository
+            DocumentKindInvoiceRepository documentKindInvoiceRepository,
+            EmissionRadianReportRepository emissionRadianReportRepository,
+            EmissionRadianSyncService emissionRadianSyncService,
+            AdminPortalRepository adminPortalRepository
     ) {
         this.portalSessionService = portalSessionService;
         this.salesReportRepository = salesReportRepository;
@@ -54,6 +68,9 @@ public class ReportsPortalController {
         this.receivedInvoiceRepository = receivedInvoiceRepository;
         this.radianEventRepository = radianEventRepository;
         this.documentKindInvoiceRepository = documentKindInvoiceRepository;
+        this.emissionRadianReportRepository = emissionRadianReportRepository;
+        this.emissionRadianSyncService = emissionRadianSyncService;
+        this.adminPortalRepository = adminPortalRepository;
     }
 
     @GetMapping("/portal/emision/reportes")
@@ -107,6 +124,105 @@ public class ReportsPortalController {
 
         byte[] csv = SalesReportCsvExporter.export(rows);
         String filename = "reporte-ventas-detallado-%s-%s.csv".formatted(filters.fromDate(), filters.toDate());
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(csv);
+    }
+
+    @GetMapping("/portal/emision/reportes/documentos-radian")
+    public String documentosRadian(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String emissionPointId,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String documentKind,
+            @RequestParam(required = false) String estadoDian,
+            HttpSession session,
+            Model model
+    ) {
+        ReportFilters filters = resolveFilters(session, sociedadId, emissionPointId, fromDate, toDate);
+        List<EmissionRadianReportRow> rows = emissionRadianReportRepository.findDocumentsWithRadianEvents(
+                filters.tenantId(),
+                filters.emissionPointId(),
+                filters.fromDate(),
+                filters.toDate(),
+                documentKind,
+                estadoDian
+        );
+
+        populateEmisionFilters(model, session, filters);
+        model.addAttribute("rows", rows);
+        model.addAttribute("documentKind", documentKind);
+        model.addAttribute("estadoDian", estadoDian);
+        model.addAttribute("totalRegistros", rows.size());
+        return "portal/emision/reportes/documentos-radian";
+    }
+
+    @PostMapping("/portal/emision/reportes/documentos-radian/sync")
+    public String syncDocumentosRadian(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String emissionPointId,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String documentKind,
+            @RequestParam(required = false) String estadoDian,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        ReportFilters filters = resolveFilters(session, sociedadId, emissionPointId, fromDate, toDate);
+        SociedadDianContext context = adminPortalRepository.findSociedadDianContext(filters.tenantId());
+
+        try {
+            EmissionRadianSyncService.SyncResult result = emissionRadianSyncService.syncFromDian(
+                    context,
+                    filters.tenantId(),
+                    filters.emissionPointId(),
+                    filters.fromDate(),
+                    filters.toDate(),
+                    documentKind,
+                    estadoDian
+            );
+            redirectAttributes.addFlashAttribute("syncMessage", result.summaryMessage());
+            redirectAttributes.addFlashAttribute("syncSuccess", result.failedDocuments() == 0);
+            if (!result.errors().isEmpty()) {
+                redirectAttributes.addFlashAttribute("syncErrors", result.errors());
+            }
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("syncMessage", "Error al sincronizar eventos RADIAN: " + ex.getMessage());
+            redirectAttributes.addFlashAttribute("syncSuccess", false);
+        }
+
+        return "redirect:/portal/emision/reportes/documentos-radian"
+                + "?sociedadId=" + filters.tenantId()
+                + (filters.emissionPointId() != null ? "&emissionPointId=" + filters.emissionPointId() : "")
+                + "&fromDate=" + filters.fromDate()
+                + "&toDate=" + filters.toDate()
+                + (documentKind != null && !documentKind.isBlank() ? "&documentKind=" + documentKind : "")
+                + (estadoDian != null && !estadoDian.isBlank() ? "&estadoDian=" + estadoDian : "");
+    }
+
+    @GetMapping("/portal/emision/reportes/documentos-radian/export")
+    public ResponseEntity<byte[]> exportDocumentosRadian(
+            @RequestParam(required = false) String sociedadId,
+            @RequestParam(required = false) String emissionPointId,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String documentKind,
+            @RequestParam(required = false) String estadoDian,
+            HttpSession session
+    ) {
+        ReportFilters filters = resolveFilters(session, sociedadId, emissionPointId, fromDate, toDate);
+        List<EmissionRadianReportRow> rows = emissionRadianReportRepository.findDocumentsWithRadianEvents(
+                filters.tenantId(),
+                filters.emissionPointId(),
+                filters.fromDate(),
+                filters.toDate(),
+                documentKind,
+                estadoDian
+        );
+        byte[] csv = EmissionRadianReportCsvExporter.export(rows);
+        String filename = "documentos-radian-%s-%s.csv".formatted(filters.fromDate(), filters.toDate());
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

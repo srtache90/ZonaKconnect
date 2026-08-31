@@ -597,6 +597,32 @@ namespace DIAN_NET
             }
         }
 
+        public DocumentInfoResponse ConsultarDocumentoInfo(string uuid, string ambiente)
+        {
+            if (string.IsNullOrWhiteSpace(uuid))
+            {
+                throw new ArgumentException("El UUID/CUFE no puede ser nulo o vacío", nameof(uuid));
+            }
+
+            if (string.IsNullOrWhiteSpace(ambiente))
+            {
+                throw new ArgumentException("El ambiente no puede ser nulo o vacío", nameof(ambiente));
+            }
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            try
+            {
+                var client = GetClient(ambiente);
+                Debug.WriteLine($"=== DEBUG: Consultando GetDocumentInfo uuid={uuid} ambiente={ambiente} ===");
+                return client.GetDocumentInfo(uuid.Trim());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error al consultar documento RADIAN en DIAN (CUFE/CUDE={uuid}): {ex.Message}", ex);
+            }
+        }
+
         public DianResponse EnviarEvento(byte[] zipData, string ambiente)
         {
             if (zipData == null || zipData.Length == 0)

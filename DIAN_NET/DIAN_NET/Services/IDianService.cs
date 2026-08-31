@@ -14,5 +14,6 @@ namespace DIAN_NET.Services
         DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente);
         DianResponse EnviarNomina(byte[] zipData, string ambiente);
         DianResponse EnviarEvento(byte[] zipData, string ambiente);
+        DocumentInfoResponse ConsultarDocumentoInfo(string uuid, string ambiente);
     }
 }

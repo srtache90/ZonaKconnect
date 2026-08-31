@@ -59,6 +59,11 @@
                         <span class="material-symbols-outlined">upload_file</span>
                         <span>Medios magnéticos</span>
                     </a>
+                    <a th:href="@{/portal/emision/reportes/documentos-radian}"
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'radian' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined">history</span>
+                        <span>Documentos RADIAN</span>
+                    </a>
                 </th:block>
 
                 <th:block th:if="${module == 'recepcion'}">
@@ -235,6 +240,11 @@
                th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'medios' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
                 <span class="material-symbols-outlined">upload_file</span>
                 <span class="font-label-sm text-label-sm mt-1">Magnéticos</span>
+            </a>
+            <a th:href="@{/portal/emision/reportes/documentos-radian}"
+               th:class="'flex flex-col items-center justify-center transition-transform text-decoration-none ' + (${activeMenu} == 'radian' ? 'text-primary font-semibold scale-110' : 'text-on-surface-variant opacity-60 hover:opacity-100')">
+                <span class="material-symbols-outlined">history</span>
+                <span class="font-label-sm text-label-sm mt-1">RADIAN</span>
             </a>
         </th:block>
 

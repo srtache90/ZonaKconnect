@@ -50,6 +50,11 @@ namespace DIAN_NET.Services
                 ? _mock.EnviarEvento(zipData, ambiente)
                 : ExecuteReal(ambiente, manager => manager.EnviarEvento(zipData, ambiente));
 
+        public DocumentInfoResponse ConsultarDocumentoInfo(string uuid, string ambiente) =>
+            IsMock(ambiente)
+                ? _mock.ConsultarDocumentoInfo(uuid, ambiente)
+                : ExecuteReal(ambiente, manager => manager.ConsultarDocumentoInfo(uuid, ambiente));
+
         private T ExecuteReal<T>(string ambiente, Func<DianManager, T> action)
         {
             var (manager, ownsManager) = CreateRealManager(ambiente);

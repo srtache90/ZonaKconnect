@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"zonak/microservice-core-go/internal/delivery"
+	"zonak/microservice-core-go/internal/emission"
+	"zonak/microservice-core-go/internal/queue"
 	"zonak/microservice-core-go/internal/reception"
 
 	"github.com/go-chi/chi/v5"
@@ -33,9 +35,10 @@ const (
 )
 
 type app struct {
-	db         *pgxpool.Pool
-	dianAPIURL string
-	httpClient *http.Client
+	db              *pgxpool.Pool
+	dianAPIURL      string
+	httpClient      *http.Client
+	radianPublisher queue.Publisher
 }
 
 type createInvoiceRequest struct {
@@ -44,6 +47,26 @@ type createInvoiceRequest struct {
 	Items    []invoiceItem   `json:"items"`
 	XMLBase  string          `json:"xml_base"`
 	Totals   json.RawMessage `json:"totals_jsonb"`
+}
+
+func enrichRawPayloadWithIssueDate(raw json.RawMessage) json.RawMessage {
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return raw
+	}
+	for _, key := range []string{"fechaEmision", "fecha_emision"} {
+		if value, ok := payload[key]; ok {
+			if text, ok := value.(string); ok && strings.TrimSpace(text) != "" {
+				return raw
+			}
+		}
+	}
+	payload["fechaEmision"] = time.Now().In(colombiaLocation).Format(time.RFC3339)
+	out, err := json.Marshal(payload)
+	if err != nil {
+		return raw
+	}
+	return out
 }
 
 type createCreditNoteRequest struct {
@@ -342,6 +365,7 @@ func main() {
 		dianAPIURL: strings.TrimRight(getenv("DIAN_API_URL", getenv("DIAN_NET_URL", "http://dian-net:8080")), "/"),
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+	a.radianPublisher = queue.NewPublisherFromEnv(ctx, db, a.dianAPIURL)
 	receptionHandlers := reception.NewHandlers(
 		db,
 		getenv("JWT_SECRET", "local-dev-secret-change-before-production-32-bytes-minimum"),
@@ -632,6 +656,7 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	rawPayload = enrichRawPayloadWithIssueDate(rawPayload)
 	totals := req.Totals
 	if len(totals) == 0 {
 		totals, err = json.Marshal(map[string]any{"items": req.Items})
@@ -765,6 +790,7 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	rawPayload = enrichRawPayloadWithIssueDate(rawPayload)
 	totals := req.Totals
 	if len(totals) == 0 {
 		totals, err = json.Marshal(map[string]any{"items": req.Items})
@@ -890,6 +916,7 @@ func (a *app) handleCreateDebitNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	rawPayload = enrichRawPayloadWithIssueDate(rawPayload)
 	totals := req.Totals
 	if len(totals) == 0 {
 		totals, err = json.Marshal(map[string]any{"items": req.Items})
@@ -1426,7 +1453,32 @@ func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointI
 	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
 		return payload, err
 	}
+	a.enqueueRadianSync(ctx, tenantID, emissionPointID, invoiceID, uuidCude, ambiente, estadoDian)
 	return payload, nil
+}
+
+func (a *app) enqueueRadianSync(
+	ctx context.Context,
+	tenantID, emissionPointID, invoiceID uuid.UUID,
+	cufe, ambiente, estadoDian string,
+) {
+	if a.radianPublisher == nil || !emission.ShouldEnqueue(estadoDian, cufe) {
+		return
+	}
+	job := emission.RadianSyncJob{
+		Job:             emission.JobNameRadianSync,
+		TenantID:        tenantID,
+		EmissionPointID: emissionPointID,
+		InvoiceID:       invoiceID,
+		Cufe:            strings.TrimSpace(cufe),
+		Ambiente:        ambiente,
+		Attempt:         0,
+		EnqueuedAt:      time.Now().UTC(),
+		Source:          "post-emission",
+	}
+	if err := a.radianPublisher.Publish(ctx, job); err != nil {
+		log.Printf("enqueueRadianSync invoice_id=%s error=%v", invoiceID, err)
+	}
 }
 
 func dianNetHTTPError(httpStatus int, payload json.RawMessage) error {
@@ -1512,6 +1564,7 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
 		return payload, err
 	}
+	a.enqueueRadianSync(ctx, tenantID, emissionPointID, invoiceID, uuidCude, ambiente, estadoDian)
 	return payload, nil
 }
 
@@ -1587,6 +1640,7 @@ func (a *app) emitDebitNoteToDianNet(ctx context.Context, tenantID, emissionPoin
 	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
 		return payload, err
 	}
+	a.enqueueRadianSync(ctx, tenantID, emissionPointID, invoiceID, uuidCude, ambiente, estadoDian)
 	return payload, nil
 }
 
