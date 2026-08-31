@@ -122,6 +122,11 @@ services:
       DianConfig__Mock__Enabled: "${DIAN_MOCK_ENABLED:-false}"
       DianConfig__Certificado__Path: ${DIAN_CERT_PATH:-/certs/dian-certificate.p12}
       DianConfig__Certificado__Password: ${DIAN_CERT_PASSWORD}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-}
+      AWS_S3_INVOICE_DOCUMENTS_BUCKET: ${AWS_S3_INVOICE_DOCUMENTS_BUCKET:-invoice-documents-bucket}
     volumes:
       - ./certs:/certs:ro
     networks:

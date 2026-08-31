@@ -1,4 +1,5 @@
-/* DIAN Connect — UI unificada (portal)
+/* Zona K e-Docs — UI unificada (portal)
+   Paleta referencia: módulo Recepción RADIAN.
    Se carga después de Bootstrap/Tailwind para normalizar componentes. */
 
 :root {
@@ -17,13 +18,25 @@
     --dc-success-container: #d8f3e3;
     --dc-warning: #7a5a00;
     --dc-warning-container: #fff1c2;
+    --dc-accent-gold: #967117;
+    --dc-accent-gold-light: #f5d88e;
+    --dc-accent-gold-soft-bg: #f4f1eb;
+    --dc-accent-gold-soft-text: #806521;
+    --dc-brand-subtitle: #dccea9;
+    --dc-header-bg: #080808;
+    --dc-header-border: #292929;
+    --dc-page-bg: rgba(247, 246, 246, 0.978);
+    --dc-focus-gold: rgba(150, 113, 23, 0.14);
+    --dc-shadow-panel: 0 10px 28px rgba(46, 38, 24, 0.055);
     --dc-radius: 0.75rem;
     --dc-radius-sm: 0.5rem;
+    --dc-radius-lg: 1rem;
+    --dc-radius-card: 1rem;
     --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     --dc-font: "TT Commons", Arial, sans-serif;
     --dc-header-h: 4rem;
 
-    /* Bootstrap: sin azul — acento negro */
+    /* Bootstrap: sin azul — acento negro + bronce recepción */
     --bs-primary: #000000;
     --bs-primary-rgb: 0, 0, 0;
     --bs-link-color: #000000;
@@ -33,7 +46,7 @@
     --bs-info-text-emphasis: #1c1c1a;
     --bs-info-bg-subtle: #eceae6;
     --bs-info-border-subtle: #cfcbc4;
-    --bs-focus-ring-color: rgba(0, 0, 0, 0.2);
+    --bs-focus-ring-color: var(--dc-focus-gold);
 }
 
 html.light,
@@ -43,14 +56,15 @@ html:not(.dark) {
 
 body,
 body.bg-light,
-body.text-on-surface {
+body.text-on-surface,
+body.zk-edocs-theme {
     min-height: 100dvh;
     margin: 0;
     color: var(--dc-on-surface) !important;
-    background:  rgba(247, 246, 246, 0.978) !important;
+    background: var(--dc-page-bg) !important;
     font-family: var(--dc-font) !important;
     -webkit-font-smoothing: antialiased;
-    padding: 0px 80px 0px 80px;
+    padding: 0 clamp(1.25rem, 4vw, 5rem);
 }
 
 html.dark body {
@@ -81,7 +95,7 @@ main.pt-24 {
     font-size: 1.75rem;
     font-weight: 600;
     letter-spacing: -0.01em;
-    color: var(--dc-primary);
+    color: #1b1b1b;
     margin: 0 0 0.35rem;
 }
 
@@ -102,12 +116,30 @@ main.pt-24 {
 .card,
 .zk-card,
 .zk-filter-card {
-    background: #ffffff85 !important;
-    border: 2px solid #ffffff00 !important;
-    border-radius: 26px !important;
-    box-shadow: 0 20px 30px 0 !important;
-    color: #62625b1f !important;
-    font-size:11px;
+    background: var(--dc-surface-lowest) !important;
+    border: 1px solid var(--dc-surface-high) !important;
+    border-radius: var(--dc-radius-card) !important;
+    box-shadow: var(--dc-shadow-panel) !important;
+    color: var(--dc-on-surface) !important;
+}
+
+.zk-filter-card,
+.zk-card {
+    position: relative;
+}
+
+.zk-filter-card::before,
+.zk-card > .card-body:first-child::before,
+.zk-invoices-panel::before {
+    position: absolute;
+    top: 0;
+    left: 1.5rem;
+    width: 3.5rem;
+    height: 3px;
+    content: "";
+    background: var(--dc-accent-gold-light);
+    border-radius: 0 0 4px 4px;
+    pointer-events: none;
 }
 
 .card-header,
@@ -151,8 +183,8 @@ small.text-muted {
 
 /* ---- Module shell (recepción / emisión / admin) ---- */
 .zk-module-header {
-    background: #080808 !important;
-    border-bottom-color: #292929 !important;
+    background: var(--dc-header-bg) !important;
+    border-bottom-color: var(--dc-header-border) !important;
 }
 
 .zk-module-brand {
@@ -173,12 +205,12 @@ small.text-muted {
 }
 
 .zk-module-brand span {
-    color: #dccea9 !important;
+    color: var(--dc-brand-subtitle) !important;
     font-family: var(--dc-font);
     font-size: 10px;
     font-weight: 600;
     letter-spacing: .16em;
-    text-transform: uppercase;
+    text-transform: none;
     line-height: 1;
 }
 
@@ -196,40 +228,8 @@ small.text-muted {
 }
 
 .zk-invoices-header {
-    background: #080808 !important;
-    border-bottom-color: #292929 !important;
-}
-
-.zk-invoices-brand {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0;
-    min-width: 14px;
-    color: #ffffff !important;
-    text-decoration: none;
-}
-
-.zk-invoices-logo {
-    display: block;
-    width: 120px;
-    height: auto;
-    object-fit: contain;
-}
-
-.zk-invoices-brand span {
-    color: #dccea9 !important;
-    font-family: var(--dc-font);
-    font-weight: 500;
-    border-radius: var(--dc-radius-sm) !important;}
-
-.zk-invoices-page {
-    background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(249,247,243,.18));
-}
-
-.zk-invoices-header {
-    background: #080808 !important;
-    border-bottom-color: #292929 !important;
+    background: var(--dc-header-bg) !important;
+    border-bottom-color: var(--dc-header-border) !important;
 }
 
 .zk-invoices-brand {
@@ -238,19 +238,19 @@ small.text-muted {
 }
 
 .zk-invoices-brand span {
-    color: #dccea9 !important;
-    font-size: .72em;
-    letter-spacing: .18em;
-    text-transform: uppercase;
+    color: var(--dc-brand-subtitle) !important;
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: none;
 }
 
 .zk-invoices-avatar {
-    background: #967117 !important;
+    background: var(--dc-accent-gold) !important;
     color: #ffffff !important;
 }
 
 .zk-invoices-header-icon {
-    background: #967117 !important;
+    background: var(--dc-accent-gold) !important;
     color: #ffffff !important;
 }
 
@@ -259,21 +259,19 @@ small.text-muted {
 }
 
 .zk-invoices-primary-action {
-    background: #967117 !important;
+    background: var(--dc-accent-gold) !important;
     color: #ffffff !important;
-    border: 1px solid #967117;
+    border: 1px solid var(--dc-accent-gold);
 }
 
-.zk-invoices-page .bg-primary {
-    background-color: #967117 !important;
-}
-
+.zk-invoices-page .bg-primary,
 .zk-invoices-page [class~="bg-primary"] {
-    background-color: #967117 !important;
+    background-color: var(--dc-accent-gold) !important;
 }
 
-.zk-invoices-page .border-primary {
-    border-color: #967117 !important;
+.zk-invoices-page .border-primary,
+.zk-invoices-page [class~="border-primary"] {
+    border-color: var(--dc-accent-gold) !important;
 }
 
 .zk-invoices-page .text-primary {
@@ -309,13 +307,13 @@ small.text-muted {
 .zk-invoices-page .zk-invoices-panel .focus\:border-secondary:focus,
 .zk-invoices-page .zk-invoices-panel select:focus,
 .zk-invoices-page .zk-invoices-panel input:focus {
-    border-color: #967117 !important;
-    box-shadow: 0 0 0 3px rgba(150, 113, 23, .14) !important;
+    border-color: var(--dc-accent-gold) !important;
+    box-shadow: 0 0 0 3px var(--dc-focus-gold) !important;
 }
 
 .zk-invoices-page .bg-secondary-fixed {
-    background: #f4f1eb !important;
-    color: #806521 !important;
+    background: var(--dc-accent-gold-soft-bg) !important;
+    color: var(--dc-accent-gold-soft-text) !important;
 }
 
 .zk-invoices-panel,
@@ -334,8 +332,9 @@ small.text-muted {
     width: 3.5rem;
     height: 3px;
     content: "";
-    background: #f5d88e;
+    background: var(--dc-accent-gold-light);
     border-radius: 0 0 4px 4px;
+    pointer-events: none;
 }
 
 .zk-invoice-row {
@@ -345,7 +344,7 @@ small.text-muted {
 
 .zk-invoice-row:hover {
     z-index: 1;
-    box-shadow: inset 3px 0 0 #967117, 0 4px 16px rgba(46, 38, 24, .06);
+    box-shadow: inset 3px 0 0 var(--dc-accent-gold), 0 4px 16px rgba(46, 38, 24, .06);
 }
 
 @media (max-width: 700px) {
@@ -451,8 +450,8 @@ textarea.form-control {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--dc-primary) !important;
-    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08) !important;
+    border-color: var(--dc-accent-gold) !important;
+    box-shadow: 0 0 0 3px var(--dc-focus-gold) !important;
 }
 
 .form-label {
@@ -491,6 +490,7 @@ textarea.form-control {
 
 .table-hover > tbody > tr:hover > * {
     background: var(--dc-surface-low) !important;
+    box-shadow: inset 3px 0 0 var(--dc-accent-gold);
 }
 
 .table-responsive {
@@ -609,7 +609,7 @@ a:not(.btn):not(.nav-link):not(.zk-module-brand):hover {
     background: #fff;
 }
 
-/* ---- Dashboard module panel (zkm) aligned to DIAN Connect ---- */
+/* ---- Dashboard module panel (zkm) aligned to Zona K e-Docs ---- */
 .zkm-body {
     background: var(--dc-surface) !important;
     color: var(--dc-on-surface) !important;
@@ -775,4 +775,33 @@ a:not(.btn):not(.nav-link):not(.zk-module-brand):hover {
     margin: 0.15rem 0 0;
     color: var(--dc-on-variant);
     font-size: 0.9rem;
+}
+
+/* ---- Dashboard alineado a paleta recepción (Zona K e-Docs) ---- */
+.zk-edocs-dashboard.zk-dashboard-shell {
+    background: var(--dc-page-bg) !important;
+    border-color: var(--dc-surface-high) !important;
+    color: var(--dc-on-surface) !important;
+}
+
+.zk-edocs-dashboard .zk-dashboard-header {
+    background: var(--dc-header-bg) !important;
+    border-bottom-color: var(--dc-header-border) !important;
+}
+
+.zk-edocs-dashboard .zk-dashboard-brand span,
+.zk-edocs-dashboard .zk-dashboard-brand [style*="CONNECT"],
+.zk-edocs-dashboard .zk-dashboard-brand [style*="e-Docs"] {
+    color: var(--dc-brand-subtitle) !important;
+    text-transform: none !important;
+}
+
+.zk-edocs-dashboard .zk-dashboard-modules,
+.zk-edocs-dashboard .zk-module-card {
+    border-color: var(--dc-surface-high) !important;
+    box-shadow: var(--dc-shadow-panel) !important;
+}
+
+.zk-edocs-dashboard .zk-module-card:hover {
+    border-color: var(--dc-accent-gold) !important;
 }

@@ -14,6 +14,11 @@ namespace DIAN_NET.Services
     {
         public string CalcularCUFE(FacturaDto factura, string ambiente)
         {
+            return Sha384(ConstruirCadenaCUFE(factura, ambiente));
+        }
+
+        public string ConstruirCadenaCUFE(FacturaDto factura, string ambiente)
+        {
             if (factura == null)
             {
                 throw new ArgumentNullException(nameof(factura));
@@ -29,11 +34,12 @@ namespace DIAN_NET.Services
             var valImp3 = FormatMoneyTruncated(impuestos.Where(i => i.Codigo == "03").Sum(i => i.Valor));
             var valTot = FormatMoneyTruncated(factura.Totales?.Total ?? 0m);
             var tipoAmbiente = NormalizeAmbiente(factura.ConfiguracionDian?.TipoAmbiente, ambiente);
+            var fechaColombia = DianColombiaHelper.ToColombia(factura.FechaEmision);
 
-            var cadena = string.Concat(
+            return string.Concat(
                 factura.NumeroDocumento,
-                factura.FechaEmision.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                factura.FechaEmision.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                fechaColombia.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                DianColombiaHelper.FormatCufeTime(factura.FechaEmision),
                 "-05:00",
                 valFac,
                 "01",
@@ -43,12 +49,10 @@ namespace DIAN_NET.Services
                 "03",
                 valImp3,
                 valTot,
-                DigitsOnly(factura.Emisor?.Nit),
-                DigitsOnly(factura.Cliente?.NumeroIdentificacion),
+                DianNitHelper.SoloDigitos(factura.Emisor?.Nit),
+                DianNitHelper.SoloDigitos(factura.Cliente?.NumeroIdentificacion),
                 factura.ConfiguracionDian?.ClaveTecnica ?? string.Empty,
                 tipoAmbiente);
-
-            return Sha384(cadena);
         }
 
         public string CalcularCUDE(NotaCreditoDto notaCredito, string ambiente)
@@ -68,11 +72,12 @@ namespace DIAN_NET.Services
             var valImp3 = FormatMoneyTruncated(impuestos.Where(i => i.Codigo == "03").Sum(i => i.Valor));
             var valTot = FormatMoneyTruncated(notaCredito.Totales?.Total ?? 0m);
             var tipoAmbiente = NormalizeAmbiente(notaCredito.ConfiguracionDian?.TipoAmbiente, ambiente);
+            var fechaColombia = DianColombiaHelper.ToColombia(notaCredito.FechaEmision);
 
             var cadena = string.Concat(
                 notaCredito.NumeroDocumento,
-                notaCredito.FechaEmision.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                notaCredito.FechaEmision.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                fechaColombia.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                DianColombiaHelper.FormatCufeTime(notaCredito.FechaEmision),
                 "-05:00",
                 valFac,
                 "01",

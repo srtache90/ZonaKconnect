@@ -9,14 +9,19 @@ namespace DIAN_NET.Services
     public class EmissionService : IEmissionService
     {
         private readonly IFacturacionService _facturacionService;
+        private readonly EmissionRequestContext _requestContext;
 
-        public EmissionService(IFacturacionService facturacionService)
+        public EmissionService(
+            IFacturacionService facturacionService,
+            EmissionRequestContext requestContext)
         {
             _facturacionService = facturacionService ?? throw new ArgumentNullException(nameof(facturacionService));
+            _requestContext = requestContext ?? throw new ArgumentNullException(nameof(requestContext));
         }
 
         public async Task<EmitDocumentResponse> EmitInvoiceAsync(EmitInvoiceRequest request)
         {
+            ApplyCertificateHints(request.CertificatePfxBase64, request.CertificatePassword);
             var response = !string.IsNullOrWhiteSpace(request.XMLBase) && request.Factura == null
                 ? await _facturacionService.EnviarXmlFacturaAsync(request.XMLBase!, request.Ambiente)
                 : await _facturacionService.EnviarFacturaAsync(new EnviarFacturaRequest
@@ -30,6 +35,7 @@ namespace DIAN_NET.Services
 
         public async Task<EmitDocumentResponse> EmitCreditNoteAsync(EmitCreditNoteRequest request)
         {
+            ApplyCertificateHints(request.CertificatePfxBase64, request.CertificatePassword);
             var response = await _facturacionService.EnviarNotaCreditoAsync(new EnviarNotaCreditoRequest
             {
                 Ambiente = request.Ambiente,
@@ -41,6 +47,7 @@ namespace DIAN_NET.Services
 
         public async Task<EmitDocumentResponse> EmitDebitNoteAsync(EmitDebitNoteRequest request)
         {
+            ApplyCertificateHints(request.CertificatePfxBase64, request.CertificatePassword);
             var response = await _facturacionService.EnviarNotaDebitoAsync(new EnviarNotaDebitoRequest
             {
                 Ambiente = request.Ambiente,
@@ -52,6 +59,7 @@ namespace DIAN_NET.Services
 
         public async Task<EmitDocumentResponse> EmitSupportDocumentAsync(EmitSupportDocumentRequest request)
         {
+            ApplyCertificateHints(request.CertificatePfxBase64, request.CertificatePassword);
             var response = await _facturacionService.EnviarDocumentoSoporteAsync(new EnviarDocumentoSoporteRequest
             {
                 Ambiente = request.Ambiente,
@@ -63,8 +71,22 @@ namespace DIAN_NET.Services
 
         public async Task<EmitDocumentResponse> EmitPayrollAsync(EmitPayrollRequest request)
         {
+            ApplyCertificateHints(request.CertificatePfxBase64, request.CertificatePassword);
             var response = await _facturacionService.EnviarNominaAsync(request);
             return MapResponse(response, "CUNE");
+        }
+
+        private void ApplyCertificateHints(string? certificatePfxBase64, string? certificatePassword)
+        {
+            if (!string.IsNullOrWhiteSpace(certificatePfxBase64))
+            {
+                _requestContext.CertificatePfxBase64 = certificatePfxBase64.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(certificatePassword))
+            {
+                _requestContext.CertificatePassword = certificatePassword;
+            }
         }
 
         private static EmitDocumentResponse MapResponse(EnviarFacturaResponse response, string identifierKind)

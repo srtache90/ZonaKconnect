@@ -1,7 +1,7 @@
 ﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | Zona K e-Docs')}"></th:block>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -94,6 +94,17 @@
                     </select>
                 </div>
                 <div class="col-md-4">
+                    <label class="form-label" for="dianRegimenFiscal">Responsabilidad fiscal (TaxLevelCode)</label>
+                    <input class="form-control" id="dianRegimenFiscal" name="dianRegimenFiscal" required
+                           list="regimenFiscalList" autocomplete="off" placeholder="O-23 o O-23;O-33">
+                    <datalist id="regimenFiscalList">
+                        <option th:each="opt : ${regimenFiscalOptions}"
+                                th:value="${opt.code}"
+                                th:text="${opt.label}">O-99</option>
+                    </datalist>
+                    <div class="form-text">Solo códigos FE DIAN: O-13, O-15, O-23, O-47, ZZ. RUT 48 (IVA) no va aquí. RUT 09 → O-23.</div>
+                </div>
+                <div class="col-md-4">
                     <label class="form-label" for="dianSoftwareId">ID Software DIAN</label>
                     <input class="form-control" id="dianSoftwareId" name="dianSoftwareId"
                            autocomplete="off" placeholder="UUID asignado por la DIAN">
@@ -128,6 +139,7 @@
                     <th>Correo saliente</th>
                     <th>Correo entrante</th>
                     <th>DIAN</th>
+                    <th>TaxLevelCode</th>
                     <th>Software</th>
                     <th class="text-end">Acción</th>
                 </tr>
@@ -159,6 +171,9 @@
                         </span>
                     </td>
                     <td>
+                        <span class="badge text-bg-light" th:text="${sociedad.dianRegimenFiscal}">O-99</span>
+                    </td>
+                    <td>
                         <div class="small">
                             <span class="text-muted">ID:</span>
                             <span th:text="${sociedad.dianSoftwareId != null and !#strings.isEmpty(sociedad.dianSoftwareId)} ? ${sociedad.dianSoftwareId} : 'Sin configurar'">Sin configurar</span>
@@ -181,7 +196,7 @@
                             <button
                                     type="button"
                                     class="btn btn-sm btn-outline-primary"
-                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-software-id=${sociedad.dianSoftwareId}"
+                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-regimen-fiscal=${sociedad.dianRegimenFiscal},data-software-id=${sociedad.dianSoftwareId}"
                                     onclick="editarSociedad(this)">
                                 Editar
                             </button>
@@ -196,7 +211,7 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(sociedades)}">
-                        <td colspan="10" class="text-center text-muted py-4">No hay sociedades registradas.</td>
+                        <td colspan="11" class="text-center text-muted py-4">No hay sociedades registradas.</td>
                 </tr>
                 </tbody>
             </table>
@@ -228,6 +243,7 @@
         document.getElementById('usuarioImap').value = button.dataset.usuarioImap || '';
         document.getElementById('passwordImap').value = '';
         document.getElementById('dianAmbiente').value = button.dataset.ambiente || 'Habilitacion';
+        document.getElementById('dianRegimenFiscal').value = button.dataset.regimenFiscal || 'O-99';
         document.getElementById('dianSoftwareId').value = button.dataset.softwareId || '';
         document.getElementById('dianSoftwarePin').value = '';
         window.scrollTo({ top: 0, behavior: 'smooth' });

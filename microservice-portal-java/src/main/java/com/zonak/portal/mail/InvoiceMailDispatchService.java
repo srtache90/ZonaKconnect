@@ -1,12 +1,17 @@
 package com.zonak.portal.mail;
 
+import com.zonak.portal.dto.InvoicePdfData;
+import com.zonak.portal.exception.InvoiceStorageException;
 import com.zonak.portal.service.InvoiceClientService;
 import com.zonak.portal.service.InvoiceOrchestratorService;
+import com.zonak.portal.service.InvoiceReportRepository;
 import jakarta.mail.internet.MimeMessage;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -14,6 +19,8 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 public class InvoiceMailDispatchService {
@@ -24,19 +31,36 @@ public class InvoiceMailDispatchService {
     private final SociedadMailAccountRepository sociedadMailAccountRepository;
     private final InvoiceOrchestratorService invoiceOrchestratorService;
     private final InvoiceClientService invoiceClientService;
+    private final InvoiceReportRepository invoiceReportRepository;
 
     public InvoiceMailDispatchService(
             MailAppProperties mailProperties,
             JavaMailSender mailSender,
             SociedadMailAccountRepository sociedadMailAccountRepository,
-            InvoiceOrchestratorService invoiceOrchestratorService,
-            InvoiceClientService invoiceClientService
+            @Lazy InvoiceOrchestratorService invoiceOrchestratorService,
+            InvoiceClientService invoiceClientService,
+            InvoiceReportRepository invoiceReportRepository
     ) {
         this.mailProperties = mailProperties;
         this.fallbackMailSender = mailSender;
         this.sociedadMailAccountRepository = sociedadMailAccountRepository;
         this.invoiceOrchestratorService = invoiceOrchestratorService;
         this.invoiceClientService = invoiceClientService;
+        this.invoiceReportRepository = invoiceReportRepository;
+    }
+
+    public Mono<String> dispatchToAcquirerIfConfigured(
+            String tenantId,
+            UUID invoiceId,
+            String emissionPointId,
+            String customerEmail
+    ) {
+        if (!StringUtils.hasText(customerEmail)) {
+            log.info("mail.dispatch skipped invoice_id={}: adquirente sin correo", invoiceId);
+            return Mono.empty();
+        }
+        return Mono.fromCallable(() -> sendInvoiceDocuments(tenantId, invoiceId, customerEmail.trim(), emissionPointId))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     public String sendInvoiceDocuments(String tenantId, UUID invoiceId, String toEmail) {
@@ -48,11 +72,12 @@ public class InvoiceMailDispatchService {
             throw new IllegalArgumentException("El correo destinatario es obligatorio");
         }
 
-        SociedadMailAccount account = null;
-        if (StringUtils.hasText(tenantId)) {
-            account = sociedadMailAccountRepository.findBySociedadId(UUID.fromString(tenantId)).orElse(null);
-        }
+        UUID tenantUuid = UUID.fromString(tenantId);
+        InvoicePdfData invoice = invoiceReportRepository.findApprovedInvoice(tenantUuid, invoiceId)
+                .or(() -> invoiceReportRepository.findInvoice(tenantUuid, invoiceId))
+                .orElseThrow(() -> new InvoiceStorageException("Documento no disponible para envío por correo"));
 
+        SociedadMailAccount account = sociedadMailAccountRepository.findBySociedadId(tenantUuid).orElse(null);
         JavaMailSender sender;
         String from;
         if (account != null && account.hasOutgoingMail()) {
@@ -70,12 +95,34 @@ public class InvoiceMailDispatchService {
 
         try {
             byte[] pdfBytes = invoiceOrchestratorService
-                    .downloadOrGeneratePdf(UUID.fromString(tenantId), invoiceId)
+                    .downloadOrGeneratePdf(tenantUuid, invoiceId)
                     .block();
 
-            byte[] attachmentBytes = downloadAttachmentQuietly(invoiceId, tenantId, emissionPointId);
+            AttachmentDownload attachmentDownload = downloadAttachmentQuietly(invoiceId, tenantId, emissionPointId);
+            if (attachmentDownload.bytes() == null || attachmentDownload.bytes().length == 0) {
+                throw new IllegalStateException(
+                        "Contenedor electrónico (AttachedDocument) no disponible. Verifique validación DIAN."
+                );
+            }
+            String subject = DianAcquirerMailComposer.buildSubject(invoice, null);
+            String body = DianAcquirerMailComposer.buildBody(
+                    invoice,
+                    account != null ? account.correoRecepcion() : null
+            );
+            String pdfName = DianAcquirerMailComposer.pdfAttachmentName(invoice);
+            String zipName = DianAcquirerMailComposer.zipAttachmentName(attachmentDownload.fileName(), invoice);
 
-            return dispatch(sender, from, toEmail, invoiceId.toString(), pdfBytes, attachmentBytes, null);
+            return dispatch(
+                    sender,
+                    from,
+                    toEmail,
+                    subject,
+                    body,
+                    pdfBytes,
+                    pdfName,
+                    attachmentDownload.bytes(),
+                    zipName
+            );
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -118,10 +165,14 @@ public class InvoiceMailDispatchService {
                     sender,
                     from,
                     toEmail,
-                    StringUtils.hasText(invoiceNumber) ? invoiceNumber : receivedId.toString(),
+                    "Documentos electrónicos Zona K - " + (StringUtils.hasText(invoiceNumber) ? invoiceNumber : receivedId),
+                    "Adjunto encontrará los documentos electrónicos recibidos.",
                     pdfBytes,
+                    "factura-" + receivedId + ".pdf",
                     null,
-                    xmlBytes
+                    null,
+                    xmlBytes,
+                    "factura-" + receivedId + ".xml"
             );
         } catch (Exception ex) {
             throw new IllegalStateException("No fue posible enviar el correo: " + ex.getMessage(), ex);
@@ -132,28 +183,43 @@ public class InvoiceMailDispatchService {
             JavaMailSender sender,
             String from,
             String toEmail,
-            String label,
+            String subject,
+            String body,
             byte[] pdfBytes,
+            String pdfFileName,
             byte[] zipBytes,
-            byte[] xmlBytes
+            String zipFileName
+    ) throws Exception {
+        return dispatch(sender, from, toEmail, subject, body, pdfBytes, pdfFileName, zipBytes, zipFileName, null, null);
+    }
+
+    private String dispatch(
+            JavaMailSender sender,
+            String from,
+            String toEmail,
+            String subject,
+            String body,
+            byte[] pdfBytes,
+            String pdfFileName,
+            byte[] zipBytes,
+            String zipFileName,
+            byte[] xmlBytes,
+            String xmlFileName
     ) throws Exception {
         MimeMessage mimeMessage = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
         helper.setFrom(from);
         helper.setTo(toEmail.trim());
-        helper.setSubject("Documentos electrónicos Zona K - " + label);
-        helper.setText(
-                "Adjunto encontrará los documentos electrónicos de la factura " + label + ".",
-                false
-        );
+        helper.setSubject(subject);
+        helper.setText(body == null ? "" : body, false);
         if (pdfBytes != null && pdfBytes.length > 0) {
-            helper.addAttachment("factura-" + label + ".pdf", new ByteArrayResource(pdfBytes));
+            helper.addAttachment(pdfFileName, new ByteArrayResource(pdfBytes));
         }
         if (zipBytes != null && zipBytes.length > 0) {
-            helper.addAttachment("dian-attachment-" + label + ".zip", new ByteArrayResource(zipBytes));
+            helper.addAttachment(zipFileName, new ByteArrayResource(zipBytes));
         }
         if (xmlBytes != null && xmlBytes.length > 0) {
-            helper.addAttachment("factura-" + label + ".xml", new ByteArrayResource(xmlBytes));
+            helper.addAttachment(xmlFileName, new ByteArrayResource(xmlBytes));
         }
         sender.send(mimeMessage);
         return "Documentos enviados a " + toEmail.trim();
@@ -181,15 +247,22 @@ public class InvoiceMailDispatchService {
         return sender;
     }
 
-    private byte[] downloadAttachmentQuietly(UUID invoiceId, String tenantId, String emissionPointId) {
+    private AttachmentDownload downloadAttachmentQuietly(UUID invoiceId, String tenantId, String emissionPointId) {
         try {
             ResponseEntity<byte[]> response = invoiceClientService
                     .downloadInvoiceDocument(invoiceId, "attachment", tenantId, emissionPointId)
                     .block();
-            return response != null ? response.getBody() : null;
+            if (response == null || response.getBody() == null || response.getBody().length == 0) {
+                return AttachmentDownload.empty();
+            }
+            String fileName = Optional.ofNullable(response.getHeaders().getContentDisposition())
+                    .map(contentDisposition -> contentDisposition.getFilename())
+                    .filter(StringUtils::hasText)
+                    .orElse(null);
+            return new AttachmentDownload(response.getBody(), fileName);
         } catch (Exception ex) {
             log.warn("No se pudo adjuntar ZIP DIAN invoice_id={}: {}", invoiceId, ex.getMessage());
-            return null;
+            return AttachmentDownload.empty();
         }
     }
 
@@ -235,6 +308,12 @@ public class InvoiceMailDispatchService {
             return "Notificación enviada a " + toEmail.trim();
         } catch (Exception ex) {
             throw new IllegalStateException("No fue posible notificar al proveedor: " + ex.getMessage(), ex);
+        }
+    }
+
+    private record AttachmentDownload(byte[] bytes, String fileName) {
+        static AttachmentDownload empty() {
+            return new AttachmentDownload(null, null);
         }
     }
 }

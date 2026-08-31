@@ -1,7 +1,7 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Puntos de Venta | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Puntos de Venta | Zona K e-Docs')}"></th:block>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -15,6 +15,7 @@
     </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4 d-none" id="dianResolutionAlert"></div>
 
     <section class="card zk-card mb-4">
         <div class="card-body">
@@ -46,16 +47,22 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label" for="prefijo">Prefijo</label>
+                    <label class="form-label" for="prefijo">Prefijo factura</label>
                     <input class="form-control" id="prefijo" name="prefijo" placeholder="FE" maxlength="12" required>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="resolucionDian">Resolución de facturación</label>
-                    <input class="form-control" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
+                    <div class="input-group">
+                        <input class="form-control" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
+                        <button class="btn btn-outline-primary" id="btnConsultarDianFe" type="button" data-doc-kind="fe">
+                            Consultar DIAN
+                        </button>
+                    </div>
+                    <div class="form-text">Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="claveTecnica">Clave técnica</label>
-                    <input class="form-control" id="claveTecnica" name="claveTecnica" autocomplete="off">
+                    <input class="form-control font-monospace" id="claveTecnica" name="claveTecnica" autocomplete="off" readonly>
                 </div>
 
                 <div class="col-md-2">
@@ -85,6 +92,47 @@
                     </div>
                 </div>
 
+                <div class="col-12">
+                    <hr class="my-1">
+                    <h3 class="h6 mb-2">Nota crédito (tipo 91)</h3>
+                    <p class="text-muted small mb-3">
+                        Usa la misma resolución y rango autorizado. Configure el prefijo DIAN de NC y el último consecutivo emitido.
+                    </p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="prefijoNc">Prefijo NC</label>
+                    <input class="form-control" id="prefijoNc" name="prefijoNc" placeholder="NC" maxlength="12" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="numeroActualNc">Número actual NC</label>
+                    <input class="form-control" id="numeroActualNc" name="numeroActualNc" type="number" min="0" value="0" required>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" id="btnConsultarDianNc" type="button" data-doc-kind="nc">
+                        Consultar prefijo NC en DIAN
+                    </button>
+                </div>
+
+                <div class="col-12">
+                    <h3 class="h6 mb-2 mt-2">Nota débito (tipo 92)</h3>
+                    <p class="text-muted small mb-3">
+                        Misma resolución compartida. Configure prefijo ND y consecutivo actual.
+                    </p>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="prefijoNd">Prefijo ND</label>
+                    <input class="form-control" id="prefijoNd" name="prefijoNd" placeholder="ND" maxlength="12" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="numeroActualNd">Número actual ND</label>
+                    <input class="form-control" id="numeroActualNd" name="numeroActualNd" type="number" min="0" value="0" required>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" id="btnConsultarDianNd" type="button" data-doc-kind="nd">
+                        Consultar prefijo ND en DIAN
+                    </button>
+                </div>
+
                 <div class="col-12 text-end">
                     <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar punto de venta</button>
                 </div>
@@ -104,7 +152,8 @@
                     <th>Sociedad</th>
                     <th>Código</th>
                     <th>Nombre / Dirección</th>
-                    <th>Prefijo</th>
+                    <th>Prefijo FE</th>
+                    <th>NC / ND</th>
                     <th>Resolución</th>
                     <th>Rango</th>
                     <th>Vigencia</th>
@@ -121,6 +170,14 @@
                         <small class="text-muted" th:text="${punto.direccion}">Dirección</small>
                     </td>
                     <td th:text="${punto.prefijo}">FE</td>
+                    <td>
+                        <div><span class="text-muted">NC:</span> <span th:text="${punto.prefijoNc}">NC</span>
+                            <small class="text-muted">(<span th:text="${punto.numeroActualNc}">0</span>)</small>
+                        </div>
+                        <div><span class="text-muted">ND:</span> <span th:text="${punto.prefijoNd}">ND</span>
+                            <small class="text-muted">(<span th:text="${punto.numeroActualNd}">0</span>)</small>
+                        </div>
+                    </td>
                     <td>
                         <div th:text="${punto.resolucionDian}">18764000000000</div>
                         <small class="text-muted" th:if="${punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica)}">
@@ -147,14 +204,14 @@
                         <button
                                 type="button"
                                 class="btn btn-sm btn-outline-primary"
-                                th:attr="data-id=${punto.id},data-sociedad=${punto.sociedadId},data-codigo=${punto.codigo},data-nombre=${punto.nombre},data-direccion=${punto.direccion},data-prefijo=${punto.prefijo},data-resolucion=${punto.resolucionDian},data-clave=${punto.claveTecnica},data-rango-desde=${punto.rangoDesde},data-rango-hasta=${punto.rangoHasta},data-numero-actual=${punto.numeroActual},data-vigencia-desde=${punto.vigenciaDesde},data-vigencia-hasta=${punto.vigenciaHasta},data-activo=${punto.activo}"
+                                th:attr="data-id=${punto.id},data-sociedad=${punto.sociedadId},data-codigo=${punto.codigo},data-nombre=${punto.nombre},data-direccion=${punto.direccion},data-prefijo=${punto.prefijo},data-resolucion=${punto.resolucionDian},data-clave=${punto.claveTecnica},data-rango-desde=${punto.rangoDesde},data-rango-hasta=${punto.rangoHasta},data-numero-actual=${punto.numeroActual},data-prefijo-nc=${punto.prefijoNc},data-numero-actual-nc=${punto.numeroActualNc},data-prefijo-nd=${punto.prefijoNd},data-numero-actual-nd=${punto.numeroActualNd},data-vigencia-desde=${punto.vigenciaDesde},data-vigencia-hasta=${punto.vigenciaHasta},data-activo=${punto.activo}"
                                 onclick="editarPuntoVenta(this)">
                             Editar
                         </button>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(puntosVenta)}">
-                    <td colspan="9" class="text-center text-muted py-4">No hay puntos de venta registrados.</td>
+                    <td colspan="10" class="text-center text-muted py-4">No hay puntos de venta registrados.</td>
                 </tr>
                 </tbody>
             </table>
@@ -163,6 +220,137 @@
 </main>
 
 <script>
+    function showDianAlert(message, isError) {
+        const alert = document.getElementById('dianResolutionAlert');
+        alert.textContent = message;
+        alert.classList.toggle('alert-danger', isError);
+        alert.classList.toggle('alert-success', !isError);
+        alert.classList.remove('d-none');
+    }
+
+    function parseDianDate(value) {
+        if (!value) {
+            return '';
+        }
+        const trimmed = value.trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+            return trimmed.substring(0, 10);
+        }
+        if (/^\d{4}\/\d{2}\/\d{2}/.test(trimmed)) {
+            return trimmed.replaceAll('/', '-').substring(0, 10);
+        }
+        return trimmed;
+    }
+
+    function aplicarResolucionDian(resolution, docKind) {
+        if (!resolution) {
+            return;
+        }
+        if (docKind === 'fe' || docKind === 'nc' || docKind === 'nd') {
+            if (resolution.resolutionNumber) {
+                document.getElementById('resolucionDian').value = resolution.resolutionNumber;
+            }
+            if (resolution.technicalKey) {
+                document.getElementById('claveTecnica').value = resolution.technicalKey;
+            }
+            if (resolution.fromNumber != null) {
+                document.getElementById('rangoDesde').value = resolution.fromNumber;
+            }
+            if (resolution.toNumber != null) {
+                document.getElementById('rangoHasta').value = resolution.toNumber;
+            }
+            if (resolution.validDateFrom) {
+                document.getElementById('vigenciaDesde').value = parseDianDate(resolution.validDateFrom);
+            }
+            if (resolution.validDateTo) {
+                document.getElementById('vigenciaHasta').value = parseDianDate(resolution.validDateTo);
+            }
+        }
+        if (docKind === 'fe' && resolution.prefix) {
+            document.getElementById('prefijo').value = resolution.prefix;
+        }
+        if (docKind === 'nc' && resolution.prefix) {
+            document.getElementById('prefijoNc').value = resolution.prefix;
+        }
+        if (docKind === 'nd' && resolution.prefix) {
+            document.getElementById('prefijoNd').value = resolution.prefix;
+        }
+    }
+
+    async function consultarResolucionDian(docKind) {
+        const sociedadId = document.getElementById('sociedadId').value;
+        const resolucion = document.getElementById('resolucionDian').value.trim();
+        const prefijoByKind = {
+            fe: document.getElementById('prefijo').value.trim(),
+            nc: document.getElementById('prefijoNc').value.trim(),
+            nd: document.getElementById('prefijoNd').value.trim()
+        };
+        const prefijo = prefijoByKind[docKind] || '';
+        const button = docKind === 'fe'
+            ? document.getElementById('btnConsultarDianFe')
+            : docKind === 'nc'
+                ? document.getElementById('btnConsultarDianNc')
+                : document.getElementById('btnConsultarDianNd');
+        const defaultLabel = docKind === 'fe' ? 'Consultar DIAN' : `Consultar prefijo ${docKind.toUpperCase()} en DIAN`;
+
+        if (!sociedadId) {
+            showDianAlert('Seleccione la sociedad antes de consultar DIAN.', true);
+            return;
+        }
+
+        const params = new URLSearchParams({ sociedadId });
+        if (resolucion) {
+            params.set('resolutionNumber', resolucion);
+        }
+        if (prefijo) {
+            params.set('prefix', prefijo);
+        }
+
+        button.disabled = true;
+        button.textContent = 'Consultando...';
+        try {
+            const response = await fetch(`/portal/admin/api/dian/resoluciones?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'No fue posible consultar DIAN');
+            }
+
+            const resolutions = Array.isArray(payload.resolutions) ? payload.resolutions : [];
+            if (resolutions.length === 0) {
+                const code = payload.operationCode || 'sin código';
+                const description = payload.operationDescription || 'DIAN no devolvió resoluciones para los filtros indicados.';
+                showDianAlert(`DIAN (${code}): ${description}`, true);
+                return;
+            }
+
+            if (resolutions.length > 1 && !resolucion && !prefijo) {
+                showDianAlert(
+                    `DIAN devolvió ${resolutions.length} resoluciones. Indique número de resolución o prefijo para seleccionar una.`,
+                    true
+                );
+                return;
+            }
+
+            const selected = resolutions.find(item => prefijo && item.prefix === prefijo) || resolutions[0];
+            aplicarResolucionDian(selected, docKind);
+            showDianAlert(
+                `Resolución ${selected.resolutionNumber || ''} (${selected.prefix || prefijo}) cargada desde DIAN (${payload.operationCode || 'OK'}).`,
+                false
+            );
+        } catch (error) {
+            showDianAlert(error.message || 'Error consultando DIAN', true);
+        } finally {
+            button.disabled = false;
+            button.textContent = defaultLabel;
+        }
+    }
+
+    document.getElementById('btnConsultarDianFe').addEventListener('click', () => consultarResolucionDian('fe'));
+    document.getElementById('btnConsultarDianNc').addEventListener('click', () => consultarResolucionDian('nc'));
+    document.getElementById('btnConsultarDianNd').addEventListener('click', () => consultarResolucionDian('nd'));
+
     function editarPuntoVenta(button) {
         document.getElementById('puntoVentaId').value = button.dataset.id || '';
         document.getElementById('sociedadId').value = button.dataset.sociedad || '';
@@ -175,6 +363,10 @@
         document.getElementById('rangoDesde').value = button.dataset.rangoDesde || '1';
         document.getElementById('rangoHasta').value = button.dataset.rangoHasta || '';
         document.getElementById('numeroActual').value = button.dataset.numeroActual || '0';
+        document.getElementById('prefijoNc').value = button.dataset.prefijoNc || 'NC';
+        document.getElementById('numeroActualNc').value = button.dataset.numeroActualNc || '0';
+        document.getElementById('prefijoNd').value = button.dataset.prefijoNd || 'ND';
+        document.getElementById('numeroActualNd').value = button.dataset.numeroActualNd || '0';
         document.getElementById('vigenciaDesde').value = button.dataset.vigenciaDesde || '';
         document.getElementById('vigenciaHasta').value = button.dataset.vigenciaHasta || '';
         document.getElementById('activo').checked = button.dataset.activo === 'true';

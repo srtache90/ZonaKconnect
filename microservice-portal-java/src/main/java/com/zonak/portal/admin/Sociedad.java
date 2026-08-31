@@ -16,6 +16,7 @@ public record Sociedad(
         Integer puertoImap,
         String usuarioImap,
         String dianAmbiente,
+        String dianRegimenFiscal,
         String dianSoftwareId,
         boolean dianSoftwarePinConfigured
 ) {

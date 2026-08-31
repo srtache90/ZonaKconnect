@@ -16,6 +16,10 @@ public record PuntoVenta(
         Long rangoDesde,
         Long rangoHasta,
         Long numeroActual,
+        String prefijoNc,
+        Long numeroActualNc,
+        String prefijoNd,
+        Long numeroActualNd,
         LocalDate vigenciaDesde,
         LocalDate vigenciaHasta,
         boolean activo

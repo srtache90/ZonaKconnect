@@ -19,12 +19,22 @@ public record CreateInvoiceRequestDTO(
     ) {
     }
 
+    public record TaxDTO(
+            @JsonProperty("codigo") String code,
+            @JsonProperty("nombre") String name,
+            @JsonProperty("porcentaje") BigDecimal percentage,
+            @JsonProperty("baseImponible") BigDecimal taxableBase,
+            @JsonProperty("valor") BigDecimal amount
+    ) {
+    }
+
     public record ItemDTO(
             @JsonProperty("codigo") String code,
             @JsonProperty("descripcion") String description,
             @JsonProperty("cantidad") BigDecimal quantity,
             @JsonProperty("precio_unitario") BigDecimal unitPrice,
-            @JsonProperty("descuento") BigDecimal discount
+            @JsonProperty("descuento") BigDecimal discount,
+            @JsonProperty("impuestos") List<TaxDTO> taxes
     ) {
     }
 }

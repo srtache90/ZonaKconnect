@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml;
 using FirmaXadesNetCore;
 using FirmaXadesNetCore.Crypto;
 using FirmaXadesNetCore.Signature.Parameters;
@@ -80,29 +81,29 @@ namespace DIAN_NET.Services
             destination.Namespaces.Add("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
             destination.Namespaces.Add("sts", "dian:gov:co:facturaelectronica:Structures-2-1");
 
-            if (xmlSinFirma.Contains("ApplicationResponse", StringComparison.Ordinal))
-            {
-                destination.XPathExpression =
-                    "/*[local-name()='ApplicationResponse']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
-            }
-            else if (xmlSinFirma.Contains("<Invoice", StringComparison.Ordinal)
-                     || xmlSinFirma.Contains(":Invoice", StringComparison.Ordinal))
-            {
-                destination.XPathExpression =
-                    "/*[local-name()='Invoice']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
-            }
-            else if (xmlSinFirma.Contains("CreditNote", StringComparison.Ordinal))
-            {
-                destination.XPathExpression =
-                    "/*[local-name()='CreditNote']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
-            }
-            else
-            {
-                destination.XPathExpression =
-                    "//ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent";
-            }
-
+            destination.XPathExpression = ResolveSignatureDestinationXPath(DetectRootLocalName(xmlSinFirma));
             return destination;
         }
+
+        private static string DetectRootLocalName(string xmlSinFirma)
+        {
+            var doc = new XmlDocument { PreserveWhitespace = true };
+            doc.LoadXml(xmlSinFirma);
+            return doc.DocumentElement?.LocalName ?? string.Empty;
+        }
+
+        private static string ResolveSignatureDestinationXPath(string rootLocalName) =>
+            rootLocalName switch
+            {
+                "ApplicationResponse" =>
+                    "/*[local-name()='ApplicationResponse']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent",
+                "CreditNote" =>
+                    "/*[local-name()='CreditNote']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent",
+                "DebitNote" =>
+                    "/*[local-name()='DebitNote']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent",
+                "Invoice" =>
+                    "/*[local-name()='Invoice']/ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent",
+                _ => "//ext:UBLExtensions/ext:UBLExtension[2]/ext:ExtensionContent"
+            };
     }
 }

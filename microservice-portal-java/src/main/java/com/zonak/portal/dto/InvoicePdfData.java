@@ -20,7 +20,14 @@ public record InvoicePdfData(
         List<TaxDetail> retenciones,
         List<ChargeDetail> recargos,
         Totals totals,
-        String status
+        String status,
+        PaymentInfo payment,
+        ReferencedDocument referencedDocument,
+        String documentTypeLabel,
+        String operationTypeLabel,
+        List<String> conceptosCorreccion,
+        String taxResponsibilities,
+        SoftwareInfo softwareInfo
 ) {
     public record Company(
             String razonSocial,
@@ -38,7 +45,8 @@ public record InvoicePdfData(
             String razonSocial,
             String identificacion,
             String direccion,
-            String email
+            String email,
+            boolean consumidorFinal
     ) {
     }
 
@@ -53,6 +61,10 @@ public record InvoicePdfData(
     }
 
     public record Item(
+            int lineNumber,
+            String codigo,
+            String unidadMedida,
+            String unidadMedidaLabel,
             BigDecimal cantidad,
             String descripcion,
             BigDecimal valorUnitario,
@@ -88,6 +100,28 @@ public record InvoicePdfData(
             String codigo,
             String nombre,
             BigDecimal valor
+    ) {
+    }
+
+    public record PaymentInfo(
+            String formaPago,
+            String medioPago,
+            String plazoCredito
+    ) {
+    }
+
+    public record ReferencedDocument(
+            String numeroDocumento,
+            String cufe,
+            LocalDate fechaEmision
+    ) {
+    }
+
+    public record SoftwareInfo(
+            String fabricanteNombre,
+            String fabricanteNit,
+            String softwareNombre,
+            String proveedorTecnologico
     ) {
     }
 }

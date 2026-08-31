@@ -1,11 +1,48 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Emisión de Facturas | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Emisión de Facturas | Zona K e-Docs')}"></th:block>
     <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e2de; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c9c2ba; border-radius: 10px; }
+        .dian-detail-panel {
+            width: min(100%, 48rem);
+            min-width: min(100%, 20rem);
+            max-height: min(90vh, 880px);
+            display: flex;
+            flex-direction: column;
+        }
+        .dian-detail-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .dian-error-text {
+            min-width: 0;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.55;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+        }
+        .dian-error-scroll {
+            max-height: 14rem;
+            overflow: auto;
+            overflow-wrap: anywhere;
+        }
+        .dian-error-scroll-lg {
+            max-height: 22rem;
+        }
+        .dian-inline-error {
+            min-width: 0;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body class="text-on-surface">
@@ -19,10 +56,16 @@
             <h1 class="dc-page-title">Emisión de Facturas</h1>
             <p class="dc-page-subtitle">Gestiona y monitorea comprobantes electrónicos con validación directa ante la DIAN.</p>
         </div>
-        <a class="btn btn-zk rounded-pill px-4 text-decoration-none"
-           th:href="@{/portal/facturacion/manual}">
-            Nueva Factura
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-zk rounded-pill px-4 text-decoration-none"
+               th:href="@{/portal/facturacion/manual}">
+                Nueva factura
+            </a>
+            <a class="btn btn-outline-primary rounded-pill px-4 text-decoration-none"
+               th:href="@{/portal/facturacion/nota-credito}">
+                Nota crédito
+            </a>
+        </div>
     </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
@@ -148,23 +191,27 @@
             <div class="zk-invoice-row grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group"
                  th:each="invoice : ${invoices}"
                  th:with="dianValidated=${T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)},
-                          canReemitDian=${invoice.tipo == 'EMITIDA' and !T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)}">
+                          canReemitDian=${invoice.tipo == 'EMITIDA' and !T(com.zonak.portal.support.InvoiceDianStatus).isValidated(invoice.estadoDian, invoice.uuidCude)},
+                          canCreditNote=${dianValidated and (invoice.documentKind == null or invoice.documentKind == 'INVOICE') and invoice.tipo == 'EMITIDA'}">
                 <div class="col-span-2 font-data-tabular font-semibold text-primary">
                     <span th:text="${invoice.prefijo}">FE</span>-<span th:text="${invoice.numero}">48291</span>
                 </div>
-                <div class="col-span-3 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-semibold text-[12px]"
+                <div class="col-span-3 flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-semibold text-[12px] shrink-0"
                          th:text="${invoice.documentKind != null and !#strings.isEmpty(invoice.documentKind) ? #strings.substring(invoice.documentKind, 0, 1) : #strings.substring(invoice.tipo, 0, 1)}">E</div>
-                    <div>
+                    <div class="min-w-0 flex-1">
                         <span class="font-body-md text-on-surface d-block"
                               th:text="${invoice.documentKind != null and !#strings.isEmpty(invoice.documentKind) ? invoice.documentKind : invoice.tipo}">INVOICE</span>
                         <span class="text-[12px] text-on-surface-variant" th:text="${invoice.id}">invoice-id</span>
-                        <span class="text-[11px] text-on-surface-variant d-block"
-                              th:if="${!dianValidated and invoice.dianErrorDescription != null and !#strings.isEmpty(invoice.dianErrorDescription)}"
-                              th:text="${#strings.abbreviate(invoice.dianErrorDescription, 80)}">mensaje DIAN</span>
-                        <span class="text-[11px] text-on-surface-variant d-block"
-                              th:if="${!dianValidated and (invoice.dianErrorDescription == null or #strings.isEmpty(invoice.dianErrorDescription)) and invoice.dianErrores != null and !#strings.isEmpty(invoice.dianErrores)}"
-                              th:text="${#strings.abbreviate(invoice.dianErrores, 80)}">errores DIAN</span>
+                        <div class="mt-1.5 rounded-lg border border-error/15 bg-error-container/30 px-2.5 py-1.5 min-w-0"
+                             th:if="${!dianValidated and (invoice.estadoDian == 'ERROR_DIAN_NET' or invoice.estadoDian == 'RECHAZADO_DIAN') and ((invoice.dianErrorDescription != null and !#strings.isEmpty(invoice.dianErrorDescription)) or (invoice.dianErrores != null and !#strings.isEmpty(invoice.dianErrores)))}">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide text-on-error-container mb-0.5">Motivo del fallo</p>
+                            <p class="text-[12px] leading-snug text-on-error-container dian-inline-error line-clamp-3"
+                               th:text="${invoice.dianErrorDescription != null and !#strings.isEmpty(invoice.dianErrorDescription) ? invoice.dianErrorDescription : invoice.dianErrores}">
+                                mensaje DIAN
+                            </p>
+                            <p class="text-[10px] text-on-error-container/80 mt-1 mb-0">Use el botón info para ver el detalle completo.</p>
+                        </div>
                     </div>
                 </div>
                 <div class="col-span-2 font-body-md text-on-surface-variant"
@@ -214,6 +261,12 @@
                     </button>
                 </div>
                 <div class="col-span-2 flex justify-end gap-2 flex-wrap invoice-row-actions">
+                    <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-primary text-decoration-none"
+                       title="Crear nota crédito"
+                       th:if="${canCreditNote}"
+                       th:href="@{/portal/facturacion/nota-credito(refInvoiceId=${invoice.id})}">
+                        <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                    </a>
                     <button class="w-9 h-9 flex items-center justify-center rounded-lg border border-secondary-container bg-secondary-container text-on-secondary-container hover:shadow-md transition-colors"
                             data-action="open-reemit-dian"
                             title="Reenviar a DIAN"
@@ -287,19 +340,19 @@
 
     <div class="fixed inset-0 z-[70] hidden items-center justify-center p-4" id="dian-detail-modal">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-action="close-dian-detail"></div>
-        <div class="relative w-full max-w-xl bg-surface-container-lowest rounded-2xl border border-surface-container-highest shadow-2xl overflow-hidden">
-            <div class="px-6 py-5 border-b border-surface-container-highest flex items-start justify-between gap-4">
-                <div>
+        <div class="relative dian-detail-panel bg-surface-container-lowest rounded-2xl border border-surface-container-highest shadow-2xl overflow-hidden">
+            <div class="px-6 py-5 border-b border-surface-container-highest flex items-start justify-between gap-4 shrink-0">
+                <div class="min-w-0">
                     <p class="font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Respuesta DIAN</p>
                     <h3 class="font-headline-md text-headline-md font-semibold text-primary">Detalle de validación</h3>
                 </div>
-                <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+                <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0"
                         data-action="close-dian-detail"
                         type="button">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
-            <div class="px-6 py-5 space-y-4">
+            <div class="dian-detail-body custom-scrollbar px-6 py-5 space-y-4" id="dian-detail-body">
                 <div class="p-4 rounded-xl bg-surface-container-low border border-surface-container-highest">
                     <div class="font-label-sm text-on-surface-variant uppercase">Factura</div>
                     <div class="font-data-tabular text-primary text-lg font-semibold" id="dian-detail-invoice-number">FE-00000</div>
@@ -320,21 +373,35 @@
                     <div class="text-[13px] text-emerald-900 mt-2"><span class="font-semibold">Mensaje DIAN:</span> <span id="dian-detail-success-message">--</span></div>
                     <div class="text-[13px] text-emerald-900 mt-2 hidden" id="dian-detail-track-row"><span class="font-semibold">Track ID:</span> <span id="dian-detail-track-id">--</span></div>
                 </div>
-                <div class="p-4 rounded-xl border border-error/20 bg-error-container hidden" id="dian-detail-error-box">
-                    <div class="font-label-sm text-on-error-container uppercase mb-2">Error / rechazo DIAN</div>
-                    <div class="text-[13px] text-on-error-container"><span class="font-semibold">Código:</span> <span id="dian-detail-error-code">--</span></div>
-                    <div class="text-[13px] text-on-error-container mt-2"><span class="font-semibold">Descripción:</span> <span id="dian-detail-error-description">--</span></div>
-                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-errores-row">
-                        <span class="font-semibold">Errores:</span>
-                        <span id="dian-detail-errores">--</span>
-                    </div>
-                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-error-track-row">
-                        <span class="font-semibold">Track ID:</span>
-                        <span id="dian-detail-error-track-id">--</span>
-                    </div>
-                    <div class="text-[13px] text-on-error-container mt-2 hidden" id="dian-detail-error-message-row">
-                        <span class="font-semibold">Mensaje:</span>
-                        <span id="dian-detail-error-message">--</span>
+                <div class="p-4 rounded-xl border border-error/20 bg-error-container hidden min-w-0" id="dian-detail-error-box">
+                    <div class="font-label-sm text-on-error-container uppercase mb-3">Error / rechazo DIAN</div>
+                    <div class="space-y-3 min-w-0">
+                        <div class="rounded-lg bg-white/60 border border-error/10 px-3 py-2 min-w-0">
+                            <div class="text-[11px] font-semibold uppercase tracking-wide text-on-error-container/80 mb-1">Código</div>
+                            <div class="text-[14px] font-data-tabular font-semibold text-on-error-container break-all" id="dian-detail-error-code">--</div>
+                        </div>
+                        <div class="rounded-lg bg-white/60 border border-error/10 px-3 py-2 min-w-0">
+                            <div class="text-[11px] font-semibold uppercase tracking-wide text-on-error-container/80 mb-1">Descripción</div>
+                            <div class="dian-error-scroll dian-error-scroll-lg custom-scrollbar rounded-md bg-white/50 px-2 py-2">
+                                <div class="dian-error-text text-on-error-container" id="dian-detail-error-description">--</div>
+                            </div>
+                        </div>
+                        <div class="rounded-lg bg-white/60 border border-error/10 px-3 py-2 hidden min-w-0" id="dian-detail-errores-row">
+                            <div class="text-[11px] font-semibold uppercase tracking-wide text-on-error-container/80 mb-1">Detalle de errores</div>
+                            <div class="dian-error-scroll dian-error-scroll-lg custom-scrollbar rounded-md bg-white/50 px-2 py-2">
+                                <ul class="mt-0 space-y-2 list-none pl-0 m-0" id="dian-detail-errores-list"></ul>
+                            </div>
+                        </div>
+                        <div class="rounded-lg bg-white/60 border border-error/10 px-3 py-2 hidden min-w-0" id="dian-detail-error-track-row">
+                            <div class="text-[11px] font-semibold uppercase tracking-wide text-on-error-container/80 mb-1">Track ID</div>
+                            <div class="text-[13px] font-data-tabular break-all text-on-error-container" id="dian-detail-error-track-id">--</div>
+                        </div>
+                        <div class="rounded-lg bg-white/60 border border-error/10 px-3 py-2 hidden min-w-0" id="dian-detail-error-message-row">
+                            <div class="text-[11px] font-semibold uppercase tracking-wide text-on-error-container/80 mb-1">Mensaje adicional</div>
+                            <div class="dian-error-scroll custom-scrollbar rounded-md bg-white/50 px-2 py-2">
+                                <div class="dian-error-text text-on-error-container" id="dian-detail-error-message">--</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="p-4 rounded-xl border border-surface-container-highest bg-surface-container-low hidden" id="dian-detail-pending-box">
@@ -344,7 +411,7 @@
                     </p>
                 </div>
             </div>
-            <div class="px-6 py-4 border-t border-surface-container-highest flex justify-end bg-surface-container-low">
+            <div class="px-6 py-4 border-t border-surface-container-highest flex justify-end bg-surface-container-low shrink-0">
                 <button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md"
                         data-action="close-dian-detail"
                         type="button">
@@ -557,6 +624,71 @@
 
     const hasText = (value) => value != null && String(value).trim().length > 0;
 
+    const formatDianErrorText = (raw) => {
+        if (!hasText(raw)) {
+            return '';
+        }
+        let text = String(raw).trim();
+        text = text
+            .replace(/urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2/g, 'cbc')
+            .replace(/urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2/g, 'cac')
+            .replace(/urn:oasis:names:specification:ubl:schema:xsd:Invoice-2/g, 'inv')
+            .replace(/urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2/g, 'cn')
+            .replace(/urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2/g, 'dn')
+            .replace(/\{'([^']+)':([^}]+)\}/g, '$2')
+            .replace(/"\s*:\s*"/g, ':')
+            .replace(/\s*\|\s*/g, '\n');
+
+        const oneOfIndex = text.search(/\.\s*One of\s*\{/i);
+        if (oneOfIndex >= 0) {
+            const head = text.slice(0, oneOfIndex).trim();
+            const tail = text.slice(oneOfIndex).replace(/^\.\s*One of\s*\{?/i, '').replace(/\}\.?\s*$/,'');
+            const options = tail
+                .split(/,\s*(?=")/)
+                .map(item => item.replace(/^"+|"+$/g, '').trim())
+                .filter(hasText);
+            if (options.length > 0) {
+                return `${head}\n\nElementos permitidos en esta posición:\n${options.map(item => `• ${item}`).join('\n')}`;
+            }
+        }
+
+        return text;
+    };
+
+    const setDianErrorText = (element, raw) => {
+        element.textContent = formatDianErrorText(raw);
+    };
+
+    const parseDianErrores = (raw) => {
+        if (!hasText(raw)) {
+            return [];
+        }
+        const trimmed = String(raw).trim();
+        if (trimmed.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(item => String(item).trim()).filter(hasText);
+                }
+            } catch (_) {
+                /* usar separadores manuales */
+            }
+        }
+        return trimmed.split(/\s*\|\s*|\r?\n+/).map(item => item.trim()).filter(hasText);
+    };
+
+    const renderDianErroresList = (listElement, raw) => {
+        listElement.innerHTML = '';
+        const items = parseDianErrores(raw);
+        items.forEach(item => {
+            const row = document.createElement('li');
+            row.className = 'dian-error-text text-on-error-container pl-4 relative before:content-[\'•\'] before:absolute before:left-0 before:text-error';
+            row.textContent = formatDianErrorText(item);
+            listElement.appendChild(row);
+        });
+        return items.length > 0;
+    };
+
     const openModal = (modal) => {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -674,6 +806,7 @@
         const pendingBox = document.getElementById('dian-detail-pending-box');
         const trackRow = document.getElementById('dian-detail-track-row');
         const erroresRow = document.getElementById('dian-detail-errores-row');
+        const erroresList = document.getElementById('dian-detail-errores-list');
         const errorTrackRow = document.getElementById('dian-detail-error-track-row');
         const errorMessageRow = document.getElementById('dian-detail-error-message-row');
 
@@ -682,6 +815,7 @@
         pendingBox.classList.add('hidden');
         trackRow.classList.add('hidden');
         erroresRow.classList.add('hidden');
+        erroresList.innerHTML = '';
         errorTrackRow.classList.add('hidden');
         errorMessageRow.classList.add('hidden');
 
@@ -697,15 +831,17 @@
             successBox.classList.remove('hidden');
         } else if (isRejected || hasErrorDetail) {
             document.getElementById('dian-detail-error-code').textContent = hasText(errorCode) ? errorCode : 'N/D';
-            document.getElementById('dian-detail-error-description').textContent = hasText(errorDescription)
+            const primaryError = hasText(errorDescription)
                 ? errorDescription
                 : (hasText(statusMessage) ? statusMessage : 'Sin descripción adicional de la DIAN.');
-            if (hasText(errores)) {
-                document.getElementById('dian-detail-errores').textContent = errores;
+            setDianErrorText(document.getElementById('dian-detail-error-description'), primaryError);
+
+            const parsedErrores = parseDianErrores(errores).filter(item => item.trim() !== primaryError.trim());
+            if (renderDianErroresList(erroresList, parsedErrores.join(' | '))) {
                 erroresRow.classList.remove('hidden');
             }
-            if (hasText(statusMessage) && statusMessage !== errorDescription) {
-                document.getElementById('dian-detail-error-message').textContent = statusMessage;
+            if (hasText(statusMessage) && statusMessage.trim() !== primaryError.trim()) {
+                setDianErrorText(document.getElementById('dian-detail-error-message'), statusMessage);
                 errorMessageRow.classList.remove('hidden');
             }
             if (hasText(trackId)) {
@@ -726,6 +862,10 @@
         }
 
         openModal(dianDetailModal);
+        const detailBody = document.getElementById('dian-detail-body');
+        if (detailBody) {
+            detailBody.scrollTop = 0;
+        }
     };
 
     const closeDianDetailModal = () => closeModal(dianDetailModal);

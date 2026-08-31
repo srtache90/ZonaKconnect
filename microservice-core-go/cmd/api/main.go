@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"zonak/microservice-core-go/internal/delivery"
 	"zonak/microservice-core-go/internal/reception"
 
 	"github.com/go-chi/chi/v5"
@@ -67,10 +69,13 @@ type createDebitNoteRequest struct {
 }
 
 type invoiceCustomer struct {
-	TipoIdentificacion   string `json:"tipo_identificacion"`
-	NumeroIdentificacion string `json:"numero_identificacion"`
-	RazonSocial          string `json:"razon_social"`
-	Email                string `json:"email"`
+	TipoIdentificacion   string     `json:"tipo_identificacion"`
+	NumeroIdentificacion string     `json:"numero_identificacion"`
+	Dv                   string     `json:"dv,omitempty"`
+	RazonSocial          string     `json:"razon_social"`
+	Email                string     `json:"email"`
+	Telefono             string     `json:"telefono,omitempty"`
+	Direccion            addressDTO `json:"direccion,omitempty"`
 }
 
 type invoiceItem struct {
@@ -79,7 +84,7 @@ type invoiceItem struct {
 	Cantidad       float64   `json:"cantidad"`
 	PrecioUnitario float64   `json:"precio_unitario"`
 	Descuento      float64   `json:"descuento"`
-	Impuestos      []dianTax `json:"impuestos"`
+	Impuestos      []dianTax `json:"impuestos,omitempty"`
 }
 
 type dianNetRequest struct {
@@ -94,6 +99,7 @@ type DIANConfig struct {
 	S3CertificateKey          string `json:"s3_certificate_key"`
 	SecretsManagerPasswordKey string `json:"secrets_manager_password_key"`
 	Ambiente                  string `json:"ambiente"`
+	RegimenFiscal             string `json:"regimen_fiscal"`
 	SoftwareID                string `json:"software_id"`
 	Pin                       string `json:"pin"`
 }
@@ -126,6 +132,7 @@ type companyEmissionContext struct {
 	Telefono             string
 	Direccion            addressDTO
 	DIANConfig           DIANConfig
+	RegimenFiscal        string
 	ResolucionDIAN       string
 	ClaveTecnica         string
 	RangoDesde           int64
@@ -156,8 +163,8 @@ type dianInvoice struct {
 	Cliente           dianCustomer      `json:"cliente"`
 	Items             []dianInvoiceItem `json:"items"`
 	Totales           dianTotals        `json:"totales"`
-	Observaciones     string            `json:"observaciones"`
-	Notas             []string          `json:"notas"`
+	Observaciones     string            `json:"observaciones,omitempty"`
+	Notas             []string          `json:"notas,omitempty"`
 	ConfiguracionDian dianConfigDTO     `json:"configuracionDian"`
 }
 
@@ -174,8 +181,8 @@ type dianCreditNote struct {
 	ConceptosCorreccion []dianCorrectionConcept `json:"conceptosCorreccion"`
 	Items               []dianInvoiceItem       `json:"items"`
 	Totales             dianTotals              `json:"totales"`
-	Observaciones       string                  `json:"observaciones"`
-	Notas               []string                `json:"notas"`
+	Observaciones       string                  `json:"observaciones,omitempty"`
+	Notas               []string                `json:"notas,omitempty"`
 	ConfiguracionDian   dianConfigDTO           `json:"configuracionDian"`
 }
 
@@ -192,8 +199,8 @@ type dianDebitNote struct {
 	ConceptosCorreccion []dianCorrectionConcept `json:"conceptosCorreccion"`
 	Items               []dianInvoiceItem       `json:"items"`
 	Totales             dianTotals              `json:"totales"`
-	Observaciones       string                  `json:"observaciones"`
-	Notas               []string                `json:"notas"`
+	Observaciones       string                  `json:"observaciones,omitempty"`
+	Notas               []string                `json:"notas,omitempty"`
 	ConfiguracionDian   dianConfigDTO           `json:"configuracionDian"`
 }
 
@@ -251,7 +258,7 @@ type dianInvoiceItem struct {
 	PrecioUnitario float64   `json:"precioUnitario"`
 	Descuento      float64   `json:"descuento"`
 	Subtotal       float64   `json:"subtotal"`
-	Impuestos      []dianTax `json:"impuestos"`
+	Impuestos      []dianTax `json:"impuestos,omitempty"`
 	Total          float64   `json:"total"`
 }
 
@@ -272,6 +279,7 @@ type dianTotals struct {
 	Subtotal        float64 `json:"subtotal"`
 	TotalDescuentos float64 `json:"totalDescuentos"`
 	TotalImpuestos  float64 `json:"totalImpuestos"`
+	Propina         float64 `json:"propina,omitempty"`
 	Total           float64 `json:"total"`
 }
 
@@ -682,7 +690,9 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 
 		if _, err := a.emitInvoiceToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitInvoiceToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
-			a.persistEmissionError(ctx, invoiceID, err)
+			if shouldPersistPreDianEmissionError(err) {
+				a.persistEmissionError(ctx, invoiceID, err)
+			}
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, nextNumber, req)
 
@@ -806,7 +816,9 @@ func (a *app) handleCreateCreditNote(w http.ResponseWriter, r *http.Request) {
 
 		if _, err := a.emitCreditNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitCreditNoteToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
-			a.persistEmissionError(ctx, invoiceID, err)
+			if shouldPersistPreDianEmissionError(err) {
+				a.persistEmissionError(ctx, invoiceID, err)
+			}
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, nextNumber, req)
 
@@ -928,7 +940,9 @@ func (a *app) handleCreateDebitNote(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 		if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("emitDebitNoteToDianNet invoice_id=%s tenant_id=%s error=%v", invoiceID, tenantID, err)
-			a.persistEmissionError(ctx, invoiceID, err)
+			if shouldPersistPreDianEmissionError(err) {
+				a.persistEmissionError(ctx, invoiceID, err)
+			}
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijoND, nextNumber, req)
 
@@ -991,7 +1005,9 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 			}
 			if _, err := a.emitCreditNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 				log.Printf("reemit NC invoice_id=%s error=%v", invoiceID, err)
-				a.persistEmissionError(ctx, invoiceID, err)
+				if shouldPersistPreDianEmissionError(err) {
+					a.persistEmissionError(ctx, invoiceID, err)
+				}
 			}
 			return
 		}
@@ -1003,7 +1019,9 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 			}
 			if _, err := a.emitDebitNoteToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 				log.Printf("reemit ND invoice_id=%s error=%v", invoiceID, err)
-				a.persistEmissionError(ctx, invoiceID, err)
+				if shouldPersistPreDianEmissionError(err) {
+					a.persistEmissionError(ctx, invoiceID, err)
+				}
 			}
 			return
 		}
@@ -1014,7 +1032,9 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := a.emitInvoiceToDianNet(ctx, tenantID, emissionPointID, invoiceID, prefijo, numero, req); err != nil {
 			log.Printf("reemit FV invoice_id=%s error=%v", invoiceID, err)
-			a.persistEmissionError(ctx, invoiceID, err)
+			if shouldPersistPreDianEmissionError(err) {
+				a.persistEmissionError(ctx, invoiceID, err)
+			}
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, numero, rawPayload, documentKind)
 
@@ -1180,13 +1200,12 @@ func (a *app) emitGenericToDianNet(tenantID, emissionPointID, invoiceID uuid.UUI
 		log.Printf("emitGeneric load context invoice_id=%s error=%v", invoiceID, err)
 		return
 	}
-	ambiente := emissionCtx.DIANConfig.Ambiente
-	if ambiente == "" {
-		ambiente = "Habilitacion"
+	requestAmbiente := ""
+	if raw, ok := payload["ambiente"]; ok {
+		requestAmbiente = fmt.Sprint(raw)
 	}
-	if _, ok := payload["ambiente"]; !ok {
-		payload["ambiente"] = ambiente
-	}
+	ambiente := resolveDianAmbiente(requestAmbiente, emissionCtx.DIANConfig.Ambiente)
+	payload["ambiente"] = ambiente
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.dianAPIURL+path, bytes.NewReader(body))
 	if err != nil {
@@ -1344,13 +1363,7 @@ func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointI
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := invoiceReq.Ambiente
-	if ambiente == "" {
-		ambiente = emissionCtx.DIANConfig.Ambiente
-	}
-	if ambiente == "" {
-		ambiente = "Habilitacion"
-	}
+	ambiente := resolveDianAmbiente(invoiceReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
 
 	factura := buildDianInvoice(invoiceReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
@@ -1410,10 +1423,21 @@ func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointI
 		return payload, err
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return payload, fmt.Errorf("DIAN_API status %d", resp.StatusCode)
+	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
+		return payload, err
 	}
 	return payload, nil
+}
+
+func dianNetHTTPError(httpStatus int, payload json.RawMessage) error {
+	if httpStatus >= 200 && httpStatus <= 299 {
+		return nil
+	}
+	// DIAN_NET responde 502 con JSON de rechazo DIAN; no es fallo de transporte.
+	if httpStatus == 502 && json.Valid(payload) {
+		return nil
+	}
+	return fmt.Errorf("DIAN_API status %d", httpStatus)
 }
 
 func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPointID, invoiceID uuid.UUID, prefijo string, numero int64, creditNoteReq createCreditNoteRequest) (json.RawMessage, error) {
@@ -1425,13 +1449,7 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := creditNoteReq.Ambiente
-	if ambiente == "" {
-		ambiente = emissionCtx.DIANConfig.Ambiente
-	}
-	if ambiente == "" {
-		ambiente = "Habilitacion"
-	}
+	ambiente := resolveDianAmbiente(creditNoteReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
 
 	notaCredito := buildDianCreditNote(creditNoteReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
@@ -1491,8 +1509,8 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 		return payload, err
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return payload, fmt.Errorf("DIAN_API status %d", resp.StatusCode)
+	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
+		return payload, err
 	}
 	return payload, nil
 }
@@ -1506,13 +1524,7 @@ func (a *app) emitDebitNoteToDianNet(ctx context.Context, tenantID, emissionPoin
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := debitNoteReq.Ambiente
-	if ambiente == "" {
-		ambiente = emissionCtx.DIANConfig.Ambiente
-	}
-	if ambiente == "" {
-		ambiente = "Habilitacion"
-	}
+	ambiente := resolveDianAmbiente(debitNoteReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
 
 	notaDebito := buildDianDebitNote(debitNoteReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
@@ -1572,10 +1584,17 @@ func (a *app) emitDebitNoteToDianNet(ctx context.Context, tenantID, emissionPoin
 		return payload, err
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return payload, fmt.Errorf("DIAN_API status %d", resp.StatusCode)
+	if err := dianNetHTTPError(resp.StatusCode, payload); err != nil {
+		return payload, err
 	}
 	return payload, nil
+}
+
+func shouldPersistPreDianEmissionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return !strings.HasPrefix(err.Error(), "DIAN_API status ")
 }
 
 func (a *app) loadCompanyEmissionContext(ctx context.Context, tenantID, emissionPointID uuid.UUID) (companyEmissionContext, error) {
@@ -1638,31 +1657,139 @@ func (a *app) loadCompanyEmissionContext(ctx context.Context, tenantID, emission
 	if err := json.Unmarshal(dianConfigRaw, &result.DIANConfig); err != nil {
 		return result, err
 	}
+	result.RegimenFiscal = normalizeRegimenFiscal(result.DIANConfig.RegimenFiscal)
 	return result, nil
 }
 
+func normalizeRegimenFiscal(value string) string {
+	allowed := map[string]struct{}{
+		"O-13": {}, "O-15": {}, "O-23": {}, "O-47": {}, "ZZ": {},
+	}
+	legacy := map[string]string{
+		"O-48": "ZZ",
+		"O-49": "ZZ",
+		"O-99": "ZZ",
+		"O-33": "",
+	}
+	parts := strings.Split(strings.ToUpper(strings.TrimSpace(value)), ";")
+	normalized := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		token := strings.TrimSpace(part)
+		if token == "" {
+			continue
+		}
+		if mapped, ok := legacy[token]; ok {
+			if mapped == "" {
+				continue
+			}
+			token = mapped
+		}
+		if _, ok := allowed[token]; !ok {
+			continue
+		}
+		if _, dup := seen[token]; dup {
+			continue
+		}
+		seen[token] = struct{}{}
+		normalized = append(normalized, token)
+	}
+	if len(normalized) == 0 {
+		return "ZZ"
+	}
+	return strings.Join(normalized, ";")
+}
+
+func defaultRegimenFiscalAdquirente(tipoIdentificacion string) string {
+	if normalizeDianIdentificationType(tipoIdentificacion) == "31" {
+		return "R-99-PJ"
+	}
+	return "R-99-PN"
+}
+
+func describeConceptoNotaCredito(codigo string) string {
+	switch strings.TrimSpace(codigo) {
+	case "2":
+		return "Anulación de factura electrónica"
+	case "3":
+		return "Rebaja  o descuento parcial o total"
+	case "4":
+		return "Ajuste de precio"
+	case "5":
+		return "Otros"
+	default:
+		return "Devolución parcial de los bienes y/o no aceptación parcial del servicio"
+	}
+}
+
 func buildDianEmisor(emissionCtx companyEmissionContext) dianParty {
+	nit := calcularSoloDigitosNIT(emissionCtx.NIT)
+	dv := strings.TrimSpace(emissionCtx.DV)
+	if dv == "" {
+		dv = calcularDVNIT(nit)
+	}
 	return dianParty{
-		Nit:                emissionCtx.NIT,
-		Dv:                 defaultString(emissionCtx.DV, "0"),
+		Nit:                nit,
+		Dv:                 dv,
 		TipoIdentificacion: "31",
 		TipoPersona:        "1",
-		RazonSocial:        emissionCtx.RazonSocial,
+		RazonSocial:        strings.TrimSpace(emissionCtx.RazonSocial),
 		NombreComercial:    defaultString(emissionCtx.NombreComercial, emissionCtx.RazonSocial),
 		Direccion:          defaultAddress(emissionCtx.Direccion),
 		Telefono:           emissionCtx.Telefono,
 		Email:              emissionCtx.Email,
-		RegimenFiscal:      "R-99-PN",
+		RegimenFiscal:      normalizeRegimenFiscal(emissionCtx.RegimenFiscal),
 		TributoID:          "01",
 		TributoNombre:      "IVA",
 		ActividadEconomica: "5611",
 	}
 }
 
+func buildDianCustomer(c invoiceCustomer) dianCustomer {
+	numeroIdentificacion := calcularSoloDigitosNIT(strings.TrimSpace(c.NumeroIdentificacion))
+	if numeroIdentificacion == "" {
+		numeroIdentificacion = "222222222222"
+	}
+	tipoIdentificacion := normalizeDianIdentificationType(c.TipoIdentificacion)
+	dv := strings.TrimSpace(c.Dv)
+	if tipoIdentificacion == "31" {
+		dv = calcularDVNIT(numeroIdentificacion)
+	} else if dv == "" {
+		dv = "0"
+	}
+	razonSocial := strings.TrimSpace(defaultString(c.RazonSocial, "Consumidor final"))
+	razonSocial = strings.Join(strings.Fields(razonSocial), " ")
+	regimenFiscal := defaultRegimenFiscalAdquirente(tipoIdentificacion)
+	tributoID := "ZZ"
+	tributoNombre := "No aplica"
+	if tipoIdentificacion == "31" {
+		tributoID = "01"
+		tributoNombre = "IVA"
+	}
+	tipoPersona := "2"
+	if tipoIdentificacion == "31" {
+		tipoPersona = "1"
+	}
+	return dianCustomer{
+		TipoIdentificacion:   tipoIdentificacion,
+		NumeroIdentificacion: numeroIdentificacion,
+		Dv:                   dv,
+		TipoPersona:          tipoPersona,
+		RazonSocial:          razonSocial,
+		NombreComercial:      razonSocial,
+		Direccion:            defaultAddress(c.Direccion),
+		Telefono:             c.Telefono,
+		Email:                c.Email,
+		RegimenFiscal:        regimenFiscal,
+		TributoID:            tributoID,
+		TributoNombre:        tributoNombre,
+	}
+}
+
 func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionContext, prefijo string, numero int64, ambiente string) dianInvoice {
-	totals := resolveTotals(req)
-	items := make([]dianInvoiceItem, 0, len(req.Items))
-	for i, item := range req.Items {
+	sourceItems := ensureItemTaxes(filterOutPropinaLines(req.Items), req.Totals)
+	items := make([]dianInvoiceItem, 0, len(sourceItems))
+	for i, item := range sourceItems {
 		quantity := defaultFloat(item.Cantidad, 1)
 		subtotal := quantity*item.PrecioUnitario - item.Descuento
 		if subtotal < 0 {
@@ -1683,10 +1810,15 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 		})
 	}
 
-	now := time.Now()
+	now := nowColombia()
 	invoiceTypeCode := "01"
 	if isContingencyInvoice(req) {
 		invoiceTypeCode = "05"
+	}
+	totals := resolveTotalsFromItems(sourceItems, req.Totals)
+	totals.Propina = parseStoredTotals(req.Totals).Propina
+	if totals.Propina > 0 && totals.Total <= totals.Subtotal+totals.TotalImpuestos {
+		totals.Total = totals.Subtotal + totals.TotalImpuestos + totals.Propina
 	}
 	return dianInvoice{
 		TipoDocumento:    "FV",
@@ -1696,24 +1828,11 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 		FechaVencimiento: now,
 		Moneda:           "COP",
 		Emisor:           buildDianEmisor(emissionCtx),
-		Cliente: dianCustomer{
-			TipoIdentificacion:   defaultString(req.Cliente.TipoIdentificacion, "31"),
-			NumeroIdentificacion: defaultString(req.Cliente.NumeroIdentificacion, "222222222222"),
-			Dv:                   "0",
-			TipoPersona:          "1",
-			RazonSocial:          defaultString(req.Cliente.RazonSocial, "Consumidor final"),
-			NombreComercial:      defaultString(req.Cliente.RazonSocial, "Consumidor final"),
-			Direccion:            defaultAddress(addressDTO{}),
-			Telefono:             "",
-			Email:                req.Cliente.Email,
-			RegimenFiscal:        "R-99-PN",
-			TributoID:            "ZZ",
-			TributoNombre:        "No Aplica",
-		},
+		Cliente:          buildDianCustomer(req.Cliente),
 		Items:         items,
 		Totales:       totals,
 		Observaciones: "Factura generada desde Core Go y emitida por DIAN_NET",
-		Notas:         []string{"Origen normalizado por Core Go"},
+		Notas:         []string{},
 		ConfiguracionDian: dianConfigDTO{
 			NumeroResolucion: emissionCtx.ResolucionDIAN,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
@@ -1754,7 +1873,7 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		})
 	}
 
-	now := time.Now()
+	now := nowColombia()
 	reference := req.FacturaReferencia
 	if reference.TipoDocumento == "" {
 		reference.TipoDocumento = "FV"
@@ -1771,9 +1890,7 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		if concepts[i].Codigo == "" {
 			concepts[i].Codigo = "1"
 		}
-		if concepts[i].Descripcion == "" {
-			concepts[i].Descripcion = "Devolucion parcial de los bienes y/o no aceptacion parcial del servicio"
-		}
+		concepts[i].Descripcion = describeConceptoNotaCredito(concepts[i].Codigo)
 	}
 
 	return dianCreditNote{
@@ -1785,24 +1902,12 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		Moneda:             "COP",
 		FacturaReferencia:  reference,
 		Emisor:             buildDianEmisor(emissionCtx),
-		Cliente: dianCustomer{
-			TipoIdentificacion:   defaultString(req.Cliente.TipoIdentificacion, "31"),
-			NumeroIdentificacion: req.Cliente.NumeroIdentificacion,
-			Dv:                   "0",
-			TipoPersona:          "1",
-			RazonSocial:          defaultString(req.Cliente.RazonSocial, "Cliente"),
-			NombreComercial:      defaultString(req.Cliente.RazonSocial, "Cliente"),
-			Direccion:            defaultAddress(addressDTO{}),
-			Email:                req.Cliente.Email,
-			RegimenFiscal:        "R-99-PN",
-			TributoID:            "ZZ",
-			TributoNombre:        "No Aplica",
-		},
+		Cliente:            buildDianCustomer(req.Cliente),
 		ConceptosCorreccion: concepts,
 		Items:               items,
 		Totales:             totals,
 		Observaciones:       "Nota credito generada desde Core Go y emitida por DIAN_NET",
-		Notas:               []string{"Origen normalizado por Core Go"},
+		Notas:               []string{},
 		ConfiguracionDian: dianConfigDTO{
 			NumeroResolucion: emissionCtx.ResolucionDIAN,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
@@ -1843,7 +1948,7 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 		})
 	}
 
-	now := time.Now()
+	now := nowColombia()
 	reference := req.FacturaReferencia
 	if reference.TipoDocumento == "" {
 		reference.TipoDocumento = "FV"
@@ -1874,24 +1979,12 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 		Moneda:            "COP",
 		FacturaReferencia: reference,
 		Emisor:            buildDianEmisor(emissionCtx),
-		Cliente: dianCustomer{
-			TipoIdentificacion:   defaultString(req.Cliente.TipoIdentificacion, "31"),
-			NumeroIdentificacion: req.Cliente.NumeroIdentificacion,
-			Dv:                   "0",
-			TipoPersona:          "1",
-			RazonSocial:          defaultString(req.Cliente.RazonSocial, "Cliente"),
-			NombreComercial:      defaultString(req.Cliente.RazonSocial, "Cliente"),
-			Direccion:            defaultAddress(addressDTO{}),
-			Email:                req.Cliente.Email,
-			RegimenFiscal:        "R-99-PN",
-			TributoID:            "ZZ",
-			TributoNombre:        "No Aplica",
-		},
+		Cliente:           buildDianCustomer(req.Cliente),
 		ConceptosCorreccion: concepts,
 		Items:               items,
 		Totales:             totals,
 		Observaciones:       "Nota debito generada desde Core Go y emitida por DIAN_NET",
-		Notas:               []string{"Origen normalizado por Core Go"},
+		Notas:               []string{},
 		ConfiguracionDian: dianConfigDTO{
 			NumeroResolucion: emissionCtx.ResolucionDIAN,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
@@ -1933,32 +2026,186 @@ func resolveTotals(req createInvoiceRequest) dianTotals {
 }
 
 func resolveTotalsFromItems(items []invoiceItem, totalsJSON json.RawMessage) dianTotals {
-	subtotal := 0.0
 	discounts := 0.0
+	lineNet := 0.0
 	for _, item := range items {
-		subtotal += defaultFloat(item.Cantidad, 1) * item.PrecioUnitario
+		qty := defaultFloat(item.Cantidad, 1)
+		base := qty*item.PrecioUnitario - item.Descuento
+		if base < 0 {
+			base = 0
+		}
+		lineNet += base
 		discounts += item.Descuento
 	}
-	netSubtotal := subtotal - discounts
-	if netSubtotal < 0 {
-		netSubtotal = 0
-	}
 
+	computedTaxes := sumTaxesFromItems(items)
 	totals := dianTotals{
-		Subtotal:        netSubtotal,
+		Subtotal:        lineNet,
 		TotalDescuentos: discounts,
-		TotalImpuestos:  sumTaxesFromItems(items),
-		Total:           netSubtotal + sumTaxesFromItems(items),
+		TotalImpuestos:  computedTaxes,
+		Total:           lineNet + computedTaxes,
 	}
 
-	var raw map[string]any
-	if len(totalsJSON) == 0 || json.Unmarshal(totalsJSON, &raw) != nil {
+	if computedTaxes > 0 {
 		return totals
 	}
-	totals.Subtotal = numberFromMap(raw, "subtotal", totals.Subtotal)
-	totals.TotalImpuestos = numberFromMap(raw, "impuestos", totals.TotalImpuestos)
-	totals.Total = numberFromMap(raw, "total", totals.Subtotal+totals.TotalImpuestos)
+
+	stored := parseStoredTotals(totalsJSON)
+	if stored.Subtotal > 0 {
+		totals.Subtotal = stored.Subtotal
+	}
+	if stored.TotalImpuestos > 0 {
+		totals.TotalImpuestos = stored.TotalImpuestos
+	}
+	if stored.Total > 0 {
+		totals.Total = stored.Total
+	} else if stored.Subtotal > 0 || stored.TotalImpuestos > 0 {
+		totals.Total = totals.Subtotal + totals.TotalImpuestos + stored.Propina
+	}
+
 	return totals
+}
+
+type storedInvoiceTotals struct {
+	Subtotal       float64 `json:"subtotal"`
+	Iva            float64 `json:"iva"`
+	Propina        float64 `json:"propina"`
+	Total          float64 `json:"total"`
+	TotalImpuestos float64 `json:"impuestos"`
+}
+
+func parseStoredTotals(raw json.RawMessage) storedInvoiceTotals {
+	if len(raw) == 0 || !json.Valid(raw) {
+		return storedInvoiceTotals{}
+	}
+	var totals storedInvoiceTotals
+	_ = json.Unmarshal(raw, &totals)
+	if totals.TotalImpuestos == 0 && totals.Iva > 0 {
+		totals.TotalImpuestos = totals.Iva
+	}
+	return totals
+}
+
+func ensureItemTaxes(items []invoiceItem, totalsJSON json.RawMessage) []invoiceItem {
+	hasTaxes := false
+	for _, item := range items {
+		if len(item.Impuestos) > 0 {
+			hasTaxes = true
+			break
+		}
+	}
+	if hasTaxes {
+		return items
+	}
+
+	stored := parseStoredTotals(totalsJSON)
+	if stored.TotalImpuestos <= 0 && stored.Iva <= 0 {
+		return items
+	}
+
+	enriched := make([]invoiceItem, len(items))
+	copy(enriched, items)
+	lineSubtotal := 0.0
+	for i, item := range enriched {
+		qty := defaultFloat(item.Cantidad, 1)
+		base := qty*item.PrecioUnitario - item.Descuento
+		if base < 0 {
+			base = 0
+		}
+		lineSubtotal += base
+		enriched[i] = item
+	}
+
+	taxRate := 19.0
+	if stored.Iva > 0 && lineSubtotal > 0 {
+		taxRate = stored.Iva / lineSubtotal * 100
+	} else if stored.TotalImpuestos > 0 && lineSubtotal > 0 {
+		taxRate = stored.TotalImpuestos / lineSubtotal * 100
+	}
+
+	for i, item := range enriched {
+		if strings.EqualFold(strings.TrimSpace(item.Codigo), "PROPINA") {
+			continue
+		}
+		qty := defaultFloat(item.Cantidad, 1)
+		base := qty*item.PrecioUnitario - item.Descuento
+		if base < 0 {
+			base = 0
+		}
+		if base <= 0 {
+			continue
+		}
+		taxVal := math.Round(base*taxRate/100*100) / 100
+		item.Impuestos = []dianTax{{
+			Codigo:        "01",
+			Nombre:        "IVA",
+			Porcentaje:    taxRate,
+			BaseImponible: base,
+			Valor:         taxVal,
+		}}
+		enriched[i] = item
+	}
+	return enriched
+}
+
+func filterOutPropinaLines(items []invoiceItem) []invoiceItem {
+	filtered := make([]invoiceItem, 0, len(items))
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.Codigo), "PROPINA") {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
+}
+
+func appendPropinaItem(items []invoiceItem, totalsJSON json.RawMessage) []invoiceItem {
+	if hasPropinaItem(items) {
+		return items
+	}
+	propina := parseStoredTotals(totalsJSON).Propina
+	if propina <= 0 {
+		return items
+	}
+	return append(items, invoiceItem{
+		Codigo:         "PROPINA",
+		Descripcion:    "Propina voluntaria",
+		Cantidad:       1,
+		PrecioUnitario: propina,
+		Descuento:      0,
+		Impuestos:      []dianTax{},
+	})
+}
+
+func hasPropinaItem(items []invoiceItem) bool {
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.Codigo), "PROPINA") {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeDianIdentificationType(raw string) string {
+	value := strings.ToUpper(strings.TrimSpace(defaultString(raw, "31")))
+	switch value {
+	case "CC", "13":
+		return "13"
+	case "CE", "22":
+		return "22"
+	case "PA", "42":
+		return "42"
+	case "NIT", "31":
+		return "31"
+	default:
+		return value
+	}
+}
+
+var colombiaLocation = time.FixedZone("America/Bogota", -5*60*60)
+
+func nowColombia() time.Time {
+	return time.Now().In(colombiaLocation)
 }
 
 func normalizeDianTaxes(taxes []dianTax, base, quantity float64, unitCode string) []dianTax {
@@ -2013,6 +2260,37 @@ func sumTaxesFromItems(items []invoiceItem) float64 {
 		}
 	}
 	return total
+}
+
+func calcularSoloDigitosNIT(value string) string {
+	var digits strings.Builder
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			digits.WriteRune(r)
+		}
+	}
+	return digits.String()
+}
+
+func calcularDVNIT(nit string) string {
+	digits := calcularSoloDigitosNIT(nit)
+	if digits == "" {
+		return "0"
+	}
+	weights := []int{3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71}
+	sum := 0
+	for i := len(digits) - 1; i >= 0; i-- {
+		weightIndex := len(digits) - 1 - i
+		if weightIndex >= len(weights) {
+			break
+		}
+		sum += int(digits[i]-'0') * weights[weightIndex]
+	}
+	remainder := sum % 11
+	if remainder < 2 {
+		return strconv.Itoa(remainder)
+	}
+	return strconv.Itoa(11 - remainder)
 }
 
 func resolveDianStatus(resp dianNetResponse, httpStatus int) string {
@@ -2080,10 +2358,44 @@ func defaultAddress(address addressDTO) addressDTO {
 
 func dianEnvironmentCode(ambiente string) string {
 	switch strings.ToLower(strings.TrimSpace(ambiente)) {
-	case "produccion", "producci?n":
+	case "produccion", "producción", "prod":
 		return "1"
 	default:
 		return "2"
+	}
+}
+
+func resolveDianAmbiente(requestAmbiente, configAmbiente string) string {
+	// LOCAL/dev en payload histórico no debe pisar el ambiente DIAN de la sociedad (Produccion/Habilitacion).
+	if explicit := explicitDianAmbiente(requestAmbiente); explicit != "" {
+		return explicit
+	}
+	if normalized := normalizeDianAmbiente(configAmbiente); normalized != "" {
+		return normalized
+	}
+	return "Habilitacion"
+}
+
+func explicitDianAmbiente(ambiente string) string {
+	switch strings.ToLower(strings.TrimSpace(ambiente)) {
+	case "", "local", "dev", "development":
+		return ""
+	}
+	return normalizeDianAmbiente(ambiente)
+}
+
+func normalizeDianAmbiente(ambiente string) string {
+	switch strings.ToLower(strings.TrimSpace(ambiente)) {
+	case "", "local", "dev", "development":
+		return "Habilitacion"
+	case "mock":
+		return "Mock"
+	case "habilitacion", "habilitación", "hab":
+		return "Habilitacion"
+	case "produccion", "producción", "prod":
+		return "Produccion"
+	default:
+		return strings.TrimSpace(ambiente)
 	}
 }
 
@@ -2168,6 +2480,18 @@ func (a *app) handleDownloadInvoiceDocument(w http.ResponseWriter, r *http.Reque
 		content = buildGraphicRepresentationPDF(prefijo, numero, estadoDian, invoiceID)
 		contentType = "application/pdf"
 		fileName = fmt.Sprintf("%s-%d.pdf", prefijo, numero)
+	case "attachment", "contenedor", "attached-document":
+		signedXML, signedErr := decodeRequiredBase64(dianResp.SignedXMLBase64)
+		appResponse := []byte(dianResp.ApplicationResponseXML)
+		if len(appResponse) == 0 {
+			appResponse, _ = decodeRequiredBase64(dianResp.ApplicationResponseXMLBase64)
+		}
+		if signedErr != nil {
+			err = signedErr
+		} else {
+			content, fileName, err = delivery.BuildAttachedDocumentZip(signedXML, appResponse)
+		}
+		contentType = "application/zip"
 	default:
 		http.Error(w, "tipo de documento invalido", http.StatusBadRequest)
 		return

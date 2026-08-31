@@ -1,84 +1,74 @@
 <!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción RADIAN | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Recepción RADIAN | Zona K e-Docs')}"></th:block>
     <style>
         .badge-tacita { background: #e8f5e9; color: #1b5e20; }
         .plazo-vencido { color: #b71c1c; font-weight: 600; }
         .plazo-por-vencer { color: #e65100; font-weight: 600; }
         .cufe-warn { color: #b71c1c; }
 
-        .zk-invoices-header {
-            background: #080808 !important;
-            border-bottom-color: #292929 !important;
-        }
-        .zk-invoices-brand {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0;
-            min-width: 14px;
-            color: #ffffff !important;
-            text-decoration: none;
-        }
-        .zk-invoices-logo {
-            display: block;
-            width: 120px;
-            height: auto;
-            object-fit: contain;
-        }
-        .zk-invoices-brand span {
-            color: #dccea9 !important;
-            font-family: "TT Commons", Arial, sans-serif;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: .16em;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-        .zk-invoices-menu,
-        .zk-invoices-menu .material-symbols-outlined {
-            color: #ffffff !important;
-        }
-        .text-on-surface-variant {
-            color: #e1dfdf !important;
-        }
         .mi-tooltip {
             position: relative;
             display: inline-block;
-            cursor: pointer;
+            cursor: help;
+            margin-top: 4px;
+        }
+        .mi-tooltip-icon {
+            font-size: 18px;
+            color: #dc3545;
+            line-height: 1;
         }
         .mi-tooltip .mi-tooltip-texto {
             visibility: hidden;
-            background-color: #f7f7f7; 
-            color: #f51313;           
-            text-align: center;
-            padding: 9px 1px;
-            border-radius: 8px;        
-            font-size: 9px;
-            font-family: sans-serif;
-            line-height: 1.4;
+            background-color: #fff5f5;
+            color: #7f1d1d;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            font-size: 12px;
+            font-family: "TT Commons", Arial, sans-serif;
+            line-height: 1.45;
             position: absolute;
-            z-index: 100;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            min-width: 200px;
-            max-width: 300px;
+            z-index: 200;
+            bottom: calc(100% + 8px);
+            left: 0;
+            min-width: 240px;
+            max-width: min(360px, 90vw);
+            white-space: normal;
+            word-wrap: break-word;
             opacity: 0;
             transition: opacity 0.2s ease-in-out;
+            pointer-events: none;
+        }
+        .mi-tooltip .mi-tooltip-texto strong {
+            display: block;
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #b91c1c;
+            margin-bottom: 6px;
+        }
+        .mi-tooltip-list {
+            margin: 0;
+            padding-left: 16px;
+        }
+        .mi-tooltip-list li + li {
+            margin-top: 4px;
         }
         .mi-tooltip .mi-tooltip-texto::after {
             content: "";
             position: absolute;
             top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
+            left: 14px;
+            border-width: 6px;
             border-style: solid;
-            border-color: #333333 transparent transparent transparent;
+            border-color: #fecaca transparent transparent transparent;
         }
-        .mi-tooltip:hover .mi-tooltip-texto {
+        .mi-tooltip:hover .mi-tooltip-texto,
+        .mi-tooltip:focus-within .mi-tooltip-texto {
             visibility: visible;
             opacity: 1;
         }
@@ -87,27 +77,8 @@
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<header class="zk-invoices-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop bg-surface border-b border-surface-container-highest">
-    <div class="flex items-center gap-3 ">
-        <button class="zk-invoices-menu p-2 -ml-2 rounded-full hover:bg-surface-container-low transition-colors" id="sidebar-open" type="button">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-        <a class="zk-invoices-brand" th:href="@{/portal}" aria-label="Zona K Connect">
-            <img th:src="@{/imagen/Zonak1.png}"
-                 src="/imagen/Zonak1.png"
-                 alt="Zona K"
-                 class="zk-invoices-logo">
-            <span>CONNECT</span>
-        </a>
-    </div>
-    <div class="flex items-center gap-4">
-        <a class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-decoration-none" th:href="@{/portal/search}" aria-label="Buscar">
-            <span class="material-symbols-outlined text-on-surface-variant">search</span>
-        </a>
-    </div>
-
-    </header>
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
@@ -116,7 +87,7 @@
     </div>
 
     <div class="alert alert-success rounded-4" id="flashSuccess" role="alert" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger rounded-4" id="flashError" role="alert" th:if="${error != null}" th:text="${error}"></div>
+    <div class="alert alert-danger rounded-4" id="flashError" role="alert" style="white-space: pre-wrap; word-break: break-word;" th:if="${error != null}" th:text="${error}"></div>
     <div class="alert d-none rounded-4" id="eventAlert" role="alert"></div>
 
     <section class="zk-filter-card p-4 mb-4">
@@ -271,11 +242,14 @@
                                 th:href="@{/portal/recepcion/{id}/detalle(id=${invoice.id})}"
                                 th:text="${invoice.proveedorName}">Proveedor</a>
                                 <div class="text-muted small zk-data" th:text="${invoice.proveedorNit}">900000000</div>
-                                <div class="mi-tooltip" th:if="${!#lists.isEmpty(invoice.validationIssues)}">
-                                    <span style="font-size: 20px; color: #dc3545;">&#9888;</span>
-                                    <span class="mi-tooltip-texto" th:text="${#strings.listJoin(invoice.validationIssues, ' · ')}">
-                                        Mensaje de error
-                                    </span>
+                                <div class="mi-tooltip" th:if="${!#lists.isEmpty(invoice.validationIssues)}" tabindex="0" role="button" aria-label="Ver problemas de validación">
+                                    <span class="mi-tooltip-icon">&#9888;</span>
+                                    <div class="mi-tooltip-texto">
+                                        <strong>Problemas de validación</strong>
+                                        <ul class="mi-tooltip-list">
+                                            <li th:each="issue : ${invoice.validationIssues}" th:text="${issue}">Mensaje de error</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </td>
                         <td>
@@ -475,6 +449,8 @@
 
     function showAlert(message, success) {
         alertBox.textContent = message;
+        alertBox.style.whiteSpace = 'pre-wrap';
+        alertBox.style.wordBreak = 'break-word';
         alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
         alertBox.classList.add(success ? 'alert-success' : 'alert-danger');
     }

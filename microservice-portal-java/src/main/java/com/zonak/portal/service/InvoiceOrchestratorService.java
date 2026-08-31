@@ -1,16 +1,19 @@
 package com.zonak.portal.service;
 
 import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
+import com.zonak.portal.dto.CreateDebitNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.dto.InvoiceResponseDTO;
 import com.zonak.portal.exception.InvoiceStorageException;
+import com.zonak.portal.mail.InvoiceMailDispatchService;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -24,26 +27,30 @@ public class InvoiceOrchestratorService {
     private final InvoiceStorageService invoiceStorageService;
     private final InvoicePdfService invoicePdfService;
     private final InvoiceReportRepository invoiceReportRepository;
+    private final InvoiceMailDispatchService invoiceMailDispatchService;
 
     public InvoiceOrchestratorService(
             InvoiceClientService invoiceClientService,
             InvoiceStorageService invoiceStorageService,
             InvoicePdfService invoicePdfService,
-            InvoiceReportRepository invoiceReportRepository
+            InvoiceReportRepository invoiceReportRepository,
+            InvoiceMailDispatchService invoiceMailDispatchService
     ) {
         this.invoiceClientService = invoiceClientService;
         this.invoiceStorageService = invoiceStorageService;
         this.invoicePdfService = invoicePdfService;
         this.invoiceReportRepository = invoiceReportRepository;
+        this.invoiceMailDispatchService = invoiceMailDispatchService;
     }
 
     public Mono<UUID> processAndPersistInvoice(CreateInvoiceRequestDTO requestDTO, String tenantId) {
         return invoiceClientService.emitInvoice(requestDTO)
-                .doOnNext(response -> generateAndUploadPdf(response, tenantId)
-                        .subscribe(
-                                pdfUrl -> log.info("PDF factura generado invoice_id={} url={}", response.id(), pdfUrl),
-                                error -> log.warn("No fue posible generar PDF invoice_id={}: {}", response.id(), error.getMessage())
-                        ))
+                .doOnNext(response -> schedulePostEmissionArtifacts(
+                        response,
+                        tenantId,
+                        null,
+                        customerEmail(requestDTO.customer())
+                ))
                 .map(InvoiceResponseDTO::id);
     }
 
@@ -53,11 +60,27 @@ public class InvoiceOrchestratorService {
             String emissionPointId
     ) {
         return invoiceClientService.emitCreditNote(requestDTO, tenantId, emissionPointId)
-                .doOnNext(response -> generateAndUploadPdf(response, tenantId)
-                        .subscribe(
-                                pdfUrl -> log.info("PDF NC generado invoice_id={} url={}", response.id(), pdfUrl),
-                                error -> log.warn("No fue posible generar PDF NC invoice_id={}: {}", response.id(), error.getMessage())
-                        ))
+                .doOnNext(response -> schedulePostEmissionArtifacts(
+                        response,
+                        tenantId,
+                        emissionPointId,
+                        customerEmail(requestDTO.cliente())
+                ))
+                .map(InvoiceResponseDTO::id);
+    }
+
+    public Mono<UUID> processAndPersistDebitNote(
+            CreateDebitNoteRequestDTO requestDTO,
+            String tenantId,
+            String emissionPointId
+    ) {
+        return invoiceClientService.emitDebitNote(requestDTO, tenantId, emissionPointId)
+                .doOnNext(response -> schedulePostEmissionArtifacts(
+                        response,
+                        tenantId,
+                        emissionPointId,
+                        customerEmail(requestDTO.cliente())
+                ))
                 .map(InvoiceResponseDTO::id);
     }
 
@@ -66,13 +89,54 @@ public class InvoiceOrchestratorService {
             String tenantId,
             String emissionPointId
     ) {
+        return processAndPersistInvoice(requestDTO, tenantId, emissionPointId, customerEmail(requestDTO.customer()));
+    }
+
+    private Mono<UUID> processAndPersistInvoice(
+            CreateInvoiceRequestDTO requestDTO,
+            String tenantId,
+            String emissionPointId,
+            String customerEmail
+    ) {
         return invoiceClientService.emitInvoice(requestDTO, tenantId, emissionPointId)
-                .doOnNext(response -> generateAndUploadPdf(response, tenantId)
-                        .subscribe(
-                                pdfUrl -> log.info("PDF factura generado invoice_id={} url={}", response.id(), pdfUrl),
-                                error -> log.warn("No fue posible generar PDF invoice_id={}: {}", response.id(), error.getMessage())
-                        ))
+                .doOnNext(response -> schedulePostEmissionArtifacts(
+                        response,
+                        tenantId,
+                        emissionPointId,
+                        customerEmail
+                ))
                 .map(InvoiceResponseDTO::id);
+    }
+
+    private void schedulePostEmissionArtifacts(
+            InvoiceResponseDTO response,
+            String tenantId,
+            String emissionPointId,
+            String customerEmail
+    ) {
+        generateAndUploadPdf(response, tenantId)
+                .flatMap(pdfUrl -> invoiceMailDispatchService.dispatchToAcquirerIfConfigured(
+                        tenantId,
+                        response.id(),
+                        emissionPointId,
+                        customerEmail
+                ))
+                .subscribe(
+                        mailResult -> {
+                            if (StringUtils.hasText(mailResult)) {
+                                log.info("Correo adquirente enviado invoice_id={} {}", response.id(), mailResult);
+                            }
+                        },
+                        error -> log.warn(
+                                "Post-emisión incompleta invoice_id={}: {}",
+                                response.id(),
+                                error.getMessage()
+                        )
+                );
+    }
+
+    private static String customerEmail(CreateInvoiceRequestDTO.CustomerDTO customer) {
+        return customer != null && StringUtils.hasText(customer.email()) ? customer.email().trim() : null;
     }
 
     private Mono<String> generateAndUploadPdf(InvoiceResponseDTO response, String tenantId) {

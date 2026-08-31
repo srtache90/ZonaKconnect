@@ -21,6 +21,7 @@ certs/
 
 # temporales locales
 tmp-*
+**/.local-design-backup/
 
 # IDE / SO
 .idea/

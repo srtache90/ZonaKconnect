@@ -199,6 +199,13 @@ CREATE TABLE IF NOT EXISTS sociedades (
     password_imap_enc TEXT,
     dian_ambiente VARCHAR(20) NOT NULL DEFAULT 'Habilitacion'
         CHECK (dian_ambiente IN ('Habilitacion', 'Produccion', 'Mock')),
+    dian_regimen_fiscal VARCHAR(16) NOT NULL DEFAULT 'O-99'
+        CHECK (dian_regimen_fiscal IN (
+            'O-06', 'O-07', 'O-08', 'O-09', 'O-11', 'O-12', 'O-13', 'O-14', 'O-15',
+            'O-16', 'O-17', 'O-19', 'O-22', 'O-23', 'O-32', 'O-33', 'O-34', 'O-36',
+            'O-37', 'O-38', 'O-39', 'O-47', 'O-48', 'O-49', 'O-99',
+            'R-06-PJ', 'R-07-PJ', 'R-12-PJ', 'R-16-PJ', 'R-99-PJ'
+        )),
     dian_software_id VARCHAR(64),
     dian_software_pin_enc TEXT,
     creado_at TIMESTAMPTZ NOT NULL DEFAULT now()

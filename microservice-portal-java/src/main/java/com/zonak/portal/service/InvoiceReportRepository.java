@@ -2,6 +2,7 @@ package com.zonak.portal.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zonak.portal.config.DianGraphicRepresentationProperties;
 import com.zonak.portal.dto.DianFiscalContext;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.exception.InvoiceStorageException;
@@ -21,6 +22,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -38,10 +40,16 @@ public class InvoiceReportRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final DianGraphicRepresentationProperties graphicProperties;
 
-    public InvoiceReportRepository(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    public InvoiceReportRepository(
+            JdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper,
+            DianGraphicRepresentationProperties graphicProperties
+    ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
+        this.graphicProperties = graphicProperties;
     }
 
     public Optional<InvoicePdfData> findApprovedInvoice(UUID tenantId, UUID invoiceId) {
@@ -50,6 +58,21 @@ public class InvoiceReportRepository {
 
     public Optional<InvoicePdfData> findInvoice(UUID tenantId, UUID invoiceId) {
         return findInvoice(tenantId, invoiceId, false);
+    }
+
+    public Optional<UUID> findEmissionPointId(UUID tenantId, UUID invoiceId) {
+        List<UUID> ids = jdbcTemplate.query(
+                """
+                        SELECT emission_point_id
+                        FROM invoices
+                        WHERE company_id = ?
+                          AND id = ?
+                        """,
+                (rs, rowNum) -> rs.getObject("emission_point_id", UUID.class),
+                tenantId,
+                invoiceId
+        );
+        return ids.stream().filter(Objects::nonNull).findFirst();
     }
 
     private Optional<InvoicePdfData> findInvoice(UUID tenantId, UUID invoiceId, boolean requireCufe) {
@@ -70,6 +93,7 @@ public class InvoiceReportRepository {
                                COALESCE(c.email::text, '') AS company_email,
                                COALESCE(c.telefono, '') AS company_phone,
                                c.direccion::text AS company_address,
+                               COALESCE(NULLIF(TRIM(c.dian_config->>'regimen_fiscal'), ''), 'O-99') AS company_regimen_fiscal,
                                ep.resolucion_dian,
                                ep.rango_desde,
                                ep.rango_hasta,
@@ -137,7 +161,7 @@ public class InvoiceReportRepository {
                 rs.getString("razon_social"),
                 rs.getString("nit"),
                 rs.getString("dv"),
-                "R-99-PN",
+                rs.getString("company_regimen_fiscal"),
                 addressText(readTree(rs.getString("company_address"))),
                 rs.getString("company_email"),
                 rs.getString("company_phone"),
@@ -156,12 +180,11 @@ public class InvoiceReportRepository {
                 )
                 : tenantCompany;
         InvoicePdfData.Customer customer = received
-                ? new InvoicePdfData.Customer(
-                        tenantCompany.razonSocial(),
-                        tenantCompany.nit(),
-                        tenantCompany.direccion(),
-                        tenantCompany.email()
-                )
+                ? mapCustomerNode(objectMapper.createObjectNode()
+                        .put("razon_social", tenantCompany.razonSocial())
+                        .put("numero_identificacion", tenantCompany.nit())
+                        .put("direccion", tenantCompany.direccion())
+                        .put("email", tenantCompany.email()))
                 : mapCustomer(rawPayload.path("cliente"));
         List<InvoicePdfData.Item> items = mapItems(rawPayload.path("items"));
         List<InvoicePdfData.TaxDetail> impuestos = taxDetails(rawPayload.path("items"), false);
@@ -177,6 +200,7 @@ public class InvoiceReportRepository {
                 totals,
                 firstText(rs.getString("uuid_cude"), dianResponse.path("cufe"), dianResponse.path("cufeCune"), dianResponse.path("uuid"))
         );
+        DianFiscalContext.DocumentKind kind = fiscalContext.documentKind();
 
         return new InvoicePdfData(
                 rs.getObject("id", UUID.class),
@@ -200,7 +224,14 @@ public class InvoiceReportRepository {
                 retenciones,
                 recargos,
                 totals,
-                rs.getString("estado_dian")
+                rs.getString("estado_dian"),
+                mapPaymentInfo(rawPayload),
+                mapReferencedDocument(rawPayload),
+                documentTypeLabel(rawPayload, kind),
+                operationTypeLabel(rawPayload, kind),
+                mapConceptosCorreccion(rawPayload),
+                DianGraphicRepresentationHelper.taxResponsibilities(company.regimen()),
+                mapSoftwareInfo()
         );
     }
 
@@ -219,11 +250,7 @@ public class InvoiceReportRepository {
         String uniqueCode = firstString(signedXml.uniqueCode(), persistedUniqueCode);
         String uniqueCodeLabel = (kind == DianFiscalContext.DocumentKind.CREDIT_NOTE
                 || kind == DianFiscalContext.DocumentKind.DEBIT_NOTE) ? "CUDE" : "CUFE";
-        String title = switch (kind) {
-            case CREDIT_NOTE -> "Nota Crédito Electrónica";
-            case DEBIT_NOTE -> "Nota Débito Electrónica";
-            default -> "Factura Electrónica de Venta";
-        };
+        String title = DianGraphicRepresentationHelper.documentTitle(kind);
         String templateName = switch (kind) {
             case CREDIT_NOTE, DEBIT_NOTE -> "reports/nota-credito-template";
             default -> "reports/factura-template";
@@ -258,13 +285,23 @@ public class InvoiceReportRepository {
             return items;
         }
 
+        int lineNumber = 1;
         for (JsonNode node : itemsNode) {
             BigDecimal cantidad = decimal(node, "cantidad", BigDecimal.ONE);
             BigDecimal valorUnitario = decimal(node, "precio_unitario", BigDecimal.ZERO);
             BigDecimal descuento = decimal(node, "descuento", BigDecimal.ZERO);
             BigDecimal subtotal = money(cantidad.multiply(valorUnitario).subtract(descuento));
             TaxBreakdown taxes = taxBreakdown(node.path("impuestos"), subtotal);
+            String unitCode = firstString(
+                    text(node, "unidad_medida", ""),
+                    text(node, "unidadMedida", ""),
+                    "94"
+            );
             items.add(new InvoicePdfData.Item(
+                    lineNumber,
+                    firstString(text(node, "codigo", ""), "ITEM-" + lineNumber),
+                    unitCode,
+                    DianGraphicRepresentationHelper.unitLabel(unitCode),
                     cantidad,
                     text(node, "descripcion", "Item facturado"),
                     valorUnitario,
@@ -273,6 +310,7 @@ public class InvoiceReportRepository {
                     taxes.otrosImpuestos(),
                     subtotal.add(taxes.iva()).add(taxes.otrosImpuestos())
             ));
+            lineNumber++;
         }
         return items;
     }
@@ -485,10 +523,133 @@ public class InvoiceReportRepository {
                 "ValFac: " + plain(totals.subtotal()),
                 "ValIva: " + plain(totals.iva()),
                 "ValOtroIm: " + plain(totals.otrosImpuestos()),
-                "ValTotal: " + plain(totals.total()),
+                "ValTolFac: " + plain(totals.total()),
                 uniqueCodeLabel + ": " + uniqueCode,
                 dianQrUrl(uniqueCode)
         );
+    }
+
+    private InvoicePdfData.PaymentInfo mapPaymentInfo(JsonNode rawPayload) {
+        JsonNode totalsNode = totalsNode(rawPayload);
+        JsonNode pagosNode = totalsNode.path("pagos");
+        if (!pagosNode.isArray() || pagosNode.isEmpty()) {
+            pagosNode = rawPayload.path("pagos");
+        }
+
+        String formaPago = firstString(
+                text(totalsNode, "condicion_venta", ""),
+                text(rawPayload, "condicion_venta", ""),
+                text(rawPayload, "forma_pago", ""),
+                "1"
+        );
+        String medioPago = "10";
+        String plazoCredito = "";
+
+        if (pagosNode.isArray() && !pagosNode.isEmpty()) {
+            JsonNode firstPayment = pagosNode.get(0);
+            formaPago = firstString(
+                    text(firstPayment, "forma_pago", ""),
+                    text(firstPayment, "formaPago", ""),
+                    formaPago
+            );
+            medioPago = firstString(
+                    text(firstPayment, "medio_pago", ""),
+                    text(firstPayment, "medioPago", ""),
+                    medioPago
+            );
+            plazoCredito = firstString(
+                    text(firstPayment, "plazo", ""),
+                    text(firstPayment, "fecha_pago", "")
+            );
+        }
+
+        return new InvoicePdfData.PaymentInfo(
+                DianGraphicRepresentationHelper.formaPagoLabel(formaPago),
+                DianGraphicRepresentationHelper.medioPagoLabel(medioPago),
+                plazoCredito
+        );
+    }
+
+    private InvoicePdfData.ReferencedDocument mapReferencedDocument(JsonNode rawPayload) {
+        JsonNode ref = rawPayload.path("factura_referencia");
+        if (ref.isMissingNode() || ref.isNull()) {
+            return null;
+        }
+        String numero = firstString(
+                text(ref, "numeroDocumento", ""),
+                text(ref, "numero_documento", "")
+        );
+        String cufe = text(ref, "cufe", "");
+        if (numero.isBlank() && cufe.isBlank()) {
+            return null;
+        }
+        LocalDate fecha = null;
+        String rawDate = firstString(text(ref, "fechaEmision", ""), text(ref, "fecha_emision", ""));
+        if (!rawDate.isBlank()) {
+            try {
+                fecha = OffsetDateTime.parse(rawDate).toLocalDate();
+            } catch (Exception ignored) {
+                if (rawDate.length() >= 10) {
+                    fecha = LocalDate.parse(rawDate.substring(0, 10));
+                }
+            }
+        }
+        return new InvoicePdfData.ReferencedDocument(numero, cufe, fecha);
+    }
+
+    private List<String> mapConceptosCorreccion(JsonNode rawPayload) {
+        JsonNode conceptos = rawPayload.path("conceptos_correccion");
+        if (!conceptos.isArray()) {
+            return List.of();
+        }
+        List<String> labels = new ArrayList<>();
+        for (JsonNode concepto : conceptos) {
+            String descripcion = text(concepto, "descripcion", "");
+            if (!descripcion.isBlank()) {
+                labels.add(descripcion);
+            }
+        }
+        return labels;
+    }
+
+    private String documentTypeLabel(JsonNode rawPayload, DianFiscalContext.DocumentKind kind) {
+        return switch (kind) {
+            case CREDIT_NOTE -> DianGraphicRepresentationHelper.documentTypeLabel(
+                    firstString(text(rawPayload, "credit_note_type_code", ""), "91"));
+            case DEBIT_NOTE -> DianGraphicRepresentationHelper.documentTypeLabel(
+                    firstString(text(rawPayload, "debit_note_type_code", ""), "92"));
+            default -> DianGraphicRepresentationHelper.documentTypeLabel(
+                    firstString(
+                            text(rawPayload.path("totals_jsonb"), "invoice_type_code", ""),
+                            text(rawPayload.path("totales"), "invoice_type_code", ""),
+                            text(rawPayload, "invoice_type_code", ""),
+                            "01"
+                    ));
+        };
+    }
+
+    private String operationTypeLabel(JsonNode rawPayload, DianFiscalContext.DocumentKind kind) {
+        if (kind == DianFiscalContext.DocumentKind.INVOICE) {
+            return "";
+        }
+        return DianGraphicRepresentationHelper.customizationLabel(text(rawPayload, "customization_id", ""));
+    }
+
+    private InvoicePdfData.SoftwareInfo mapSoftwareInfo() {
+        return new InvoicePdfData.SoftwareInfo(
+                graphicProperties.softwareManufacturerName(),
+                graphicProperties.softwareManufacturerNit(),
+                graphicProperties.softwareName(),
+                graphicProperties.technologyProviderName()
+        );
+    }
+
+    private JsonNode totalsNode(JsonNode rawPayload) {
+        JsonNode totalsNode = rawPayload.path("totals_jsonb");
+        if (totalsNode.isMissingNode() || totalsNode.isNull()) {
+            totalsNode = rawPayload.path("totales");
+        }
+        return totalsNode;
     }
 
     private String dianQrUrl(String uniqueCode) {
@@ -576,11 +737,26 @@ public class InvoiceReportRepository {
     }
 
     private InvoicePdfData.Customer mapCustomer(JsonNode customerNode) {
+        return mapCustomerNode(customerNode);
+    }
+
+    private InvoicePdfData.Customer mapCustomerNode(JsonNode customerNode) {
+        String identificacion = firstText(
+                text(customerNode, "numero_identificacion", ""),
+                customerNode.path("numeroIdentificacion")
+        );
+        String razonSocial = text(customerNode, "razon_social", "Cliente");
+        boolean consumidorFinal = DianGraphicRepresentationHelper.isConsumidorFinal(identificacion, razonSocial);
+        if (consumidorFinal) {
+            razonSocial = "Consumidor final";
+            identificacion = "222222222222";
+        }
         return new InvoicePdfData.Customer(
-                text(customerNode, "razon_social", "Cliente"),
-                firstText(text(customerNode, "numero_identificacion", ""), customerNode.path("numeroIdentificacion")),
+                razonSocial,
+                identificacion,
                 addressText(customerNode.path("direccion")),
-                text(customerNode, "email", "")
+                text(customerNode, "email", ""),
+                consumidorFinal
         );
     }
 
