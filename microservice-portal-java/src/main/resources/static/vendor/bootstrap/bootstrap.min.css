@@ -3959,7 +3959,8 @@ textarea.form-control-lg {
 
 .btn-group-vertical>.btn,.btn-group>.btn {
     position: relative;
-    flex: 1 1 auto
+    flex: 1 1 auto;
+    font-size:11px;
 }
 
 .btn-group-vertical>.btn-check:checked+.btn,.btn-group-vertical>.btn-check:focus+.btn,.btn-group-vertical>.btn.active,.btn-group-vertical>.btn:active,.btn-group-vertical>.btn:focus,.btn-group-vertical>.btn:hover,.btn-group>.btn-check:checked+.btn,.btn-group>.btn-check:focus+.btn,.btn-group>.btn.active,.btn-group>.btn:active,.btn-group>.btn:focus,.btn-group>.btn:hover {
@@ -8518,7 +8519,8 @@ textarea.form-control-lg {
 }
 
 .mt-1 {
-    margin-top: .25rem!important
+    margin-top: .25rem!important;
+    width: 100px!important;
 }
 
 .mt-2 {
@@ -8690,8 +8692,8 @@ textarea.form-control-lg {
 }
 
 .py-2 {
-    padding-top: .5rem!important;
-    padding-bottom: .5rem!important
+    padding-top: 8px!important;
+    padding-bottom: 8px!important
 }
 
 .py-3 {

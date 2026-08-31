@@ -443,6 +443,10 @@ textarea.form-control {
     background: var(--dc-surface-lowest) !important;
     color: var(--dc-on-surface) !important;
     font-family: var(--dc-font);
+    font-size: 11px;
+    padding-bottom: 1px;
+    padding-top: 3px;
+
 }
 
 .form-control:focus,
@@ -470,7 +474,7 @@ textarea.form-control {
 .table > :not(caption) > * > * {
     background: transparent !important;
     border-bottom-color: var(--dc-surface-high) !important;
-    padding: 0.9rem 0.85rem;
+    padding: 0.9px 6px;
     vertical-align: middle;
 }
 

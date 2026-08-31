@@ -108,7 +108,6 @@
     </div>
 
     </header>
->>>>>>> 6068c8bad39cd64354af46f44414cc277d1ca696
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / RADIAN</p>
@@ -236,7 +235,7 @@
                         </th>
                         <th class="text-center">Proveedor</th>
                         <th class="text-center">Factura</th>
-                        <th class="text-center" style="min-width: 170px;">Punto</th>
+                        <th class="text-center" style="min-width: 120px;">Punto</th>
                         <th class="text-center">Total</th>
                         <th class="text-center">Emisión</th>
                         <th class="text-center">Estado</th>
@@ -290,7 +289,7 @@
                             <div th:if="${invoice.assignedEmissionPointId == null}" class="text-muted">Sin asignar</div>
                             <div class="text-muted" style="font-size:11px"
                                  th:text="${invoice.assignmentSource}">UNASSIGNED</div>
-                            <form class="mt-1" method="post"
+                            <form class="mt-1 " method="post"
                                   th:if="${canAssignPoint}"
                                   th:action="@{/portal/recepcion/{id}/asignar-punto(id=${invoice.id})}">
                                 <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
@@ -306,7 +305,7 @@
                         <td class="text-center zk-data text-nowrap  py-4 px-3" th:text="${'$ ' + #numbers.formatDecimal(invoice.totalAmount, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
                         <td class="zk-data text-nowrap text-center py-4 px-3 align-middle" th:text="${invoice.fechaEmision}">2026-06-12</td>
                         <td>
-                            <span class="badge badge-soft rounded-pill px-5 py-2.5"
+                            <span class="badge badge-soft rounded-pill px-3 py-2.5"
                                   th:classappend="${invoice.estadoDian.name() == 'PENDIENTE'} ? ' badge-pendiente' :
                                                   (${invoice.estadoDian.name() == 'ACUSADA_085'} ? ' badge-085' :
                                                   (${invoice.estadoDian.name() == 'RECIBIDA_086'} ? ' badge-086' :
@@ -316,7 +315,7 @@
                                 PENDIENTE
                             </span>
                         </td>
-                        <td class="text-center py-4 px-3 align-middle">
+                        <td class="text-center py-4 px-2 align-middle">
                             <div class="btn-group btn-group-sm shadow-sm inline-flex" role="group" style="min-width: 140px; border-radius: 8px; overflow: hidden;">
                                 <button type="button"
                                         class="btn btn-outline-secondary px-3 py-2"
@@ -332,7 +331,7 @@
                                         <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
                                         </svg>
                                 </button>
-                                <a class="btn btn-outline-secondary px-3 py-2"
+                                <a class="btn btn-outline-secondary px-2 py-2"
                                    data-bs-toggle="tooltip"
                                    data-bs-placement="top"
                                    title="Descargar XML"
@@ -343,7 +342,7 @@
                                     </svg>
                                 </a>
                                 <button type="button"
-                                        class="btn btn-outline-secondary px-3 py-2"
+                                        class="btn btn-outline-secondary px-2 py-2"
                                         data-bs-toggle="tooltip"
                                         data-bs-placement="top"
                                         title="Envío por correo"
