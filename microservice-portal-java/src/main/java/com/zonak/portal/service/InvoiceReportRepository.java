@@ -85,6 +85,7 @@ public class InvoiceReportRepository {
                                i.numero,
                                i.estado_dian,
                                i.uuid_cude,
+                               i.created_at,
                                i.raw_dian_payload_jsonb::text AS raw_payload,
                                i.dian_response_jsonb::text AS dian_response,
                                c.razon_social,
@@ -198,7 +199,8 @@ public class InvoiceReportRepository {
                 company,
                 customer,
                 totals,
-                firstText(rs.getString("uuid_cude"), dianResponse.path("cufe"), dianResponse.path("cufeCune"), dianResponse.path("uuid"))
+                firstText(rs.getString("uuid_cude"), dianResponse.path("cufe"), dianResponse.path("cufeCune"), dianResponse.path("uuid")),
+                rs.getObject("created_at", OffsetDateTime.class)
         );
         DianFiscalContext.DocumentKind kind = fiscalContext.documentKind();
 
@@ -242,7 +244,8 @@ public class InvoiceReportRepository {
             InvoicePdfData.Company company,
             InvoicePdfData.Customer customer,
             InvoicePdfData.Totals totals,
-            String persistedUniqueCode
+            String persistedUniqueCode,
+            OffsetDateTime createdAt
     ) {
         DianFiscalContext.DocumentKind kind = signedXml.documentKind() != null
                 ? signedXml.documentKind()
@@ -257,10 +260,10 @@ public class InvoiceReportRepository {
         };
         LocalDate issueDate = signedXml.issueDate() != null
                 ? signedXml.issueDate()
-                : fallbackIssueDate(rawPayload);
+                : fallbackIssueDate(rawPayload, createdAt);
         OffsetTime issueTime = signedXml.issueTime() != null
                 ? signedXml.issueTime()
-                : fallbackIssueTime(rawPayload);
+                : fallbackIssueTime(rawPayload, createdAt);
         String qrUrl = dianQrUrl(uniqueCode);
 
         return new DianFiscalContext(
@@ -699,22 +702,24 @@ public class InvoiceReportRepository {
         return signedXmlMetadata(Base64.getEncoder().encodeToString(xml.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private LocalDate fallbackIssueDate(JsonNode rawPayload) {
+    private LocalDate fallbackIssueDate(JsonNode rawPayload, OffsetDateTime createdAt) {
         String rawDate = firstString(text(rawPayload, "fechaEmision", ""), text(rawPayload, "fecha_emision", ""));
-        if (rawDate.isBlank()) {
-            throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
-        }
-        try {
-            return OffsetDateTime.parse(rawDate).toLocalDate();
-        } catch (Exception ignored) {
-            if (rawDate.length() >= 10) {
-                return LocalDate.parse(rawDate.substring(0, 10));
+        if (!rawDate.isBlank()) {
+            try {
+                return OffsetDateTime.parse(rawDate).toLocalDate();
+            } catch (Exception ignored) {
+                if (rawDate.length() >= 10) {
+                    return LocalDate.parse(rawDate.substring(0, 10));
+                }
             }
-            throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
         }
+        if (createdAt != null) {
+            return createdAt.atZoneSameInstant(COLOMBIA_OFFSET).toLocalDate();
+        }
+        throw new InvoiceStorageException("IssueDate fiscal no disponible para representación gráfica");
     }
 
-    private OffsetTime fallbackIssueTime(JsonNode rawPayload) {
+    private OffsetTime fallbackIssueTime(JsonNode rawPayload, OffsetDateTime createdAt) {
         String rawDate = firstString(text(rawPayload, "fechaEmision", ""), text(rawPayload, "fecha_emision", ""));
         if (!rawDate.isBlank()) {
             try {
@@ -722,6 +727,9 @@ public class InvoiceReportRepository {
             } catch (Exception ignored) {
                 return OffsetTime.of(0, 0, 0, 0, COLOMBIA_OFFSET);
             }
+        }
+        if (createdAt != null) {
+            return createdAt.withOffsetSameInstant(COLOMBIA_OFFSET).toOffsetTime();
         }
         return OffsetTime.of(0, 0, 0, 0, COLOMBIA_OFFSET);
     }

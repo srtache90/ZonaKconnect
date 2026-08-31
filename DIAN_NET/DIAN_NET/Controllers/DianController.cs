@@ -10,10 +10,14 @@ namespace DIAN_NET.Controllers
     public class DianController : ControllerBase
     {
         private readonly IDianResolutionService _resolutionService;
+        private readonly IDianDocumentInfoService _documentInfoService;
 
-        public DianController(IDianResolutionService resolutionService)
+        public DianController(
+            IDianResolutionService resolutionService,
+            IDianDocumentInfoService documentInfoService)
         {
             _resolutionService = resolutionService ?? throw new ArgumentNullException(nameof(resolutionService));
+            _documentInfoService = documentInfoService ?? throw new ArgumentNullException(nameof(documentInfoService));
         }
 
         /// <summary>
@@ -37,6 +41,31 @@ namespace DIAN_NET.Controllers
                     ambiente,
                     resolutionNumber,
                     prefix);
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(502, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Consulta eventos RADIAN/mercantiles asociados a un CUFE/CUDE (GetDocumentInfo).
+        /// </summary>
+        [HttpGet("document-info")]
+        [ProducesResponseType(typeof(DianDocumentInfoQueryResponse), 200)]
+        [ProducesResponseType(typeof(object), 400)]
+        public ActionResult<DianDocumentInfoQueryResponse> GetDocumentInfo(
+            [FromQuery] string uuid,
+            [FromQuery] string ambiente = "Habilitacion")
+        {
+            try
+            {
+                var response = _documentInfoService.ConsultarEventosPorCufe(uuid, ambiente);
                 return Ok(response);
             }
             catch (ArgumentException ex)

@@ -68,7 +68,7 @@ services:
     container_name: zona-k-localstack
     restart: unless-stopped
     environment:
-      - SERVICES=s3,secretsmanager
+      - SERVICES=s3,secretsmanager,sqs
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
@@ -160,6 +160,8 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       RECEPTION_S3_BUCKET: zona-k-reception
       S3_BUCKET: zona-k-reception
+      EMISSION_RADIAN_SYNC_QUEUE_URL: http://localstack:4566/000000000000/zona-k-emission-radian-sync
+      EMISSION_RADIAN_SYNC_DELAY_SECONDS: "120"
     ports:
       - "8081:8080"
     depends_on:
@@ -169,8 +171,38 @@ services:
         condition: service_completed_successfully
       dian-net:
         condition: service_started
+      localstack:
+        condition: service_healthy
       zona-k-dian-mock:
         condition: service_started
+    networks:
+      - local_infra
+
+  core-go-worker:
+    build:
+      context: ./microservice-core-go
+    container_name: zona-k-core-go-worker
+    restart: unless-stopped
+    entrypoint: ["/app/worker"]
+    environment:
+      DATABASE_URL: postgres://zona_k_app:zona_k_app_local_password@postgres:5432/zona_k_facturacion?sslmode=disable
+      DIAN_API_URL: http://dian-net:8080
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      EMISSION_RADIAN_SYNC_QUEUE_URL: http://localstack:4566/000000000000/zona-k-emission-radian-sync
+      EMISSION_RADIAN_SWEEP_INTERVAL: 4h
+      EMISSION_RADIAN_SWEEP_LIMIT: "50"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      dian-net:
+        condition: service_started
+      localstack:
+        condition: service_healthy
     networks:
       - local_infra
 
@@ -285,7 +317,7 @@ configs:
       RECEIVED_BUCKET_NAME="received-invoices-bucket"
       SECRET_NAME="dian/certificates/test-passwords"
 
-      echo "Inicializando recursos locales de AWS: S3 y Secrets Manager"
+      echo "Inicializando recursos locales de AWS: S3, Secrets Manager y SQS"
 
       if ! awslocal s3api head-bucket --bucket "$${BUCKET_NAME}" >/dev/null 2>&1; then
         awslocal s3api create-bucket --bucket "$${BUCKET_NAME}"
@@ -322,7 +354,12 @@ configs:
           --secret-string "$${SECRET_PAYLOAD}"
       fi
 
-      echo "Recursos locales listos: s3://$${BUCKET_NAME}, s3://$${RECEIVED_BUCKET_NAME}, secret:$${SECRET_NAME}"
+      RADIAN_SYNC_QUEUE="zona-k-emission-radian-sync"
+      if ! awslocal sqs get-queue-url --queue-name "$${RADIAN_SYNC_QUEUE}" >/dev/null 2>&1; then
+        awslocal sqs create-queue --queue-name "$${RADIAN_SYNC_QUEUE}"
+      fi
+
+      echo "Recursos locales listos: s3://$${BUCKET_NAME}, s3://$${RECEIVED_BUCKET_NAME}, secret:$${SECRET_NAME}, sqs:$${RADIAN_SYNC_QUEUE}"
   dian_mock_success_mapping:
     content: |
       {

@@ -93,6 +93,7 @@ namespace DIAN_NET
                     provider.GetRequiredService<IDianXmlDebugStore>(),
                     provider.GetRequiredService<ITenantCertificateLoader>()));
             builder.Services.AddScoped<IDianResolutionService, DianResolutionService>();
+            builder.Services.AddScoped<IDianDocumentInfoService, DianDocumentInfoService>();
             builder.Services.AddScoped<IEmissionService, EmissionService>();
             builder.Services.AddScoped<IRadianEventService>(provider =>
             {
