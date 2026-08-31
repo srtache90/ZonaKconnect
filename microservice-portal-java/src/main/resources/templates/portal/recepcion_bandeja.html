@@ -132,8 +132,9 @@
                 <label class="form-label text-muted small" for="cufe">CUFE</label>
                 <input class="form-control rounded-3" id="cufe" name="cufe" th:value="${cufe}" placeholder="Fragmento CUFE">
             </div>
-            <div class="col-md-2">
-                <button class="btn btn-zk rounded-pill w-100" type="submit">Filtrar</button>
+            <div class ="col-md-1-2">
+            <div class="col-md-22">
+                <button class="btn-1 btn-zk rounded-pill w-100" type="submit">Filtrar</button>
             </div>
             <div class="col-md-3">
                 <label class="form-label text-muted small" for="fromDate">Desde</label>
@@ -143,6 +144,7 @@
                 <label class="form-label text-muted small" for="toDate">Hasta</label>
                 <input class="form-control rounded-3" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
+        </div>
         </form>
     </section>
 
@@ -153,6 +155,7 @@
                     <h2 class="h3 mb-1">Facturas recibidas (abiertas)</h2>
                     <p class="text-muted mb-0">Secuencia legal: 085 → 086 → 087/088. Tras 086, 3 días hábiles → tácita.</p>
                 </div>
+                <div class="button-group d-flex gap-2 flex-wrap">
                 <span class="badge rounded-pill text-bg-light border zk-data" th:text="'Total: ' + ${#lists.size(invoices)}">Total: 0</span>
                 <form method="post" th:action="@{/portal/recepcion/sincronizar-correo}">
                     <input type="hidden" name="sociedadId" th:value="${selectedSociedadId}">
@@ -162,6 +165,7 @@
                    th:href="@{/portal/recepcion/historico(sociedadId=${selectedSociedadId})}">Histórico</a>
                 <a class="btn btn-outline-dark rounded-pill px-4"
                    th:href="@{/portal/recepcion/reportes(sociedadId=${selectedSociedadId})}">Reportes</a>
+                   </div>
                 <form class="d-flex gap-2 align-items-center"
                       enctype="multipart/form-data"
                       method="post"
