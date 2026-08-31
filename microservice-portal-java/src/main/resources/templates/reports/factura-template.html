@@ -6,21 +6,21 @@
     <style>
         @page {
             size: letter;
-            margin: 18mm 14mm;
+            margin: 16mm 12mm 28mm 12mm;
         }
 
         body {
             color: #1f2937;
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.35;
         }
 
         .header {
             border-bottom: 3px solid #12355b;
             display: table;
-            margin-bottom: 14px;
-            padding-bottom: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
             width: 100%;
         }
 
@@ -38,14 +38,14 @@
         .logo {
             border: 1px solid #d1d5db;
             color: #12355b;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
-            height: 58px;
+            height: 54px;
             letter-spacing: 1px;
-            line-height: 58px;
-            margin-bottom: 8px;
+            line-height: 54px;
+            margin-bottom: 6px;
             text-align: center;
-            width: 160px;
+            width: 150px;
         }
 
         h1, h2, h3, p {
@@ -54,14 +54,19 @@
 
         h1 {
             color: #12355b;
-            font-size: 21px;
+            font-size: 14px;
             margin-bottom: 4px;
+            text-transform: lowercase;
+        }
+
+        h1::first-letter {
+            text-transform: uppercase;
         }
 
         h2 {
             color: #12355b;
-            font-size: 13px;
-            margin-bottom: 7px;
+            font-size: 11px;
+            margin-bottom: 6px;
             text-transform: uppercase;
         }
 
@@ -69,35 +74,42 @@
             border: 1px solid #12355b;
             border-radius: 4px;
             display: inline-block;
-            padding: 8px 12px;
+            max-width: 100%;
+            padding: 8px 10px;
             text-align: left;
         }
 
         .muted {
             color: #6b7280;
+            font-size: 9px;
         }
 
         .grid {
             display: table;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             width: 100%;
         }
 
         .grid-col {
             display: table-cell;
-            padding-right: 10px;
+            padding-right: 8px;
             vertical-align: top;
             width: 50%;
+        }
+
+        .grid-col:last-child {
+            padding-right: 0;
         }
 
         .card {
             border: 1px solid #d1d5db;
             border-radius: 4px;
-            padding: 10px;
+            min-height: 88px;
+            padding: 8px;
         }
 
         .row {
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .label {
@@ -107,22 +119,23 @@
 
         table {
             border-collapse: collapse;
-            margin-top: 8px;
+            margin-top: 6px;
             width: 100%;
         }
 
         th {
             background: #12355b;
             color: white;
-            font-size: 10px;
-            padding: 7px 6px;
+            font-size: 8px;
+            padding: 5px 4px;
             text-align: left;
             text-transform: uppercase;
         }
 
         td {
             border-bottom: 1px solid #e5e7eb;
-            padding: 7px 6px;
+            font-size: 9px;
+            padding: 5px 4px;
             vertical-align: top;
         }
 
@@ -130,10 +143,14 @@
             text-align: right;
         }
 
+        .text-center {
+            text-align: center;
+        }
+
         .totals {
             margin-left: auto;
-            margin-top: 10px;
-            width: 42%;
+            margin-top: 8px;
+            width: 46%;
         }
 
         .totals td {
@@ -158,15 +175,19 @@
         .grand-total {
             background: #eef4fb;
             color: #12355b;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: bold;
         }
 
         .legal-footer {
             border-top: 2px solid #12355b;
+            margin-top: 14px;
+            padding-top: 10px;
+            width: 100%;
+        }
+
+        .legal-grid {
             display: table;
-            margin-top: 18px;
-            padding-top: 12px;
             width: 100%;
         }
 
@@ -177,23 +198,57 @@
         }
 
         .legal-text {
-            padding-right: 14px;
-            width: 72%;
+            padding-right: 12px;
+            width: 70%;
         }
 
         .qr-box {
             text-align: center;
-            width: 28%;
+            width: 30%;
         }
 
         .qr-box img {
-            height: 130px;
-            width: 130px;
+            height: 76px;
+            width: 76px;
         }
 
         .cufe {
             font-family: "Courier New", monospace;
-            font-size: 9px;
+            font-size: 8px;
+            word-break: break-all;
+        }
+
+        .software-footer {
+            border-top: 1px solid #d1d5db;
+            font-size: 8px;
+            margin-top: 10px;
+            padding-top: 6px;
+        }
+
+        .page-qr {
+            bottom: 0;
+            position: fixed;
+            right: 0;
+            text-align: center;
+            width: 90px;
+        }
+
+        .page-qr img {
+            height: 76px;
+            width: 76px;
+        }
+
+        .page-qr p {
+            font-size: 7px;
+        }
+
+        .note-list {
+            margin: 4px 0 0 14px;
+            padding: 0;
+        }
+
+        .note-list li {
+            margin-bottom: 2px;
         }
     </style>
 </head>
@@ -203,22 +258,49 @@
         <img th:if="${invoice.company.logoDataUri != null and !#strings.isEmpty(invoice.company.logoDataUri)}"
              th:src="${invoice.company.logoDataUri}"
              alt="Logo"
-             style="max-height:58px; max-width:160px;"/>
+             style="max-height:54px; max-width:150px;"/>
         <div th:unless="${invoice.company.logoDataUri != null and !#strings.isEmpty(invoice.company.logoDataUri)}"
              class="logo">ZONA K</div>
-        <h1 th:text="${invoice.company.razonSocial}">Sociedad</h1>
+        <h1 th:text="${invoice.fiscalContext.documentTitle}">Factura electrónica de venta</h1>
+        <p th:if="${!#strings.isEmpty(invoice.documentTypeLabel)}">
+            <span class="label">Tipo documento:</span>
+            <span th:text="${invoice.documentTypeLabel}">Factura electrónica de venta</span>
+        </p>
+        <p th:if="${!#strings.isEmpty(invoice.operationTypeLabel)}">
+            <span class="label">Tipo operación:</span>
+            <span th:text="${invoice.operationTypeLabel}">Nota crédito referenciada</span>
+        </p>
+        <p><span class="label">Razón social:</span> <span th:text="${invoice.company.razonSocial}">Sociedad</span></p>
         <p><span class="label">NIT:</span> <span th:text="${invoice.company.nit + '-' + invoice.company.dv}">900000000-0</span></p>
-        <p><span class="label">Régimen:</span> <span th:text="${invoice.company.regimen}">R-99-PN</span></p>
+        <p><span class="label">Régimen fiscal:</span> <span th:text="${invoice.company.regimen}">O-23</span></p>
+        <p th:if="${!#strings.isEmpty(invoice.taxResponsibilities)}">
+            <span class="label">Responsabilidades:</span>
+            <span th:text="${invoice.taxResponsibilities}">Agente de retención IVA</span>
+        </p>
         <p><span class="label">Dirección:</span> <span th:text="${invoice.company.direccion}">Dirección</span></p>
+        <p th:if="${!#strings.isEmpty(invoice.company.telefono)}">
+            <span class="label">Teléfono:</span> <span th:text="${invoice.company.telefono}">Teléfono</span>
+        </p>
         <p><span class="label">Correo:</span> <span th:text="${invoice.company.email}">correo@empresa.com</span></p>
     </div>
     <div class="header-right">
         <div class="document-box">
-            <h2 th:text="${invoice.fiscalContext.documentTitle}">Factura electrónica de venta</h2>
             <p><span class="label">No.</span> <strong th:text="${invoice.documentNumber}">FE1</strong></p>
-            <p><span class="label">Fecha:</span> <span th:text="${invoice.fiscalContext.issueDate}">2026-01-01</span></p>
-            <p><span class="label">Hora:</span> <span th:text="${invoice.fiscalContext.issueTime}">12:00:00-05:00</span></p>
+            <p><span class="label">Fecha generación:</span> <span th:text="${invoice.fiscalContext.issueDate}">2026-01-01</span></p>
+            <p><span class="label">Hora generación:</span> <span th:text="${invoice.fiscalContext.issueTime}">12:00:00-05:00</span></p>
             <p><span class="label">Estado DIAN:</span> <span th:text="${invoice.status}">Validado</span></p>
+            <p th:if="${invoice.payment != null}">
+                <span class="label">Forma de pago:</span>
+                <span th:text="${invoice.payment.formaPago}">Contado</span>
+            </p>
+            <p th:if="${invoice.payment != null and invoice.payment.formaPago == 'Crédito' and !#strings.isEmpty(invoice.payment.plazoCredito)}">
+                <span class="label">Plazo:</span>
+                <span th:text="${invoice.payment.plazoCredito}">30 días</span>
+            </p>
+            <p th:if="${invoice.payment != null and invoice.payment.formaPago == 'Contado'}">
+                <span class="label">Medio de pago:</span>
+                <span th:text="${invoice.payment.medioPago}">Efectivo</span>
+            </p>
         </div>
     </div>
 </section>
@@ -226,7 +308,7 @@
 <section class="grid">
     <div class="grid-col">
         <div class="card">
-            <h2>Resolución de facturación</h2>
+            <h2>Resolución DIAN</h2>
             <p><span class="label">Resolución:</span> <span th:text="${invoice.resolution.numeroResolucion}">1876</span></p>
             <p><span class="label">Prefijo:</span> <span th:text="${invoice.resolution.prefijo}">FE</span></p>
             <p><span class="label">Rango autorizado:</span>
@@ -239,32 +321,86 @@
     </div>
     <div class="grid-col">
         <div class="card">
-            <h2>Cliente / adquirente</h2>
-            <p><span class="label">Nombre:</span> <span th:text="${invoice.customer.razonSocial}">Cliente</span></p>
-            <p><span class="label">NIT/Cédula:</span> <span th:text="${invoice.customer.identificacion}">000</span></p>
-            <p><span class="label">Dirección:</span> <span th:text="${invoice.customer.direccion}">Dirección cliente</span></p>
-            <p><span class="label">Correo:</span> <span th:text="${invoice.customer.email}">cliente@correo.com</span></p>
+            <h2>Adquirente</h2>
+            <p th:if="${invoice.customer.consumidorFinal}">
+                <span class="label">Identificación:</span> 222222222222
+            </p>
+            <p th:if="${invoice.customer.consumidorFinal}">
+                <span class="label">Nombre:</span> Consumidor final
+            </p>
+            <p th:unless="${invoice.customer.consumidorFinal}">
+                <span class="label">Nombre / razón social:</span>
+                <span th:text="${invoice.customer.razonSocial}">Cliente</span>
+            </p>
+            <p th:unless="${invoice.customer.consumidorFinal}">
+                <span class="label">Identificación:</span>
+                <span th:text="${invoice.customer.identificacion}">000</span>
+            </p>
+            <p th:if="${!#strings.isEmpty(invoice.customer.direccion)}">
+                <span class="label">Dirección:</span>
+                <span th:text="${invoice.customer.direccion}">Dirección cliente</span>
+            </p>
+            <p th:if="${!#strings.isEmpty(invoice.customer.email)}">
+                <span class="label">Correo:</span>
+                <span th:text="${invoice.customer.email}">cliente@correo.com</span>
+            </p>
         </div>
     </div>
 </section>
 
+<section th:if="${invoice.referencedDocument != null}" class="grid">
+    <div class="grid-col" style="width:100%;">
+        <div class="card">
+            <h2>Documento referenciado</h2>
+            <p><span class="label">Factura referenciada:</span>
+                <span th:text="${invoice.referencedDocument.numeroDocumento}">EVK528</span>
+            </p>
+            <p th:if="${invoice.referencedDocument.fechaEmision != null}">
+                <span class="label">Fecha factura referenciada:</span>
+                <span th:text="${invoice.referencedDocument.fechaEmision}">2026-08-28</span>
+            </p>
+            <p><span class="label">CUFE factura referenciada:</span></p>
+            <p class="cufe" th:text="${invoice.referencedDocument.cufe}">CUFE</p>
+        </div>
+    </div>
+</section>
+
+<section th:if="${!#lists.isEmpty(invoice.conceptosCorreccion)}">
+    <h2>Concepto de corrección</h2>
+    <ul class="note-list">
+        <li th:each="concepto : ${invoice.conceptosCorreccion}" th:text="${concepto}">Concepto</li>
+    </ul>
+</section>
+
 <section>
-    <h2>Detalle de productos y servicios</h2>
+    <h2>Detalle de bienes y servicios</h2>
+    <p class="muted">
+        Total líneas:
+        <span th:text="${#lists.size(invoice.items)}">1</span>
+    </p>
     <table>
         <thead>
         <tr>
-            <th>Cantidad</th>
+            <th class="text-center">#</th>
+            <th>Código</th>
             <th>Descripción</th>
-            <th class="text-right">Valor unitario</th>
+            <th class="text-center">Cant.</th>
+            <th>U/M</th>
+            <th class="text-right">V. unitario</th>
+            <th class="text-right">Desc.</th>
             <th class="text-right">IVA</th>
             <th class="text-right">Total ítem</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="item : ${invoice.items}">
-            <td th:text="${#numbers.formatDecimal(item.cantidad, 1, 2)}">1</td>
+            <td class="text-center" th:text="${item.lineNumber}">1</td>
+            <td th:text="${item.codigo}">COD</td>
             <td th:text="${item.descripcion}">Servicio</td>
+            <td class="text-center" th:text="${#numbers.formatDecimal(item.cantidad, 1, 2)}">1</td>
+            <td th:text="${item.unidadMedidaLabel}">Unidad</td>
             <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.valorUnitario, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
+            <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.descuento, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
             <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.iva, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
             <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(item.total, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
         </tr>
@@ -310,7 +446,7 @@
             <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(charge.valor, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
         </tr>
         <tr class="charge-row" th:if="${!#lists.isEmpty(invoice.recargos)}">
-            <td>Total recargos</td>
+            <td>Total recargos / propinas</td>
             <td class="text-right" th:text="${'$ ' + #numbers.formatDecimal(invoice.totals.totalRecargos, 1, 'POINT', 2, 'COMMA')}">$ 0,00</td>
         </tr>
         <tr class="grand-total">
@@ -319,20 +455,44 @@
         </tr>
         </tbody>
     </table>
-    <p style="margin-top:12px;"><span class="label">Valor en letras:</span> <span th:text="${valorEnLetras}">CERO PESOS</span></p>
+    <p style="margin-top:10px;"><span class="label">Valor en letras:</span> <span th:text="${valorEnLetras}">CERO PESOS</span></p>
 </section>
 
 <section class="legal-footer">
-    <div class="legal-text">
-        <h2>Información legal DIAN</h2>
-        <p class="muted">Esta representación gráfica es válida para consulta de la factura electrónica emitida.</p>
-        <p><span class="label" th:text="${invoice.fiscalContext.uniqueCodeLabel + ':'}">CUFE:</span></p>
-        <p class="cufe" th:text="${invoice.fiscalContext.uniqueCode}">CUFE</p>
+    <div class="legal-grid">
+        <div class="legal-text">
+            <h2>Validación DIAN</h2>
+            <p class="muted">
+                Representación gráfica de un documento electrónico. El documento XML validado por la DIAN
+                es el que tiene validez legal. Consulte autenticidad escaneando el código QR o en
+                https://catalogo-vpfe.dian.gov.co
+            </p>
+            <p><span class="label" th:text="${invoice.fiscalContext.uniqueCodeLabel + ':'}">CUFE:</span></p>
+            <p class="cufe" th:text="${invoice.fiscalContext.uniqueCode}">CUFE</p>
+        </div>
+        <div class="qr-box">
+            <img th:src="${qrDataUri}" alt="Código QR DIAN"/>
+            <p class="muted">Código QR DIAN (mín. 2 cm)</p>
+        </div>
     </div>
-    <div class="qr-box">
-        <img th:src="${qrDataUri}" alt="Código QR DIAN"/>
-        <p class="muted">Código QR DIAN</p>
+    <div class="software-footer" th:if="${invoice.softwareInfo != null}">
+        <p>
+            <span class="label">Software:</span>
+            <span th:text="${invoice.softwareInfo.softwareNombre}">Zona K FE</span>
+            ·
+            <span class="label">Fabricante:</span>
+            <span th:text="${invoice.softwareInfo.fabricanteNombre + ' NIT ' + invoice.softwareInfo.fabricanteNit}">Zona K</span>
+            <span th:if="${!#strings.isEmpty(invoice.softwareInfo.proveedorTecnologico)}">
+                · <span class="label">Proveedor tecnológico:</span>
+                <span th:text="${invoice.softwareInfo.proveedorTecnologico}">Zona K</span>
+            </span>
+        </p>
     </div>
 </section>
+
+<div class="page-qr">
+    <img th:src="${qrDataUri}" alt="QR DIAN"/>
+    <p class="muted">QR DIAN</p>
+</div>
 </body>
 </html>

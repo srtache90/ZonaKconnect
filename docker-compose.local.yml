@@ -109,9 +109,16 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
-      # Solo bootstrap de certificado local si falta .pfx.
-      # El mock DIAN se activa por sociedad (dian_ambiente=Mock), no globalmente.
+      # Solo bootstrap de certificado local si falta .pfx (fallback Mock).
       DianConfig__Mock__Enabled: "true"
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_S3_INVOICE_DOCUMENTS_BUCKET: invoice-documents-bucket
+    depends_on:
+      localstack:
+        condition: service_healthy
     ports:
       - "8090:8080"
     networks:
@@ -189,6 +196,7 @@ services:
       SPRING_PROFILES_ACTIVE: local
       SERVICES_CORE_GO_BASE_URL: http://core-go:8080
       DIAN_API_URL: http://dian-net:8080
+      DIAN_NET_BASE_URL: http://dian-net:8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zona_k_facturacion
       SPRING_DATASOURCE_USERNAME: zona_k_app
       SPRING_DATASOURCE_PASSWORD: zona_k_app_local_password

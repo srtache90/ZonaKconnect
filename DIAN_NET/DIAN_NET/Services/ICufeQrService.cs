@@ -8,6 +8,7 @@ namespace DIAN_NET.Services
     public interface ICufeQrService
     {
         string CalcularCUFE(FacturaDto factura, string ambiente);
+        string ConstruirCadenaCUFE(FacturaDto factura, string ambiente);
         string CalcularCUDE(NotaCreditoDto notaCredito, string ambiente);
         string CalcularCUDE(NotaDebitoDto notaDebito, string ambiente);
         string CalcularCUFE(string xmlSinFirma, string numeroDocumento, DateTime fechaEmision, string tipoDocumento);

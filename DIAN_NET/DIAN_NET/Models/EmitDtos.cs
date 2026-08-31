@@ -4,35 +4,39 @@ using System.Text.Json.Serialization;
 
 namespace DIAN_NET.Models
 {
-    public class EmitInvoiceRequest
+    public abstract class EmitRequestBase
     {
         public string Ambiente { get; set; } = "Habilitacion";
+        [JsonPropertyName("certificate_pfx_base64")]
+        public string? CertificatePfxBase64 { get; set; }
+        [JsonPropertyName("certificate_password")]
+        public string? CertificatePassword { get; set; }
+    }
+
+    public class EmitInvoiceRequest : EmitRequestBase
+    {
         public FacturaDto? Factura { get; set; }
         [JsonPropertyName("xml_base")]
         public string? XMLBase { get; set; }
     }
 
-    public class EmitSupportDocumentRequest
+    public class EmitSupportDocumentRequest : EmitRequestBase
     {
-        public string Ambiente { get; set; } = "Habilitacion";
         public DocumentoSoporteDto? DocumentoSoporte { get; set; }
     }
 
-    public class EmitCreditNoteRequest
+    public class EmitCreditNoteRequest : EmitRequestBase
     {
-        public string Ambiente { get; set; } = "Habilitacion";
         public NotaCreditoDto? NotaCredito { get; set; }
     }
 
-    public class EmitDebitNoteRequest
+    public class EmitDebitNoteRequest : EmitRequestBase
     {
-        public string Ambiente { get; set; } = "Habilitacion";
         public NotaDebitoDto? NotaDebito { get; set; }
     }
 
-    public class EmitPayrollRequest
+    public class EmitPayrollRequest : EmitRequestBase
     {
-        public string Ambiente { get; set; } = "Habilitacion";
         public NominaDto? Nomina { get; set; }
     }
 

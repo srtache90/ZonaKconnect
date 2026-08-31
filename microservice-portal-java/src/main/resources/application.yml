@@ -5,7 +5,7 @@ services:
   core-go:
     base-url: ${SERVICES_CORE_GO_BASE_URL:${CORE_GO_BASE_URL:http://core-go:8080}}
   dian-net:
-    base-url: ${DIAN_NET_BASE_URL:http://dian-net:8080}
+    base-url: ${DIAN_NET_BASE_URL:${DIAN_API_URL:http://dian-net:8080}}
 
 spring:
   datasource:
@@ -35,3 +35,10 @@ mail:
   reception-protocol: ${MAIL_RECEPTION_PROTOCOL:pop3}
   reception-username: ${MAIL_RECEPTION_DEFAULT_USERNAME:recepcion}
   reception-password: ${MAIL_RECEPTION_DEFAULT_PASSWORD:recepcion}
+
+dian:
+  graphic-representation:
+    software-manufacturer-name: ${DIAN_SOFTWARE_MANUFACTURER_NAME:Zona K S.A.S.}
+    software-manufacturer-nit: ${DIAN_SOFTWARE_MANUFACTURER_NIT:901000000}
+    software-name: ${DIAN_SOFTWARE_NAME:Zona K Facturación Electrónica}
+    technology-provider-name: ${DIAN_TECHNOLOGY_PROVIDER_NAME:Zona K S.A.S.}

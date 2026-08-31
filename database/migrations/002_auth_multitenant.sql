@@ -55,40 +55,89 @@ CREATE INDEX IF NOT EXISTS idx_certificados_sociedad_activo
 CREATE INDEX IF NOT EXISTS idx_usuario_sociedades_sociedad
     ON usuario_sociedades (sociedad_id);
 
-INSERT INTO sociedades (
-    id,
-    razon_social,
-    nit,
-    api_key,
-    correo_emision,
-    correo_recepcion,
-    host_smtp,
-    puerto_smtp,
-    usuario_smtp,
-    password_smtp_enc
-)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'Sociedad Local Zona K',
-    '900123456',
-    'local-sap-simphony-api-key',
-    'emision@zonak.local',
-    'recepcion@zonak.local',
-    'smtp.zonak.local',
-    587,
-    'smtp-local',
-    'LOCAL_ENCRYPTED_PLACEHOLDER'
-)
-ON CONFLICT (id) DO UPDATE SET
-    razon_social = EXCLUDED.razon_social,
-    nit = EXCLUDED.nit,
-    api_key = EXCLUDED.api_key,
-    correo_emision = EXCLUDED.correo_emision,
-    correo_recepcion = EXCLUDED.correo_recepcion,
-    host_smtp = EXCLUDED.host_smtp,
-    puerto_smtp = EXCLUDED.puerto_smtp,
-    usuario_smtp = EXCLUDED.usuario_smtp,
-    password_smtp_enc = EXCLUDED.password_smtp_enc;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'sociedades'
+          AND column_name = 'dian_regimen_fiscal'
+    ) THEN
+        ALTER TABLE sociedades ALTER COLUMN dian_regimen_fiscal SET DEFAULT 'ZZ';
+        INSERT INTO sociedades (
+            id,
+            razon_social,
+            nit,
+            api_key,
+            correo_emision,
+            correo_recepcion,
+            host_smtp,
+            puerto_smtp,
+            usuario_smtp,
+            password_smtp_enc,
+            dian_regimen_fiscal
+        )
+        VALUES (
+            '00000000-0000-0000-0000-000000000001',
+            'Sociedad Local Zona K',
+            '900123456',
+            'local-sap-simphony-api-key',
+            'emision@zonak.local',
+            'recepcion@zonak.local',
+            'smtp.zonak.local',
+            587,
+            'smtp-local',
+            'LOCAL_ENCRYPTED_PLACEHOLDER',
+            'ZZ'
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            razon_social = EXCLUDED.razon_social,
+            nit = EXCLUDED.nit,
+            api_key = EXCLUDED.api_key,
+            correo_emision = EXCLUDED.correo_emision,
+            correo_recepcion = EXCLUDED.correo_recepcion,
+            host_smtp = EXCLUDED.host_smtp,
+            puerto_smtp = EXCLUDED.puerto_smtp,
+            usuario_smtp = EXCLUDED.usuario_smtp,
+            password_smtp_enc = EXCLUDED.password_smtp_enc;
+    ELSE
+        INSERT INTO sociedades (
+            id,
+            razon_social,
+            nit,
+            api_key,
+            correo_emision,
+            correo_recepcion,
+            host_smtp,
+            puerto_smtp,
+            usuario_smtp,
+            password_smtp_enc
+        )
+        VALUES (
+            '00000000-0000-0000-0000-000000000001',
+            'Sociedad Local Zona K',
+            '900123456',
+            'local-sap-simphony-api-key',
+            'emision@zonak.local',
+            'recepcion@zonak.local',
+            'smtp.zonak.local',
+            587,
+            'smtp-local',
+            'LOCAL_ENCRYPTED_PLACEHOLDER'
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            razon_social = EXCLUDED.razon_social,
+            nit = EXCLUDED.nit,
+            api_key = EXCLUDED.api_key,
+            correo_emision = EXCLUDED.correo_emision,
+            correo_recepcion = EXCLUDED.correo_recepcion,
+            host_smtp = EXCLUDED.host_smtp,
+            puerto_smtp = EXCLUDED.puerto_smtp,
+            usuario_smtp = EXCLUDED.usuario_smtp,
+            password_smtp_enc = EXCLUDED.password_smtp_enc;
+    END IF;
+END $$;
 
 INSERT INTO usuarios (
     id,

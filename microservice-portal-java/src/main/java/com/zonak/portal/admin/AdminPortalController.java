@@ -28,20 +28,27 @@ public class AdminPortalController {
     private final AdminPortalRepository adminPortalRepository;
     private final SensitiveDataCryptoService cryptoService;
     private final MailReceptionSyncService mailReceptionSyncService;
+    private final DianCertificateProvisioningService dianCertificateProvisioningService;
+    private final DianResolutionClient dianResolutionClient;
 
     public AdminPortalController(
             AdminPortalRepository adminPortalRepository,
             SensitiveDataCryptoService cryptoService,
-            MailReceptionSyncService mailReceptionSyncService
+            MailReceptionSyncService mailReceptionSyncService,
+            DianCertificateProvisioningService dianCertificateProvisioningService,
+            DianResolutionClient dianResolutionClient
     ) {
         this.adminPortalRepository = adminPortalRepository;
         this.cryptoService = cryptoService;
         this.mailReceptionSyncService = mailReceptionSyncService;
+        this.dianCertificateProvisioningService = dianCertificateProvisioningService;
+        this.dianResolutionClient = dianResolutionClient;
     }
 
     @GetMapping("/portal/admin/sociedades")
     public String sociedades(Model model) {
         model.addAttribute("sociedades", adminPortalRepository.findSociedades());
+        model.addAttribute("regimenFiscalOptions", DianRegimenFiscal.emisorOptions());
         model.addAttribute("form", new SociedadForm());
         model.addAttribute("navModule", "configuracion");
         model.addAttribute("navActive", "sociedades");
@@ -57,6 +64,13 @@ public class AdminPortalController {
             redirectAttributes.addFlashAttribute(
                     "error",
                     "Razón social y NIT son obligatorios."
+            );
+            return "redirect:/portal/admin/sociedades";
+        }
+        if (!DianRegimenFiscal.isValid(form.getDianRegimenFiscal())) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "Responsabilidad fiscal (TaxLevelCode) inválida."
             );
             return "redirect:/portal/admin/sociedades";
         }
@@ -94,6 +108,7 @@ public class AdminPortalController {
                     trimToNull(form.getUsuarioImap()),
                     passwordImapEnc,
                     form.getDianAmbiente(),
+                    DianRegimenFiscal.normalize(form.getDianRegimenFiscal()),
                     trimToNull(form.getDianSoftwareId()),
                     dianSoftwarePinEnc,
                     dianSoftwarePinPlaintext
@@ -161,6 +176,8 @@ public class AdminPortalController {
         long rangoDesde = form.getRangoDesde() != null ? form.getRangoDesde() : 1L;
         long rangoHasta = form.getRangoHasta() != null ? form.getRangoHasta() : rangoDesde;
         long numeroActual = form.getNumeroActual() != null ? form.getNumeroActual() : rangoDesde - 1;
+        long numeroActualNc = form.getNumeroActualNc() != null ? form.getNumeroActualNc() : rangoDesde - 1;
+        long numeroActualNd = form.getNumeroActualNd() != null ? form.getNumeroActualNd() : rangoDesde - 1;
 
         adminPortalRepository.savePuntoVenta(
                 id,
@@ -174,12 +191,39 @@ public class AdminPortalController {
                 rangoDesde,
                 rangoHasta,
                 numeroActual,
+                form.getPrefijoNc(),
+                numeroActualNc,
+                form.getPrefijoNd(),
+                numeroActualNd,
                 form.getVigenciaDesde(),
                 form.getVigenciaHasta(),
                 form.isActivo()
         );
         redirectAttributes.addFlashAttribute("success", "Punto de venta guardado correctamente");
         return "redirect:/portal/admin/puntos-venta";
+    }
+
+    @GetMapping(value = "/portal/admin/api/dian/resoluciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<?> consultarResolucionesDian(
+            @RequestParam UUID sociedadId,
+            @RequestParam(required = false) String resolutionNumber,
+            @RequestParam(required = false) String prefix
+    ) {
+        SociedadDianContext context = adminPortalRepository.findSociedadDianContext(sociedadId);
+        if (context == null) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Sociedad no encontrada"));
+        }
+
+        try {
+            return ResponseEntity.ok(
+                    dianResolutionClient.consultarResoluciones(context, resolutionNumber, prefix)
+            );
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(502).body(java.util.Map.of("error", ex.getMessage()));
+        }
     }
 
     @PostMapping("/portal/admin/certificados")
@@ -212,7 +256,17 @@ public class AdminPortalController {
                 validoHasta,
                 activo
         );
-        redirectAttributes.addFlashAttribute("success", "Certificado digital guardado correctamente");
+        try {
+            dianCertificateProvisioningService.provisionFromUpload(sociedadId, certificado.getBytes(), password);
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "Certificado guardado en BD, pero no se pudo publicar en S3/Secrets para emisión DIAN: "
+                            + ex.getMessage()
+            );
+            return "redirect:/portal/admin/certificados";
+        }
+        redirectAttributes.addFlashAttribute("success", "Certificado digital guardado y vinculado para emisión DIAN");
         return "redirect:/portal/admin/certificados";
     }
 
@@ -258,6 +312,7 @@ public class AdminPortalController {
         private String usuarioImap;
         private String passwordImap;
         private String dianAmbiente = "Habilitacion";
+        private String dianRegimenFiscal = DianRegimenFiscal.DEFAULT;
         private String dianSoftwareId;
         private String dianSoftwarePin;
 
@@ -381,6 +436,14 @@ public class AdminPortalController {
             this.dianAmbiente = dianAmbiente;
         }
 
+        public String getDianRegimenFiscal() {
+            return dianRegimenFiscal;
+        }
+
+        public void setDianRegimenFiscal(String dianRegimenFiscal) {
+            this.dianRegimenFiscal = dianRegimenFiscal;
+        }
+
         public String getDianSoftwareId() {
             return dianSoftwareId;
         }
@@ -410,6 +473,10 @@ public class AdminPortalController {
         private Long rangoDesde = 1L;
         private Long rangoHasta;
         private Long numeroActual = 0L;
+        private String prefijoNc = "NC";
+        private Long numeroActualNc = 0L;
+        private String prefijoNd = "ND";
+        private Long numeroActualNd = 0L;
         private LocalDate vigenciaDesde;
         private LocalDate vigenciaHasta;
         private boolean activo = true;
@@ -500,6 +567,38 @@ public class AdminPortalController {
 
         public void setNumeroActual(Long numeroActual) {
             this.numeroActual = numeroActual;
+        }
+
+        public String getPrefijoNc() {
+            return prefijoNc;
+        }
+
+        public void setPrefijoNc(String prefijoNc) {
+            this.prefijoNc = prefijoNc;
+        }
+
+        public Long getNumeroActualNc() {
+            return numeroActualNc;
+        }
+
+        public void setNumeroActualNc(Long numeroActualNc) {
+            this.numeroActualNc = numeroActualNc;
+        }
+
+        public String getPrefijoNd() {
+            return prefijoNd;
+        }
+
+        public void setPrefijoNd(String prefijoNd) {
+            this.prefijoNd = prefijoNd;
+        }
+
+        public Long getNumeroActualNd() {
+            return numeroActualNd;
+        }
+
+        public void setNumeroActualNd(Long numeroActualNd) {
+            this.numeroActualNd = numeroActualNd;
         }
 
         public LocalDate getVigenciaDesde() {

@@ -5,8 +5,8 @@ services:
   core-go:
     base-url: ${SERVICES_CORE_GO_BASE_URL:http://localhost:8081}
   dian-net:
-    # DIAN_API_URL apunta al motor DIAN_NET; el mock solo aplica si la sociedad tiene ambiente=Mock.
-    base-url: ${DIAN_API_URL:http://localhost:8090}
+    # DIAN_NET_BASE_URL / DIAN_API_URL apuntan al motor DIAN_NET (puerto 8090 expuesto en host, 8080 en red Docker).
+    base-url: ${DIAN_NET_BASE_URL:${DIAN_API_URL:http://localhost:8090}}
 
 spring:
   datasource:

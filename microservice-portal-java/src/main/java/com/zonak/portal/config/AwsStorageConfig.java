@@ -11,6 +11,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 @Configuration
 public class AwsStorageConfig {
@@ -44,6 +45,24 @@ public class AwsStorageConfig {
         }
 
         return S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+    }
+
+    @Bean
+    public SecretsManagerClient secretsManagerClient() {
+        if (localMode) {
+            return SecretsManagerClient.builder()
+                    .region(Region.of(region))
+                    .endpointOverride(URI.create(endpointOverride))
+                    .credentialsProvider(
+                            StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+                    )
+                    .build();
+        }
+
+        return SecretsManagerClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();

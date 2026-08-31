@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -28,8 +29,7 @@ namespace DIAN_NET.Services
         private readonly IXadesSignService _xadesSignService;
         private readonly IDianService _dianService;
         private readonly IDianXmlDebugStore _xmlDebugStore;
-        private readonly string _certificatePath;
-        private readonly string _certificatePassword;
+        private readonly ITenantCertificateLoader _tenantCertificateLoader;
         private string? _lastDebugXmlId;
 
         public FacturacionService(
@@ -38,16 +38,15 @@ namespace DIAN_NET.Services
             IXadesSignService xadesSignService,
             IDianService dianService,
             IDianXmlDebugStore xmlDebugStore,
-            string certificatePath,
-            string certificatePassword)
+            ITenantCertificateLoader tenantCertificateLoader)
         {
             _xmlTransformService = xmlTransformService ?? throw new ArgumentNullException(nameof(xmlTransformService));
             _cufeQrService = cufeQrService ?? throw new ArgumentNullException(nameof(cufeQrService));
             _xadesSignService = xadesSignService ?? throw new ArgumentNullException(nameof(xadesSignService));
             _dianService = dianService ?? throw new ArgumentNullException(nameof(dianService));
             _xmlDebugStore = xmlDebugStore ?? throw new ArgumentNullException(nameof(xmlDebugStore));
-            _certificatePath = certificatePath ?? throw new ArgumentNullException(nameof(certificatePath));
-            _certificatePassword = certificatePassword ?? throw new ArgumentNullException(nameof(certificatePassword));
+            _tenantCertificateLoader = tenantCertificateLoader
+                ?? throw new ArgumentNullException(nameof(tenantCertificateLoader));
         }
 
         public async Task<EnviarFacturaResponse> EnviarFacturaAsync(EnviarFacturaRequest request)
@@ -55,8 +54,10 @@ namespace DIAN_NET.Services
             try
             {
                 ValidarFacturaElectronica(request.Factura, request.Ambiente);
+                SincronizarTipoAmbienteFactura(request.Factura, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlFactura(request.Factura);
                 var cufe = _cufeQrService.CalcularCUFE(request.Factura, request.Ambiente);
+                var cufeChain = _cufeQrService.ConstruirCadenaCUFE(request.Factura, request.Ambiente);
                 var qrCode = _cufeQrService.GenerarQRCode(
                     cufe,
                     request.Factura.Emisor.Nit,
@@ -70,9 +71,11 @@ namespace DIAN_NET.Services
                     cufe,
                     "CUFE-SHA384",
                     qrCode,
+                    cufeChain,
                     nombreArchivo,
                     request.Ambiente,
                     "Factura",
+                    DianColombiaHelper.ToColombia(request.Factura.FechaEmision),
                     (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
             }
             catch (Exception ex)
@@ -110,9 +113,11 @@ namespace DIAN_NET.Services
                     identificador,
                     "CUFE-SHA384",
                     null,
+                    null,
                     nombreArchivo,
                     ambiente,
                     "XMLImportado",
+                    ExtraerSigningTimeXml(xmlDoc),
                     (zipData, zipName, ambienteDian) => _dianService.EnviarFactura(zipData, zipName, ambienteDian));
             }
             catch (Exception ex)
@@ -125,6 +130,7 @@ namespace DIAN_NET.Services
         {
             try
             {
+                SincronizarTipoAmbienteNotaCredito(request.NotaCredito, request.Ambiente);
                 ValidarNotaCredito(request.NotaCredito, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlNotaCredito(request.NotaCredito);
                 var cude = _cufeQrService.CalcularCUDE(request.NotaCredito, request.Ambiente);
@@ -141,9 +147,11 @@ namespace DIAN_NET.Services
                     cude,
                     "CUDE-SHA384",
                     qrCode,
+                    null,
                     nombreArchivo,
                     request.Ambiente,
                     "NotaCredito",
+                    DianColombiaHelper.ToColombia(request.NotaCredito.FechaEmision),
                     (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
             }
             catch (Exception ex)
@@ -156,6 +164,7 @@ namespace DIAN_NET.Services
         {
             try
             {
+                SincronizarTipoAmbienteNotaDebito(request.NotaDebito, request.Ambiente);
                 ValidarNotaDebito(request.NotaDebito, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlNotaDebito(request.NotaDebito);
                 var cude = _cufeQrService.CalcularCUDE(request.NotaDebito, request.Ambiente);
@@ -172,9 +181,11 @@ namespace DIAN_NET.Services
                     cude,
                     "CUDE-SHA384",
                     qrCode,
+                    null,
                     nombreArchivo,
                     request.Ambiente,
                     "NotaDebito",
+                    DianColombiaHelper.ToColombia(request.NotaDebito.FechaEmision),
                     (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
             }
             catch (Exception ex)
@@ -206,9 +217,11 @@ namespace DIAN_NET.Services
                     cuds,
                     "CUDS-SHA384",
                     qrCode,
+                    null,
                     nombreArchivo,
                     request.Ambiente,
                     "DocumentoSoporte",
+                    DianColombiaHelper.ToColombia(request.DocumentoSoporte.FechaEmision),
                     (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
             }
             catch (Exception ex)
@@ -230,9 +243,11 @@ namespace DIAN_NET.Services
                     cune,
                     "CUNE-SHA384",
                     null,
+                    null,
                     nombreArchivo,
                     request.Ambiente,
                     "Nomina",
+                    DianColombiaHelper.ToColombia(request.Nomina!.FechaEmision),
                     (zipData, _, ambiente) => _dianService.EnviarNomina(zipData, ambiente));
             }
             catch (Exception ex)
@@ -246,12 +261,14 @@ namespace DIAN_NET.Services
             string identificador,
             string schemeName,
             string? qrCode,
+            string? cufeChain,
             string nombreArchivo,
             string ambiente,
             string documentKind,
+            DateTimeOffset signingTime,
             Func<byte[], string, string, DIAN_NET.DIANreference.DianResponse> enviar)
         {
-            var xmlConIdentificador = AgregarIdentificadorXml(xmlSinFirma, identificador, schemeName, qrCode);
+            var xmlConIdentificador = AgregarIdentificadorXml(xmlSinFirma, identificador, schemeName, qrCode, cufeChain);
             var debugSnapshot = _xmlDebugStore.SaveBeforeSign(
                 documentKind,
                 ambiente,
@@ -262,11 +279,12 @@ namespace DIAN_NET.Services
                 xmlConIdentificador);
             _lastDebugXmlId = debugSnapshot.Id;
 
-            var certificate = new X509Certificate2(
-                _certificatePath,
-                _certificatePassword,
-                X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
-            var xmlFirmado = _xadesSignService.FirmarXml(xmlConIdentificador, certificate, identificador);
+            var certificate = _tenantCertificateLoader.LoadCertificate(ambiente);
+            var xmlFirmado = _xadesSignService.FirmarXml(
+                xmlConIdentificador,
+                certificate,
+                identificador,
+                signingTime);
             _xmlDebugStore.SaveSignedXml(debugSnapshot.Id, xmlFirmado);
             var zipData = CrearZip(xmlFirmado, nombreArchivo);
             var respuestaDian = await Task.Run(() => enviar(zipData, nombreArchivo + ".zip", ambiente));
@@ -293,7 +311,7 @@ namespace DIAN_NET.Services
             };
         }
 
-        private static string AgregarIdentificadorXml(string xmlSinFirma, string identificador, string schemeName, string? qrCode)
+        private static string AgregarIdentificadorXml(string xmlSinFirma, string identificador, string schemeName, string? qrCode, string? cufeChain)
         {
             var xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(xmlSinFirma);
@@ -302,13 +320,27 @@ namespace DIAN_NET.Services
             nsmgr.AddNamespace("sts", "dian:gov:co:facturaelectronica:Structures-2-1");
             nsmgr.AddNamespace("nom", "dian:gov:co:facturaelectronica:NominaIndividual");
 
+            var invoiceTypeCodeNode = xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/*[local-name()='InvoiceTypeCode']", nsmgr)
+                ?? xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/cbc:InvoiceTypeCode", nsmgr);
+            if (!string.IsNullOrWhiteSpace(cufeChain) && invoiceTypeCodeNode != null)
+            {
+                var noteNode = xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/*[local-name()='Note']", nsmgr)
+                    ?? xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/cbc:Note", nsmgr);
+                if (noteNode != null)
+                {
+                    noteNode.InnerText = cufeChain;
+                }
+                else
+                {
+                    var noteElement = xmlDoc.CreateElement("cbc", "Note", nsmgr.LookupNamespace("cbc"));
+                    noteElement.InnerText = cufeChain;
+                    invoiceTypeCodeNode.ParentNode?.InsertAfter(noteElement, invoiceTypeCodeNode);
+                }
+            }
+
             var uuidNode = xmlDoc.SelectSingleNode("//cbc:UUID", nsmgr);
             var cuneNode = xmlDoc.SelectSingleNode("//nom:CUNE", nsmgr);
-            var profileExecutionID = xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/*[local-name()='ProfileExecutionID']")?.InnerText;
-            if (string.IsNullOrWhiteSpace(profileExecutionID))
-            {
-                profileExecutionID = "2";
-            }
+            var profileExecutionID = ExtraerProfileExecutionID(xmlDoc, nsmgr);
 
             if (cuneNode != null)
             {
@@ -405,11 +437,49 @@ namespace DIAN_NET.Services
             }
             if (string.IsNullOrWhiteSpace(factura.ConfiguracionDian.TipoAmbiente))
             {
-                factura.ConfiguracionDian.TipoAmbiente = string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase) ||
-                                                        string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
+                SincronizarTipoAmbienteFactura(factura, ambiente);
+            }
+        }
+
+        private static void SincronizarTipoAmbienteFactura(FacturaDto factura, string ambiente)
+        {
+            factura.ConfiguracionDian ??= new ConfiguracionDianDto();
+            factura.ConfiguracionDian.TipoAmbiente =
+                string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
                     ? "1"
                     : "2";
-            }
+        }
+
+        private static void SincronizarTipoAmbienteNotaCredito(NotaCreditoDto notaCredito, string ambiente)
+        {
+            notaCredito.ConfiguracionDian ??= new ConfiguracionDianDto();
+            notaCredito.ConfiguracionDian.TipoAmbiente =
+                string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
+                    ? "1"
+                    : "2";
+        }
+
+        private static void SincronizarTipoAmbienteNotaDebito(NotaDebitoDto notaDebito, string ambiente)
+        {
+            notaDebito.ConfiguracionDian ??= new ConfiguracionDianDto();
+            notaDebito.ConfiguracionDian.TipoAmbiente =
+                string.Equals(ambiente, "Produccion", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ambiente, "Producción", StringComparison.OrdinalIgnoreCase)
+                    ? "1"
+                    : "2";
+        }
+
+        private static string ExtraerProfileExecutionID(XmlDocument xmlDoc, XmlNamespaceManager nsmgr)
+        {
+            var profileExecutionID =
+                xmlDoc.SelectSingleNode("/*[local-name()='Invoice']/*[local-name()='ProfileExecutionID']", nsmgr)?.InnerText
+                ?? xmlDoc.SelectSingleNode("/*[local-name()='CreditNote']/*[local-name()='ProfileExecutionID']", nsmgr)?.InnerText
+                ?? xmlDoc.SelectSingleNode("/*[local-name()='DebitNote']/*[local-name()='ProfileExecutionID']", nsmgr)?.InnerText
+                ?? xmlDoc.SelectSingleNode("/*[local-name()='ApplicationResponse']/*[local-name()='ProfileExecutionID']", nsmgr)?.InnerText;
+
+            return string.IsNullOrWhiteSpace(profileExecutionID) ? "2" : profileExecutionID.Trim();
         }
 
         private static void ValidarNotaCredito(NotaCreditoDto notaCredito, string ambiente)
@@ -554,12 +624,36 @@ namespace DIAN_NET.Services
         {
             if (respuestaDian.XmlBytes != null && respuestaDian.XmlBytes.Length > 0)
             {
-                return Encoding.UTF8.GetString(respuestaDian.XmlBytes);
+                var asText = Encoding.UTF8.GetString(respuestaDian.XmlBytes).TrimStart('\uFEFF');
+                if (asText.StartsWith("<", StringComparison.Ordinal))
+                {
+                    return asText;
+                }
+
+                try
+                {
+                    var decoded = Convert.FromBase64String(asText);
+                    return Encoding.UTF8.GetString(decoded).TrimStart('\uFEFF');
+                }
+                catch (FormatException)
+                {
+                    return asText;
+                }
             }
 
-            return respuestaDian.XmlBase64Bytes != null && respuestaDian.XmlBase64Bytes.Length > 0
-                ? Encoding.UTF8.GetString(respuestaDian.XmlBase64Bytes)
-                : string.Empty;
+            if (respuestaDian.XmlBase64Bytes != null && respuestaDian.XmlBase64Bytes.Length > 0)
+            {
+                try
+                {
+                    return Encoding.UTF8.GetString(respuestaDian.XmlBase64Bytes).TrimStart('\uFEFF');
+                }
+                catch
+                {
+                    return string.Empty;
+                }
+            }
+
+            return string.Empty;
         }
 
         private static string CalcularCune(NominaDto nomina)
@@ -577,6 +671,37 @@ namespace DIAN_NET.Services
 
             var hash = SHA384.HashData(Encoding.UTF8.GetBytes(cadena));
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
+
+        private static DateTimeOffset ExtraerSigningTimeXml(XmlDocument xmlDoc)
+        {
+            var nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
+
+            var issueDate = xmlDoc.SelectSingleNode("//*[local-name()='IssueDate']", nsmgr)?.InnerText?.Trim();
+            var issueTimeRaw = xmlDoc.SelectSingleNode("//*[local-name()='IssueTime']", nsmgr)?.InnerText?.Trim();
+            if (string.IsNullOrWhiteSpace(issueDate))
+            {
+                return DianColombiaHelper.ToColombia(DateTime.UtcNow);
+            }
+
+            var issueTime = string.IsNullOrWhiteSpace(issueTimeRaw) ? "00:00:00-05:00" : issueTimeRaw;
+            if (!issueTime.Contains('T', StringComparison.Ordinal) && issueTime.Length <= 8)
+            {
+                issueTime += "-05:00";
+            }
+
+            if (DateTimeOffset.TryParse($"{issueDate}T{issueTime}", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                return parsed.ToOffset(TimeSpan.FromHours(-5));
+            }
+
+            if (DateTime.TryParse($"{issueDate} {issueTime}".Replace("-05:00", string.Empty), CultureInfo.InvariantCulture, DateTimeStyles.None, out var local))
+            {
+                return DianColombiaHelper.ToColombia(local);
+            }
+
+            return DianColombiaHelper.ToColombia(DateTime.UtcNow);
         }
 
         private static string ExtraerIdentificadorXml(XmlDocument xmlDoc)
@@ -627,6 +752,8 @@ namespace DIAN_NET.Services
             };
         }
 
+        private static readonly UTF8Encoding Utf8NoBom = new(false);
+
         private byte[] CrearZip(string xmlContent, string nombreArchivo)
         {
             using (var memoryStream = new MemoryStream())
@@ -635,7 +762,7 @@ namespace DIAN_NET.Services
                 {
                     var entry = archive.CreateEntry(nombreArchivo);
                     using (var entryStream = entry.Open())
-                    using (var writer = new StreamWriter(entryStream, Encoding.UTF8))
+                    using (var writer = new StreamWriter(entryStream, Utf8NoBom))
                     {
                         writer.Write(xmlContent);
                     }

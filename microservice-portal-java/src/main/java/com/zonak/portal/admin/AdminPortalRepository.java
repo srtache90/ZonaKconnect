@@ -1,5 +1,7 @@
 package com.zonak.portal.admin;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +32,11 @@ public class AdminPortalRepository {
                                s.host_smtp, s.puerto_smtp, s.usuario_smtp,
                                s.host_imap, s.puerto_imap, s.usuario_imap, s.dian_ambiente,
                                COALESCE(
+                                   NULLIF(TRIM(s.dian_regimen_fiscal), ''),
+                                   NULLIF(TRIM(c.dian_config->>'regimen_fiscal'), ''),
+                                   'O-99'
+                               ) AS dian_regimen_fiscal,
+                               COALESCE(
                                    NULLIF(TRIM(s.dian_software_id), ''),
                                    NULLIF(TRIM(c.dian_config->>'software_id'), '')
                                ) AS dian_software_id,
@@ -55,6 +62,7 @@ public class AdminPortalRepository {
                         rs.getObject("puerto_imap", Integer.class),
                         rs.getString("usuario_imap"),
                         rs.getString("dian_ambiente"),
+                        rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
                         rs.getBoolean("dian_software_pin_configured")
                 ),
@@ -73,6 +81,11 @@ public class AdminPortalRepository {
                         SELECT s.id, s.razon_social, s.nit, s.api_key, s.correo_emision, s.correo_recepcion,
                                s.host_smtp, s.puerto_smtp, s.usuario_smtp,
                                s.host_imap, s.puerto_imap, s.usuario_imap, s.dian_ambiente,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_regimen_fiscal), ''),
+                                   NULLIF(TRIM(c.dian_config->>'regimen_fiscal'), ''),
+                                   'O-99'
+                               ) AS dian_regimen_fiscal,
                                COALESCE(
                                    NULLIF(TRIM(s.dian_software_id), ''),
                                    NULLIF(TRIM(c.dian_config->>'software_id'), '')
@@ -100,6 +113,7 @@ public class AdminPortalRepository {
                         rs.getObject("puerto_imap", Integer.class),
                         rs.getString("usuario_imap"),
                         rs.getString("dian_ambiente"),
+                        rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
                         rs.getBoolean("dian_software_pin_configured")
                 ),
@@ -132,6 +146,7 @@ public class AdminPortalRepository {
             String usuarioImap,
             String passwordImapEnc,
             String dianAmbiente,
+            String dianRegimenFiscal,
             String dianSoftwareId,
             String dianSoftwarePinEnc,
             String dianSoftwarePinPlaintext
@@ -142,9 +157,9 @@ public class AdminPortalRepository {
                             id, razon_social, nit, api_key, correo_emision, correo_recepcion,
                             host_smtp, puerto_smtp, usuario_smtp, password_smtp_enc,
                             host_imap, puerto_imap, usuario_imap, password_imap_enc,
-                            dian_ambiente, dian_software_id, dian_software_pin_enc
+                            dian_ambiente, dian_regimen_fiscal, dian_software_id, dian_software_pin_enc
                         )
-                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)
+                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)
                         ON CONFLICT (id) DO UPDATE SET
                             razon_social = EXCLUDED.razon_social,
                             nit = EXCLUDED.nit,
@@ -160,6 +175,7 @@ public class AdminPortalRepository {
                             usuario_imap = EXCLUDED.usuario_imap,
                             password_imap_enc = COALESCE(EXCLUDED.password_imap_enc, sociedades.password_imap_enc),
                             dian_ambiente = EXCLUDED.dian_ambiente,
+                            dian_regimen_fiscal = EXCLUDED.dian_regimen_fiscal,
                             dian_software_id = COALESCE(NULLIF(EXCLUDED.dian_software_id, ''), sociedades.dian_software_id),
                             dian_software_pin_enc = COALESCE(EXCLUDED.dian_software_pin_enc, sociedades.dian_software_pin_enc)
                         """,
@@ -178,6 +194,7 @@ public class AdminPortalRepository {
                 usuarioImap,
                 passwordImapEnc,
                 normalizeDianAmbiente(dianAmbiente),
+                DianRegimenFiscal.normalize(dianRegimenFiscal),
                 dianSoftwareId,
                 dianSoftwarePinEnc
         );
@@ -287,6 +304,86 @@ public class AdminPortalRepository {
         );
     }
 
+    public record CertificadoProvisionRow(UUID sociedadId, String contenidoBase64Enc, String passwordEnc) {
+    }
+
+    public List<CertificadoProvisionRow> findCertificadosPendingDianConfigSync() {
+        return jdbcTemplate.query(
+                """
+                        SELECT DISTINCT ON (c.sociedad_id)
+                               c.sociedad_id,
+                               c.contenido_base64_enc,
+                               c.password_enc
+                        FROM certificados_digitales c
+                        JOIN companies co ON co.id = c.sociedad_id
+                        WHERE c.activo = TRUE
+                          AND c.valido_hasta >= CURRENT_DATE
+                          AND (
+                              NULLIF(TRIM(co.dian_config->>'s3_certificate_key'), '') IS NULL
+                              OR NULLIF(TRIM(co.dian_config->>'secrets_manager_password_key'), '') IS NULL
+                          )
+                        ORDER BY c.sociedad_id, c.valido_hasta DESC
+                        """,
+                (rs, rowNum) -> new CertificadoProvisionRow(
+                        rs.getObject("sociedad_id", UUID.class),
+                        rs.getString("contenido_base64_enc"),
+                        rs.getString("password_enc")
+                )
+        );
+    }
+
+    public void syncDianCertificateKeys(UUID sociedadId, String s3CertificateKey, String secretsManagerPasswordKey) {
+        jdbcTemplate.update(
+                """
+                        UPDATE companies
+                        SET dian_config = COALESCE(dian_config, '{}'::jsonb)
+                            || jsonb_build_object(
+                                's3_certificate_key', ?::text,
+                                'secrets_manager_password_key', ?::text
+                            ),
+                            updated_at = now()
+                        WHERE id = ?
+                        """,
+                s3CertificateKey,
+                secretsManagerPasswordKey,
+                sociedadId
+        );
+    }
+
+    public SociedadDianContext findSociedadDianContext(UUID sociedadId) {
+        return jdbcTemplate.query(
+                """
+                        SELECT s.id,
+                               s.nit,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_software_id), ''),
+                                   NULLIF(TRIM(c.dian_config->>'software_id'), '')
+                               ) AS software_id,
+                               COALESCE(
+                                   NULLIF(TRIM(c.dian_config->>'ambiente'), ''),
+                                   NULLIF(TRIM(s.dian_ambiente), ''),
+                                   'Habilitacion'
+                               ) AS ambiente,
+                               NULLIF(TRIM(c.dian_config->>'s3_certificate_key'), '') AS s3_certificate_key,
+                               NULLIF(TRIM(c.dian_config->>'secrets_manager_password_key'), '') AS secrets_manager_password_key
+                        FROM sociedades s
+                        JOIN companies c ON c.id = s.id
+                        WHERE s.id = ?
+                        """,
+                rs -> rs.next()
+                        ? new SociedadDianContext(
+                                rs.getObject("id", UUID.class),
+                                rs.getString("nit"),
+                                rs.getString("software_id"),
+                                rs.getString("ambiente"),
+                                rs.getString("s3_certificate_key"),
+                                rs.getString("secrets_manager_password_key")
+                        )
+                        : null,
+                sociedadId
+        );
+    }
+
     public List<PuntoVenta> findPuntosVenta() {
         return jdbcTemplate.query(
                 """
@@ -294,28 +391,14 @@ public class AdminPortalRepository {
                                ep.codigo, ep.nombre, ep.direccion, ep.prefijo,
                                ep.resolucion_dian, ep.clave_tecnica,
                                ep.rango_desde, ep.rango_hasta, ep.numero_actual,
+                               ep.prefijo_nc, ep.numero_actual_nc,
+                               ep.prefijo_nd, ep.numero_actual_nd,
                                ep.vigencia_desde, ep.vigencia_hasta, ep.is_active
                         FROM emission_points ep
                         JOIN sociedades s ON s.id = ep.company_id
                         ORDER BY s.razon_social ASC, ep.codigo ASC
                         """,
-                (rs, rowNum) -> new PuntoVenta(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("sociedad_id", UUID.class),
-                        rs.getString("razon_social"),
-                        rs.getString("codigo"),
-                        rs.getString("nombre"),
-                        rs.getString("direccion"),
-                        rs.getString("prefijo"),
-                        rs.getString("resolucion_dian"),
-                        rs.getString("clave_tecnica"),
-                        rs.getObject("rango_desde", Long.class),
-                        rs.getObject("rango_hasta", Long.class),
-                        rs.getObject("numero_actual", Long.class),
-                        rs.getObject("vigencia_desde", LocalDate.class),
-                        rs.getObject("vigencia_hasta", LocalDate.class),
-                        rs.getBoolean("is_active")
-                )
+                (rs, rowNum) -> mapPuntoVentaRow(rs)
         );
     }
 
@@ -337,6 +420,8 @@ public class AdminPortalRepository {
                                ep.codigo, ep.nombre, ep.direccion, ep.prefijo,
                                ep.resolucion_dian, ep.clave_tecnica,
                                ep.rango_desde, ep.rango_hasta, ep.numero_actual,
+                               ep.prefijo_nc, ep.numero_actual_nc,
+                               ep.prefijo_nd, ep.numero_actual_nd,
                                ep.vigencia_desde, ep.vigencia_hasta, ep.is_active
                         FROM emission_points ep
                         JOIN sociedades s ON s.id = ep.company_id
@@ -345,23 +430,7 @@ public class AdminPortalRepository {
                           AND CURRENT_DATE BETWEEN ep.vigencia_desde AND ep.vigencia_hasta
                         ORDER BY s.razon_social ASC, ep.codigo ASC
                         """.formatted(placeholders),
-                (rs, rowNum) -> new PuntoVenta(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("sociedad_id", UUID.class),
-                        rs.getString("razon_social"),
-                        rs.getString("codigo"),
-                        rs.getString("nombre"),
-                        rs.getString("direccion"),
-                        rs.getString("prefijo"),
-                        rs.getString("resolucion_dian"),
-                        rs.getString("clave_tecnica"),
-                        rs.getObject("rango_desde", Long.class),
-                        rs.getObject("rango_hasta", Long.class),
-                        rs.getObject("numero_actual", Long.class),
-                        rs.getObject("vigencia_desde", LocalDate.class),
-                        rs.getObject("vigencia_hasta", LocalDate.class),
-                        rs.getBoolean("is_active")
-                ),
+                (rs, rowNum) -> mapPuntoVentaRow(rs),
                 sociedadIds.toArray()
         );
     }
@@ -397,11 +466,19 @@ public class AdminPortalRepository {
             Long rangoDesde,
             Long rangoHasta,
             Long numeroActual,
+            String prefijoNc,
+            Long numeroActualNc,
+            String prefijoNd,
+            Long numeroActualNd,
             LocalDate vigenciaDesde,
             LocalDate vigenciaHasta,
             boolean activo
     ) {
         ensureCompanyForSociedad(sociedadId);
+        String safePrefijoNc = normalizePrefijoDocumento(prefijoNc, "NC");
+        String safePrefijoNd = normalizePrefijoDocumento(prefijoNd, "ND");
+        long safeNumeroNc = numeroActualNc != null ? numeroActualNc : Math.max(rangoDesde - 1, 0);
+        long safeNumeroNd = numeroActualNd != null ? numeroActualNd : Math.max(rangoDesde - 1, 0);
         jdbcTemplate.update(
                 """
                         INSERT INTO emission_points (
@@ -410,7 +487,7 @@ public class AdminPortalRepository {
                             numero_actual, prefijo_nc, numero_actual_nc, prefijo_nd, numero_actual_nd,
                             vigencia_desde, vigencia_hasta, is_active
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NC', GREATEST(? - 1, 0), 'ND', GREATEST(? - 1, 0), ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT (id) DO UPDATE SET
                             company_id = EXCLUDED.company_id,
                             codigo = EXCLUDED.codigo,
@@ -422,6 +499,10 @@ public class AdminPortalRepository {
                             rango_desde = EXCLUDED.rango_desde,
                             rango_hasta = EXCLUDED.rango_hasta,
                             numero_actual = EXCLUDED.numero_actual,
+                            prefijo_nc = EXCLUDED.prefijo_nc,
+                            numero_actual_nc = EXCLUDED.numero_actual_nc,
+                            prefijo_nd = EXCLUDED.prefijo_nd,
+                            numero_actual_nd = EXCLUDED.numero_actual_nd,
                             vigencia_desde = EXCLUDED.vigencia_desde,
                             vigencia_hasta = EXCLUDED.vigencia_hasta,
                             is_active = EXCLUDED.is_active,
@@ -438,12 +519,45 @@ public class AdminPortalRepository {
                 rangoDesde,
                 rangoHasta,
                 numeroActual,
-                rangoDesde,
-                rangoDesde,
+                safePrefijoNc,
+                safeNumeroNc,
+                safePrefijoNd,
+                safeNumeroNd,
                 vigenciaDesde,
                 vigenciaHasta,
                 activo
         );
+    }
+
+    private static PuntoVenta mapPuntoVentaRow(ResultSet rs) throws SQLException {
+        return new PuntoVenta(
+                rs.getObject("id", UUID.class),
+                rs.getObject("sociedad_id", UUID.class),
+                rs.getString("razon_social"),
+                rs.getString("codigo"),
+                rs.getString("nombre"),
+                rs.getString("direccion"),
+                rs.getString("prefijo"),
+                rs.getString("resolucion_dian"),
+                rs.getString("clave_tecnica"),
+                rs.getObject("rango_desde", Long.class),
+                rs.getObject("rango_hasta", Long.class),
+                rs.getObject("numero_actual", Long.class),
+                rs.getString("prefijo_nc"),
+                rs.getObject("numero_actual_nc", Long.class),
+                rs.getString("prefijo_nd"),
+                rs.getObject("numero_actual_nd", Long.class),
+                rs.getObject("vigencia_desde", LocalDate.class),
+                rs.getObject("vigencia_hasta", LocalDate.class),
+                rs.getBoolean("is_active")
+        );
+    }
+
+    private static String normalizePrefijoDocumento(String prefijo, String fallback) {
+        if (prefijo == null || prefijo.isBlank()) {
+            return fallback;
+        }
+        return prefijo.trim().toUpperCase();
     }
 
     private void ensureCompanyForSociedad(UUID sociedadId) {
@@ -454,7 +568,8 @@ public class AdminPortalRepository {
                         )
                         SELECT id, nit, '0', razon_social, correo_emision, '{}'::jsonb,
                                jsonb_build_object(
-                                   'ambiente', dian_ambiente
+                                   'ambiente', dian_ambiente,
+                                   'regimen_fiscal', dian_regimen_fiscal
                                )
                                || CASE
                                    WHEN NULLIF(dian_software_id, '') IS NOT NULL
@@ -470,7 +585,8 @@ public class AdminPortalRepository {
                             email = EXCLUDED.email,
                             dian_config = COALESCE(companies.dian_config, '{}'::jsonb)
                                 || jsonb_build_object(
-                                    'ambiente', EXCLUDED.dian_config -> 'ambiente'
+                                    'ambiente', EXCLUDED.dian_config -> 'ambiente',
+                                    'regimen_fiscal', EXCLUDED.dian_config -> 'regimen_fiscal'
                                 )
                                 || CASE
                                     WHEN NULLIF(EXCLUDED.dian_config ->> 'software_id', '') IS NOT NULL
@@ -492,6 +608,7 @@ public class AdminPortalRepository {
                             UPDATE companies c
                             SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
                                 || jsonb_build_object('ambiente', s.dian_ambiente)
+                                || jsonb_build_object('regimen_fiscal', s.dian_regimen_fiscal)
                                 || CASE
                                     WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
                                         THEN jsonb_build_object('software_id', s.dian_software_id)
@@ -514,6 +631,7 @@ public class AdminPortalRepository {
                         UPDATE companies c
                         SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
                             || jsonb_build_object('ambiente', s.dian_ambiente)
+                            || jsonb_build_object('regimen_fiscal', s.dian_regimen_fiscal)
                             || CASE
                                 WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
                                     THEN jsonb_build_object('software_id', s.dian_software_id)
@@ -550,6 +668,10 @@ public class AdminPortalRepository {
                 "CLAVE-TECNICA-DIAN-MOCK-LOCAL",
                 1L,
                 99_999_999L,
+                0L,
+                "NC",
+                0L,
+                "ND",
                 0L,
                 LocalDate.now().minusDays(1),
                 LocalDate.now().plusYears(10),

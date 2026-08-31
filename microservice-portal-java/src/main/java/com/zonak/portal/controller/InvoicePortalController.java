@@ -11,9 +11,15 @@ import com.zonak.portal.dto.InvoiceResponseDTO;
 import com.zonak.portal.exception.InvoiceEmissionException;
 import com.zonak.portal.exception.InvoiceStorageException;
 import com.zonak.portal.mail.InvoiceMailDispatchService;
+import com.zonak.portal.dto.DianFiscalContext;
+import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.service.InvoiceClientService;
 import com.zonak.portal.service.InvoiceOrchestratorService;
+import com.zonak.portal.service.InvoiceReportRepository;
 import com.zonak.portal.service.PortalSessionService;
+import com.zonak.portal.support.InvoiceDianStatus;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -47,6 +53,7 @@ public class InvoicePortalController {
     private final InvoiceOrchestratorService invoiceOrchestratorService;
     private final InvoiceMailDispatchService invoiceMailDispatchService;
     private final AdminPortalRepository adminPortalRepository;
+    private final InvoiceReportRepository invoiceReportRepository;
     private final PortalSessionService portalSessionService;
     private final boolean localMode;
 
@@ -55,6 +62,7 @@ public class InvoicePortalController {
             InvoiceOrchestratorService invoiceOrchestratorService,
             InvoiceMailDispatchService invoiceMailDispatchService,
             AdminPortalRepository adminPortalRepository,
+            InvoiceReportRepository invoiceReportRepository,
             PortalSessionService portalSessionService,
             @Value("${aws.local-mode:false}") boolean localMode
     ) {
@@ -62,6 +70,7 @@ public class InvoicePortalController {
         this.invoiceOrchestratorService = invoiceOrchestratorService;
         this.invoiceMailDispatchService = invoiceMailDispatchService;
         this.adminPortalRepository = adminPortalRepository;
+        this.invoiceReportRepository = invoiceReportRepository;
         this.portalSessionService = portalSessionService;
         this.localMode = localMode;
     }
@@ -71,8 +80,38 @@ public class InvoicePortalController {
         return "redirect:/portal/invoices";
     }
 
+    @GetMapping("/portal/facturacion/nota-credito")
+    public String notaCredito(
+            @RequestParam(required = false) String refInvoiceId,
+            HttpSession session,
+            Model model
+    ) {
+        populateManualFormModel(session, model, "91", "nota-credito");
+        applyCreditNotePrefill(session, refInvoiceId, model);
+        model.addAttribute("pageTitle", "Nota crédito electrónica");
+        model.addAttribute("pageDescription", "Anule total o parcialmente una factura validada por la DIAN.");
+        model.addAttribute("submitLabel", "Emitir nota crédito");
+        return "portal/factura_manual";
+    }
+
     @GetMapping("/portal/facturacion/manual")
-    public String facturacionManual(HttpSession session, Model model) {
+    public String facturacionManual(
+            @RequestParam(required = false) String tipo,
+            HttpSession session,
+            Model model
+    ) {
+        String tipoOperacion = normalizeManualTipoOperacion(tipo);
+        String navActive = "91".equals(tipoOperacion) ? "nota-credito" : "manual";
+        populateManualFormModel(session, model, tipoOperacion, navActive);
+        if ("91".equals(tipoOperacion)) {
+            model.addAttribute("pageTitle", "Nota crédito electrónica");
+            model.addAttribute("pageDescription", "Anule total o parcialmente una factura validada por la DIAN.");
+            model.addAttribute("submitLabel", "Emitir nota crédito");
+        }
+        return "portal/factura_manual";
+    }
+
+    private void populateManualFormModel(HttpSession session, Model model, String tipoOperacion, String navActive) {
         List<Sociedad> sociedades = portalSessionService.resolveSociedades(session);
         List<PuntoVenta> puntosVenta = portalSessionService.resolvePuntosVenta(session);
         String selectedSociedadId = portalSessionService.resolveSelectedSociedadId(session, sociedades);
@@ -86,9 +125,77 @@ public class InvoicePortalController {
         model.addAttribute("puntosVenta", puntosVenta);
         model.addAttribute("selectedSociedadId", selectedSociedadId);
         model.addAttribute("selectedEmissionPointId", selectedEmissionPointId);
+        model.addAttribute("selectedTipoOperacion", tipoOperacion);
         model.addAttribute("navModule", "emision");
-        model.addAttribute("navActive", "manual");
-        return "portal/factura_manual";
+        model.addAttribute("navActive", navActive);
+    }
+
+    private void applyCreditNotePrefill(HttpSession session, String refInvoiceId, Model model) {
+        if (!StringUtils.hasText(refInvoiceId)) {
+            return;
+        }
+
+        UUID tenantId;
+        UUID invoiceId;
+        try {
+            tenantId = UUID.fromString(portalSessionService.resolveSelectedSociedadId(
+                    session,
+                    portalSessionService.resolveSociedades(session)
+            ));
+            invoiceId = UUID.fromString(refInvoiceId.trim());
+        } catch (RuntimeException ex) {
+            model.addAttribute("prefillWarning", "No fue posible cargar la factura de referencia.");
+            return;
+        }
+
+        if (!resolveSociedadIds(session).contains(tenantId)) {
+            model.addAttribute("prefillWarning", "La sociedad activa no está autorizada para esta operación.");
+            return;
+        }
+
+        Optional<InvoicePdfData> invoice = invoiceReportRepository.findInvoice(tenantId, invoiceId);
+        if (invoice.isEmpty()) {
+            model.addAttribute("prefillWarning", "Factura de referencia no encontrada.");
+            return;
+        }
+
+        InvoicePdfData data = invoice.get();
+        if (data.fiscalContext().documentKind() != DianFiscalContext.DocumentKind.INVOICE) {
+            model.addAttribute("prefillWarning", "Solo se puede referenciar una factura de venta (01/05).");
+            return;
+        }
+        if (!InvoiceDianStatus.isValidated(data.status(), data.fiscalContext().uniqueCode())) {
+            model.addAttribute("prefillWarning", "La factura referenciada debe estar validada por la DIAN.");
+            return;
+        }
+
+        invoiceReportRepository.findEmissionPointId(tenantId, invoiceId).ifPresent(emissionPointId ->
+                model.addAttribute("selectedEmissionPointId", emissionPointId.toString())
+        );
+
+        model.addAttribute("prefillCufeReferencia", data.fiscalContext().uniqueCode());
+        model.addAttribute("prefillNumeroDocumentoReferencia", data.documentNumber());
+        if (data.fiscalContext().issueDate() != null) {
+            model.addAttribute(
+                    "prefillFechaEmisionReferencia",
+                    data.fiscalContext().issueDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            );
+        }
+        if (data.customer() != null) {
+            model.addAttribute("prefillIdentificacion", data.customer().identificacion());
+            model.addAttribute("prefillRazonSocial", data.customer().razonSocial());
+            model.addAttribute("prefillEmail", data.customer().email());
+        }
+    }
+
+    private static String normalizeManualTipoOperacion(String tipo) {
+        if (!StringUtils.hasText(tipo)) {
+            return "01";
+        }
+        return switch (tipo.trim()) {
+            case "91", "92", "05" -> tipo.trim();
+            default -> "01";
+        };
     }
 
     @PostMapping("/portal/facturacion/manual/emitir")
@@ -126,15 +233,21 @@ public class InvoicePortalController {
             String tipoOperacion = form.getTipoOperacion() == null ? "" : form.getTipoOperacion().trim();
             UUID invoiceId;
             if ("91".equals(tipoOperacion)) {
-                InvoiceResponseDTO response = invoiceClientService
-                        .emitCreditNote(form.toCreditNoteDTO(), tenantUuid.toString(), emissionPointId.toString())
+                invoiceId = invoiceOrchestratorService
+                        .processAndPersistCreditNote(
+                                form.toCreditNoteDTO(),
+                                tenantUuid.toString(),
+                                emissionPointId.toString()
+                        )
                         .block();
-                invoiceId = response != null ? response.id() : null;
             } else if ("92".equals(tipoOperacion)) {
-                InvoiceResponseDTO response = invoiceClientService
-                        .emitDebitNote(form.toDebitNoteDTO(), tenantUuid.toString(), emissionPointId.toString())
+                invoiceId = invoiceOrchestratorService
+                        .processAndPersistDebitNote(
+                                form.toDebitNoteDTO(),
+                                tenantUuid.toString(),
+                                emissionPointId.toString()
+                        )
                         .block();
-                invoiceId = response != null ? response.id() : null;
             } else {
                 invoiceId = invoiceOrchestratorService
                         .processAndPersistInvoice(form.toDTO(), tenantUuid.toString(), emissionPointId.toString())
@@ -143,10 +256,17 @@ public class InvoicePortalController {
             redirectAttributes.addFlashAttribute("success", "Documento emitido correctamente. ID: " + invoiceId);
         } catch (InvoiceStorageException | InvoiceEmissionException | IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("error", readableError(ex));
-            return "redirect:/portal/facturacion/manual";
+            return "redirect:" + manualFormReturnPath(form.getTipoOperacion());
         }
 
         return "redirect:/portal/invoices";
+    }
+
+    private static String manualFormReturnPath(String tipoOperacion) {
+        if ("91".equals(tipoOperacion == null ? "" : tipoOperacion.trim())) {
+            return "/portal/facturacion/nota-credito";
+        }
+        return "/portal/facturacion/manual";
     }
 
     @GetMapping("/portal/invoices")
@@ -515,6 +635,49 @@ public class InvoicePortalController {
                 .orElse("");
     }
 
+    private static String mapIdentificationTypeForDian(String code) {
+        if (code == null || code.isBlank()) {
+            return "31";
+        }
+        return switch (code.trim().toUpperCase()) {
+            case "CC", "13" -> "13";
+            case "CE", "22" -> "22";
+            case "PA", "42" -> "42";
+            case "NIT", "31" -> "31";
+            default -> code.trim();
+        };
+    }
+
+    private static String normalizeIdentificacion(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("[^0-9]", "");
+    }
+
+    private static String normalizeRazonSocial(String value) {
+        if (value == null || value.isBlank()) {
+            return "Consumidor final";
+        }
+        return value.trim().replaceAll("\\s+", " ");
+    }
+
+    private static List<CreateInvoiceRequestDTO.TaxDTO> buildLineTaxes(BigDecimal base, BigDecimal taxRate) {
+        if (base == null || base.compareTo(BigDecimal.ZERO) <= 0
+                || taxRate == null || taxRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+        BigDecimal taxAmount = base.multiply(taxRate)
+                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        return List.of(new CreateInvoiceRequestDTO.TaxDTO(
+                "01",
+                "IVA",
+                taxRate,
+                base,
+                taxAmount
+        ));
+    }
+
     public static class CreateInvoiceForm {
         private String sociedadId;
         private String emissionPointId;
@@ -533,11 +696,11 @@ public class InvoicePortalController {
             BigDecimal total = safeCantidad.multiply(safePrecio);
 
             return new CreateInvoiceRequestDTO(
-                    "LOCAL",
+                    "",
                     new CreateInvoiceRequestDTO.CustomerDTO(
-                            defaultIfBlank(clienteTipoIdentificacion, "NIT"),
-                            clienteIdentificacion,
-                            clienteRazonSocial,
+                            mapIdentificationTypeForDian(defaultIfBlank(clienteTipoIdentificacion, "31")),
+                            normalizeIdentificacion(clienteIdentificacion),
+                            normalizeRazonSocial(clienteRazonSocial),
                             clienteEmail
                     ),
                     List.of(new CreateInvoiceRequestDTO.ItemDTO(
@@ -545,7 +708,8 @@ public class InvoicePortalController {
                             defaultIfBlank(itemDescripcion, "Servicio de Software"),
                             safeCantidad,
                             safePrecio,
-                            BigDecimal.ZERO
+                            BigDecimal.ZERO,
+                            null
                     )),
                     "",
                     Map.of("subtotal", total, "total", total)
@@ -671,11 +835,11 @@ public class InvoicePortalController {
             }
 
             return new CreateInvoiceRequestDTO(
-                    "LOCAL",
+                    "",
                     new CreateInvoiceRequestDTO.CustomerDTO(
-                            mapIdentificationType(tipoDocumentoIdentidad),
-                            identificacion,
-                            razonSocial,
+                            mapIdentificationTypeForDian(tipoDocumentoIdentidad),
+                            normalizeIdentificacion(identificacion),
+                            normalizeRazonSocial(razonSocial),
                             email
                     ),
                     itemDTOs,
@@ -705,13 +869,13 @@ public class InvoicePortalController {
             String fechaEmision = formatFechaEmisionReferencia(fechaEmisionReferencia);
 
             return new CreateCreditNoteRequestDTO(
-                    "LOCAL",
+                    "",
                     "20",
                     "91",
                     new CreateInvoiceRequestDTO.CustomerDTO(
-                            mapIdentificationType(tipoDocumentoIdentidad),
-                            identificacion,
-                            razonSocial,
+                            mapIdentificationTypeForDian(tipoDocumentoIdentidad),
+                            normalizeIdentificacion(identificacion),
+                            normalizeRazonSocial(razonSocial),
                             email
                     ),
                     new CreateCreditNoteRequestDTO.FacturaReferenciaDTO(
@@ -752,13 +916,13 @@ public class InvoicePortalController {
             String fechaEmision = formatFechaEmisionReferencia(fechaEmisionReferencia);
 
             return new CreateDebitNoteRequestDTO(
-                    "LOCAL",
+                    "",
                     "30",
                     "92",
                     new CreateInvoiceRequestDTO.CustomerDTO(
-                            mapIdentificationType(tipoDocumentoIdentidad),
-                            identificacion,
-                            razonSocial,
+                            mapIdentificationTypeForDian(tipoDocumentoIdentidad),
+                            normalizeIdentificacion(identificacion),
+                            normalizeRazonSocial(razonSocial),
                             email
                     ),
                     new CreateCreditNoteRequestDTO.FacturaReferenciaDTO(
@@ -787,12 +951,16 @@ public class InvoicePortalController {
                     }
                     BigDecimal cantidad = item.getCantidad() != null ? item.getCantidad() : BigDecimal.ONE;
                     BigDecimal precio = item.getPrecioUnitario() != null ? item.getPrecioUnitario() : BigDecimal.ZERO;
+                    BigDecimal base = cantidad.multiply(precio);
+                    BigDecimal taxRate = item.getPorcentajeIva() != null ? item.getPorcentajeIva() : new BigDecimal("19");
+                    List<CreateInvoiceRequestDTO.TaxDTO> impuestos = InvoicePortalController.buildLineTaxes(base, taxRate);
                     itemDTOs.add(new CreateInvoiceRequestDTO.ItemDTO(
                             defaultIfBlank(item.getCodigo(), "MAN-001"),
                             item.getDescripcion(),
                             cantidad,
                             precio,
-                            BigDecimal.ZERO
+                            BigDecimal.ZERO,
+                            impuestos
                     ));
                 }
             }
@@ -802,7 +970,8 @@ public class InvoicePortalController {
                         "Producto o servicio manual",
                         BigDecimal.ONE,
                         BigDecimal.ZERO,
-                        BigDecimal.ZERO
+                        BigDecimal.ZERO,
+                        List.of()
                 ));
             }
             return itemDTOs;
@@ -852,10 +1021,12 @@ public class InvoicePortalController {
         }
 
         private String describeConceptoCredito(String codigo) {
-            return switch (codigo) {
+            return switch (defaultIfBlank(codigo, "1")) {
                 case "2" -> "Anulación de factura electrónica";
-                case "3" -> "Rebaja o descuento total";
-                default -> "Devolucion parcial de los bienes y/o no aceptacion parcial del servicio";
+                case "3" -> "Rebaja  o descuento parcial o total";
+                case "4" -> "Ajuste de precio";
+                case "5" -> "Otros";
+                default -> "Devolución parcial de los bienes y/o no aceptación parcial del servicio";
             };
         }
 
@@ -867,6 +1038,7 @@ public class InvoicePortalController {
             };
         }
 
+        /** Etiqueta legible para UI (no usar en payload DIAN). */
         private String mapIdentificationType(String code) {
             if (code == null || code.isBlank()) {
                 return "NIT";

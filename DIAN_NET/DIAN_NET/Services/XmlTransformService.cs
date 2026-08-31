@@ -44,7 +44,7 @@ namespace DIAN_NET.Services
             ["34"] = new("ICUI", false, false),
             ["35"] = new("ICL", false, false),
             ["36"] = new("ADV", false, false),
-            ["ZZ"] = new("No Aplica", false, false)
+            ["ZZ"] = new("No aplica", false, false)
         };
 
         public string GenerarXmlFactura(FacturaDto factura)
@@ -75,41 +75,44 @@ namespace DIAN_NET.Services
             invoice.Add(new XElement(XName.Get("ProfileID", CBC_NAMESPACE), "DIAN 2.1: Factura Electrónica de Venta"));
             invoice.Add(new XElement(XName.Get("ProfileExecutionID", CBC_NAMESPACE), factura.ConfiguracionDian.TipoAmbiente));
             invoice.Add(new XElement(XName.Get("ID", CBC_NAMESPACE), factura.NumeroDocumento));
-            invoice.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), factura.FechaEmision.ToString("yyyy-MM-dd")));
-            invoice.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), factura.FechaEmision.ToString("HH:mm:ss") + "-05:00"));
+            invoice.Add(new XElement(XName.Get("UUID", CBC_NAMESPACE),
+                new XAttribute("schemeID", factura.ConfiguracionDian.TipoAmbiente),
+                new XAttribute("schemeName", "CUFE-SHA384"),
+                new XAttribute("schemeAgencyID", "195"),
+                new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
+                string.Empty));
+            invoice.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), DianColombiaHelper.FormatIssueDate(factura.FechaEmision)));
+            invoice.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), DianColombiaHelper.FormatIssueTime(factura.FechaEmision)));
             invoice.Add(new XElement(XName.Get("DueDate", CBC_NAMESPACE), factura.FechaVencimiento.ToString("yyyy-MM-dd")));
             invoice.Add(new XElement(XName.Get("InvoiceTypeCode", CBC_NAMESPACE), factura.InvoiceTypeCode));
             invoice.Add(new XElement(XName.Get("DocumentCurrencyCode", CBC_NAMESPACE), factura.Moneda));
 
-            // Notas
-            if (factura.Notas != null && factura.Notas.Count > 0)
+            invoice.Add(new XElement(XName.Get("LineCountNumeric", CBC_NAMESPACE), factura.Items.Count));
+            invoice.Add(CrearAccountingSupplierParty(factura.Emisor, factura.ConfiguracionDian.Prefijo));
+            invoice.Add(CrearAccountingCustomerParty(factura.Cliente));
+            invoice.Add(CrearPaymentMeans(factura.FechaVencimiento));
+
+            if (factura.Totales?.Propina > 0)
             {
-                foreach (var nota in factura.Notas)
-                {
-                    invoice.Add(new XElement(XName.Get("Note", CBC_NAMESPACE), nota));
-                }
+                invoice.Add(CrearAllowanceChargePropina(factura.Totales.Propina));
             }
 
-            // AccountingSupplierParty (Emisor)
-            invoice.Add(CrearAccountingSupplierParty(factura.Emisor));
+            foreach (var taxTotal in CrearTaxTotals(factura.Items))
+            {
+                invoice.Add(taxTotal);
+            }
 
-            // AccountingCustomerParty (Cliente)
-            invoice.Add(CrearAccountingCustomerParty(factura.Cliente));
+            foreach (var withholding in CrearWithholdingTaxTotals(factura.Items))
+            {
+                invoice.Add(withholding);
+            }
 
-            // TaxTotal
-            invoice.Add(CrearTaxTotals(factura.Items));
-            invoice.Add(CrearWithholdingTaxTotals(factura.Items));
+            invoice.Add(CrearLegalMonetaryTotal(factura.Totales, factura.Items));
 
-            // LegalMonetaryTotal
-            invoice.Add(CrearLegalMonetaryTotal(factura.Totales));
-
-            // InvoiceLines
             foreach (var item in factura.Items)
             {
                 invoice.Add(CrearInvoiceLine(item));
             }
-
-            invoice.Add(new XElement(XName.Get("LineCountNumeric", CBC_NAMESPACE), factura.Items.Count));
 
             return invoice.ToString();
         }
@@ -123,24 +126,7 @@ namespace DIAN_NET.Services
             var extensionContent1 = new XElement(XName.Get("ExtensionContent", EXT_NAMESPACE));
             var dianExtensions = new XElement(XName.Get("DianExtensions", DIAN_NAMESPACE));
 
-            // InvoiceControl
-            var invoiceControl = new XElement(XName.Get("InvoiceControl", DIAN_NAMESPACE));
-            invoiceControl.Add(new XElement(XName.Get("InvoiceAuthorization", DIAN_NAMESPACE), 
-                factura.ConfiguracionDian.NumeroResolucion));
-            
-            var authPeriod = new XElement(XName.Get("AuthorizationPeriod", DIAN_NAMESPACE));
-            authPeriod.Add(new XElement(XName.Get("StartDate", CBC_NAMESPACE), 
-                factura.ConfiguracionDian.FechaInicio.ToString("yyyy-MM-dd")));
-            authPeriod.Add(new XElement(XName.Get("EndDate", CBC_NAMESPACE), 
-                factura.ConfiguracionDian.FechaFin.ToString("yyyy-MM-dd")));
-            invoiceControl.Add(authPeriod);
-
-            var authorizedInvoices = new XElement(XName.Get("AuthorizedInvoices", DIAN_NAMESPACE));
-            authorizedInvoices.Add(new XElement(XName.Get("Prefix", DIAN_NAMESPACE), factura.ConfiguracionDian.Prefijo));
-            authorizedInvoices.Add(new XElement(XName.Get("From", DIAN_NAMESPACE), factura.ConfiguracionDian.RangoInicio));
-            authorizedInvoices.Add(new XElement(XName.Get("To", DIAN_NAMESPACE), factura.ConfiguracionDian.RangoFin));
-            invoiceControl.Add(authorizedInvoices);
-            dianExtensions.Add(invoiceControl);
+            dianExtensions.Add(CrearInvoiceControl(factura.ConfiguracionDian));
 
             // InvoiceSource
             var invoiceSource = new XElement(XName.Get("InvoiceSource", DIAN_NAMESPACE));
@@ -196,7 +182,7 @@ namespace DIAN_NET.Services
             return extensions;
         }
 
-        private XElement CrearAccountingSupplierParty(EmisorDto emisor)
+        private XElement CrearAccountingSupplierParty(EmisorDto emisor, string? prefijoResolucion = null)
         {
             var party = new XElement(XName.Get("AccountingSupplierParty", CAC_NAMESPACE));
             party.Add(new XElement(XName.Get("AdditionalAccountID", CBC_NAMESPACE), "1"));
@@ -205,12 +191,10 @@ namespace DIAN_NET.Services
             partyElement.Add(new XElement(XName.Get("PartyName", CAC_NAMESPACE),
                 new XElement(XName.Get("Name", CBC_NAMESPACE), emisor.RazonSocial)));
 
-            // PhysicalLocation
             var physicalLocation = new XElement(XName.Get("PhysicalLocation", CAC_NAMESPACE));
             physicalLocation.Add(CrearAddress(emisor.Direccion));
             partyElement.Add(physicalLocation);
 
-            // PartyTaxScheme
             var partyTaxScheme = new XElement(XName.Get("PartyTaxScheme", CAC_NAMESPACE));
             partyTaxScheme.Add(new XElement(XName.Get("RegistrationName", CBC_NAMESPACE), emisor.RazonSocial));
             partyTaxScheme.Add(new XElement(XName.Get("CompanyID", CBC_NAMESPACE),
@@ -220,15 +204,14 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 emisor.Nit));
             partyTaxScheme.Add(new XElement(XName.Get("TaxLevelCode", CBC_NAMESPACE),
-                new XAttribute("listName", "No Aplica"),
-                emisor.RegimenFiscal));
+                new XAttribute("listName", "05"),
+                NormalizarTaxLevelCodeEmisor(emisor.RegimenFiscal)));
             partyTaxScheme.Add(CrearTaxSchemeAddress(emisor.Direccion));
             partyTaxScheme.Add(new XElement(XName.Get("TaxScheme", CAC_NAMESPACE),
                 new XElement(XName.Get("ID", CBC_NAMESPACE), emisor.TributoId),
                 new XElement(XName.Get("Name", CBC_NAMESPACE), emisor.TributoNombre)));
             partyElement.Add(partyTaxScheme);
 
-            // PartyLegalEntity
             var partyLegalEntity = new XElement(XName.Get("PartyLegalEntity", CAC_NAMESPACE));
             partyLegalEntity.Add(new XElement(XName.Get("RegistrationName", CBC_NAMESPACE), emisor.RazonSocial));
             partyLegalEntity.Add(new XElement(XName.Get("CompanyID", CBC_NAMESPACE),
@@ -237,6 +220,11 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyID", "195"),
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 emisor.Nit));
+            if (!string.IsNullOrWhiteSpace(prefijoResolucion))
+            {
+                partyLegalEntity.Add(new XElement(XName.Get("CorporateRegistrationScheme", CAC_NAMESPACE),
+                    new XElement(XName.Get("ID", CBC_NAMESPACE), prefijoResolucion)));
+            }
             partyElement.Add(partyLegalEntity);
 
             // Contact
@@ -273,15 +261,11 @@ namespace DIAN_NET.Services
             partyElement.Add(new XElement(XName.Get("PartyName", CAC_NAMESPACE),
                 new XElement(XName.Get("Name", CBC_NAMESPACE), cliente.RazonSocial ?? "Consumidor final")));
 
-            // PhysicalLocation
-            if (cliente.Direccion != null)
-            {
-                var physicalLocation = new XElement(XName.Get("PhysicalLocation", CAC_NAMESPACE));
-                physicalLocation.Add(CrearAddress(cliente.Direccion));
-                partyElement.Add(physicalLocation);
-            }
+            var direccionCliente = cliente.Direccion ?? NormalizarDireccion(null);
+            var physicalLocation = new XElement(XName.Get("PhysicalLocation", CAC_NAMESPACE));
+            physicalLocation.Add(CrearAddress(direccionCliente));
+            partyElement.Add(physicalLocation);
 
-            // PartyTaxScheme
             var partyTaxScheme = new XElement(XName.Get("PartyTaxScheme", CAC_NAMESPACE));
             partyTaxScheme.Add(new XElement(XName.Get("RegistrationName", CBC_NAMESPACE), cliente.RazonSocial ?? "Consumidor final"));
             partyTaxScheme.Add(new XElement(XName.Get("CompanyID", CBC_NAMESPACE),
@@ -291,8 +275,9 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 cliente.NumeroIdentificacion));
             partyTaxScheme.Add(new XElement(XName.Get("TaxLevelCode", CBC_NAMESPACE),
-                new XAttribute("listName", "No Aplica"),
-                cliente.RegimenFiscal ?? "R-99-PN"));
+                new XAttribute("listName", "04"),
+                NormalizarTaxLevelCodeAdquirente(cliente.RegimenFiscal, cliente.TipoIdentificacion)));
+            partyTaxScheme.Add(CrearTaxSchemeAddress(direccionCliente));
             partyTaxScheme.Add(new XElement(XName.Get("TaxScheme", CAC_NAMESPACE),
                 new XElement(XName.Get("ID", CBC_NAMESPACE), cliente.TributoId),
                 new XElement(XName.Get("Name", CBC_NAMESPACE), cliente.TributoNombre)));
@@ -308,6 +293,20 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 cliente.NumeroIdentificacion));
             partyElement.Add(partyLegalEntity);
+
+            if (!string.IsNullOrWhiteSpace(cliente.Email) || !string.IsNullOrWhiteSpace(cliente.Telefono))
+            {
+                var contact = new XElement(XName.Get("Contact", CAC_NAMESPACE));
+                if (!string.IsNullOrWhiteSpace(cliente.Telefono))
+                {
+                    contact.Add(new XElement(XName.Get("Telephone", CBC_NAMESPACE), cliente.Telefono));
+                }
+                if (!string.IsNullOrWhiteSpace(cliente.Email))
+                {
+                    contact.Add(new XElement(XName.Get("ElectronicMail", CBC_NAMESPACE), cliente.Email));
+                }
+                partyElement.Add(contact);
+            }
 
             party.Add(partyElement);
             return party;
@@ -361,11 +360,56 @@ namespace DIAN_NET.Services
             return address;
         }
 
-        private List<XElement> CrearTaxTotals(List<ItemDto> items)
+        private XElement CrearInvoiceControl(ConfiguracionDianDto configuracion)
+        {
+            var invoiceControl = new XElement(XName.Get("InvoiceControl", DIAN_NAMESPACE));
+            invoiceControl.Add(new XElement(XName.Get("InvoiceAuthorization", DIAN_NAMESPACE),
+                configuracion.NumeroResolucion));
+
+            var authPeriod = new XElement(XName.Get("AuthorizationPeriod", DIAN_NAMESPACE));
+            authPeriod.Add(new XElement(XName.Get("StartDate", CBC_NAMESPACE),
+                configuracion.FechaInicio.ToString("yyyy-MM-dd")));
+            authPeriod.Add(new XElement(XName.Get("EndDate", CBC_NAMESPACE),
+                configuracion.FechaFin.ToString("yyyy-MM-dd")));
+            invoiceControl.Add(authPeriod);
+
+            var authorizedInvoices = new XElement(XName.Get("AuthorizedInvoices", DIAN_NAMESPACE));
+            authorizedInvoices.Add(new XElement(XName.Get("Prefix", DIAN_NAMESPACE), configuracion.Prefijo));
+            authorizedInvoices.Add(new XElement(XName.Get("From", DIAN_NAMESPACE), configuracion.RangoInicio));
+            authorizedInvoices.Add(new XElement(XName.Get("To", DIAN_NAMESPACE), configuracion.RangoFin));
+            invoiceControl.Add(authorizedInvoices);
+            return invoiceControl;
+        }
+
+        private static XElement CrearPaymentMeans(DateTime fechaVencimiento)
+        {
+            return new XElement(XName.Get("PaymentMeans", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), "1"),
+                new XElement(XName.Get("PaymentMeansCode", CBC_NAMESPACE), "10"),
+                new XElement(XName.Get("PaymentDueDate", CBC_NAMESPACE), DianColombiaHelper.FormatIssueDate(fechaVencimiento)));
+        }
+
+        private static XElement CrearAllowanceChargeDescuento(decimal monto, int numeroLinea)
+        {
+            return new XElement(XName.Get("AllowanceCharge", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), numeroLinea),
+                new XElement(XName.Get("ChargeIndicator", CBC_NAMESPACE), "false"),
+                new XElement(XName.Get("AllowanceChargeReasonCode", CBC_NAMESPACE), "00"),
+                new XElement(XName.Get("AllowanceChargeReason", CBC_NAMESPACE), "Descuento comercial"),
+                new XElement(XName.Get("MultiplierFactorNumeric", CBC_NAMESPACE), "0.00"),
+                new XElement(XName.Get("Amount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    monto.ToString("F2", CultureInfo.InvariantCulture)),
+                new XElement(XName.Get("BaseAmount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    monto.ToString("F2", CultureInfo.InvariantCulture)));
+        }
+
+        private List<XElement> CrearTaxTotals(List<ItemDto> items, bool incluirRetenciones = false)
         {
             var impuestos = (items ?? new List<ItemDto>())
                 .SelectMany(i => i.Impuestos ?? new List<ImpuestoDto>())
-                .Where(i => !i.EsRetencion)
+                .Where(i => incluirRetenciones || !i.EsRetencion)
                 .ToList();
 
             return impuestos
@@ -462,22 +506,69 @@ namespace DIAN_NET.Services
             return taxSubtotal;
         }
 
-        private XElement CrearLegalMonetaryTotal(TotalesDto totales)
+        private static XElement CrearAllowanceChargePropina(decimal monto)
         {
+            return new XElement(XName.Get("AllowanceCharge", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), "1"),
+                new XElement(XName.Get("ChargeIndicator", CBC_NAMESPACE), "true"),
+                new XElement(XName.Get("AllowanceChargeReasonCode", CBC_NAMESPACE), "01"),
+                new XElement(XName.Get("AllowanceChargeReason", CBC_NAMESPACE), "Propina"),
+                new XElement(XName.Get("MultiplierFactorNumeric", CBC_NAMESPACE), "0.00"),
+                new XElement(XName.Get("Amount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    monto.ToString("F2", CultureInfo.InvariantCulture)),
+                new XElement(XName.Get("BaseAmount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    monto.ToString("F2", CultureInfo.InvariantCulture)));
+        }
+
+        private XElement CrearLegalMonetaryTotal(TotalesDto totales, List<ItemDto> items)
+        {
+            var lineExtension = (items ?? new List<ItemDto>()).Sum(i => i.Subtotal);
+            var propina = totales?.Propina ?? 0m;
+            var impuestos = (items ?? new List<ItemDto>())
+                .SelectMany(i => i.Impuestos ?? new List<ImpuestoDto>())
+                .ToList();
+            var taxAmount = impuestos.Where(i => !i.EsRetencion).Sum(i => i.Valor);
+            var withholdingAmount = impuestos.Where(i => i.EsRetencion).Sum(i => i.Valor);
+            var taxInclusive = lineExtension + taxAmount;
+            var payable = taxInclusive + propina - withholdingAmount;
+
             var monetaryTotal = new XElement(XName.Get("LegalMonetaryTotal", CAC_NAMESPACE));
             monetaryTotal.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
-                totales.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+                lineExtension.ToString("F2", CultureInfo.InvariantCulture)));
             monetaryTotal.Add(new XElement(XName.Get("TaxExclusiveAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
-                totales.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+                lineExtension.ToString("F2", CultureInfo.InvariantCulture)));
             monetaryTotal.Add(new XElement(XName.Get("TaxInclusiveAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
-                totales.Total.ToString("F2", CultureInfo.InvariantCulture)));
+                taxInclusive.ToString("F2", CultureInfo.InvariantCulture)));
+            if (propina > 0)
+            {
+                monetaryTotal.Add(new XElement(XName.Get("ChargeTotalAmount", CBC_NAMESPACE),
+                    new XAttribute("currencyID", "COP"),
+                    propina.ToString("F2", CultureInfo.InvariantCulture)));
+            }
             monetaryTotal.Add(new XElement(XName.Get("PayableAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
-                totales.Total.ToString("F2", CultureInfo.InvariantCulture)));
+                payable.ToString("F2", CultureInfo.InvariantCulture)));
             return monetaryTotal;
+        }
+
+        private static XElement CrearItemElement(ItemDto item)
+        {
+            var itemElement = new XElement(XName.Get("Item", CAC_NAMESPACE));
+            itemElement.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), item.Descripcion));
+            itemElement.Add(new XElement(XName.Get("SellersItemIdentification", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), item.Codigo),
+                new XElement(XName.Get("ExtendedID", CBC_NAMESPACE), item.Codigo)));
+            itemElement.Add(new XElement(XName.Get("StandardItemIdentification", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE),
+                    new XAttribute("schemeID", "999"),
+                    new XAttribute("schemeName", "Estándar de adopción del contribuyente"),
+                    item.Codigo)));
+            return itemElement;
         }
 
         private XElement CrearInvoiceLine(ItemDto item)
@@ -490,28 +581,29 @@ namespace DIAN_NET.Services
             invoiceLine.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
                 item.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+            invoiceLine.Add(new XElement(XName.Get("FreeOfChargeIndicator", CBC_NAMESPACE),
+                item.Subtotal <= 0 && item.PrecioUnitario <= 0 ? "true" : "false"));
 
-            // TaxTotal para la línea
-            if (item.Impuestos != null && item.Impuestos.Count > 0)
+            if (item.Descuento > 0)
             {
-                invoiceLine.Add(CrearTaxTotals(new List<ItemDto> { item }));
-                invoiceLine.Add(CrearWithholdingTaxTotals(new List<ItemDto> { item }));
+                invoiceLine.Add(CrearAllowanceChargeDescuento(item.Descuento, item.NumeroLinea));
             }
 
-            // Item
-            var itemElement = new XElement(XName.Get("Item", CAC_NAMESPACE));
-            itemElement.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), item.Descripcion));
-            itemElement.Add(new XElement(XName.Get("SellersItemIdentification", CAC_NAMESPACE),
-                new XElement(XName.Get("ID", CBC_NAMESPACE), item.Codigo),
-                new XElement(XName.Get("ExtendedID", CBC_NAMESPACE), item.Codigo)));
-            itemElement.Add(new XElement(XName.Get("StandardItemIdentification", CAC_NAMESPACE),
-                new XElement(XName.Get("ID", CBC_NAMESPACE),
-                    new XAttribute("schemeID", "999"),
-                    new XAttribute("schemeName", "Estándar de adopción del contribuyente"),
-                    item.Codigo)));
-            invoiceLine.Add(itemElement);
+            if (item.Impuestos != null && item.Impuestos.Count > 0)
+            {
+                foreach (var taxTotal in CrearTaxTotals(new List<ItemDto> { item }))
+                {
+                    invoiceLine.Add(taxTotal);
+                }
 
-            // Price
+                foreach (var withholding in CrearWithholdingTaxTotals(new List<ItemDto> { item }))
+                {
+                    invoiceLine.Add(withholding);
+                }
+            }
+
+            invoiceLine.Add(CrearItemElement(item));
+
             invoiceLine.Add(new XElement(XName.Get("Price", CAC_NAMESPACE),
                 new XElement(XName.Get("PriceAmount", CBC_NAMESPACE),
                     new XAttribute("currencyID", "COP"),
@@ -536,21 +628,34 @@ namespace DIAN_NET.Services
             factura.ConfiguracionDian.TipoAmbiente = Default(factura.ConfiguracionDian.TipoAmbiente, "2");
 
             factura.Emisor ??= new EmisorDto();
+            factura.Emisor.Nit = DianNitHelper.NormalizarNit(factura.Emisor.Nit);
+            factura.Emisor.RazonSocial = NormalizarRazonSocial(factura.Emisor.RazonSocial);
+            factura.Emisor.NombreComercial = NormalizarRazonSocial(Default(factura.Emisor.NombreComercial, factura.Emisor.RazonSocial));
             factura.Emisor.TipoIdentificacion = Default(factura.Emisor.TipoIdentificacion, "31");
             factura.Emisor.TipoPersona = Default(factura.Emisor.TipoPersona, "1");
-            factura.Emisor.Dv = Default(factura.Emisor.Dv, "0");
-            factura.Emisor.RegimenFiscal = Default(factura.Emisor.RegimenFiscal, "R-99-PN");
+            factura.Emisor.Dv = DianNitHelper.NormalizarDv(factura.Emisor.Nit, factura.Emisor.TipoIdentificacion, factura.Emisor.Dv);
+            factura.Emisor.RegimenFiscal = Default(factura.Emisor.RegimenFiscal, "ZZ");
             factura.Emisor.TributoId = Default(factura.Emisor.TributoId, "01");
             factura.Emisor.TributoNombre = Default(factura.Emisor.TributoNombre, NombreTributo(factura.Emisor.TributoId));
             factura.Emisor.Direccion = NormalizarDireccion(factura.Emisor.Direccion);
 
             factura.Cliente ??= new ClienteDto();
-            factura.Cliente.TipoIdentificacion = Default(factura.Cliente.TipoIdentificacion, "31");
+            factura.Cliente.NumeroIdentificacion = DianNitHelper.NormalizarNit(factura.Cliente.NumeroIdentificacion);
+            factura.Cliente.RazonSocial = NormalizarRazonSocial(factura.Cliente.RazonSocial);
+            factura.Cliente.NombreComercial = NormalizarRazonSocial(Default(factura.Cliente.NombreComercial, factura.Cliente.RazonSocial));
+            factura.Cliente.TipoIdentificacion = NormalizarTipoIdentificacionDian(factura.Cliente.TipoIdentificacion);
             factura.Cliente.TipoPersona = Default(factura.Cliente.TipoPersona, "1");
-            factura.Cliente.Dv = Default(factura.Cliente.Dv, "0");
-            factura.Cliente.RegimenFiscal = Default(factura.Cliente.RegimenFiscal, "R-99-PN");
-            factura.Cliente.TributoId = Default(factura.Cliente.TributoId, "ZZ");
-            factura.Cliente.TributoNombre = Default(factura.Cliente.TributoNombre, NombreTributo(factura.Cliente.TributoId));
+            factura.Cliente.Dv = DianNitHelper.NormalizarDv(
+                factura.Cliente.NumeroIdentificacion,
+                factura.Cliente.TipoIdentificacion,
+                factura.Cliente.Dv);
+            factura.Cliente.RegimenFiscal = DefaultRegimenFiscalAdquirente(
+                factura.Cliente.RegimenFiscal,
+                factura.Cliente.TipoIdentificacion);
+            factura.Cliente.TipoPersona = string.Equals(factura.Cliente.TipoIdentificacion, "31", StringComparison.OrdinalIgnoreCase)
+                ? "1"
+                : "2";
+            NormalizarTributoCliente(factura.Cliente);
             factura.Cliente.Direccion = NormalizarDireccion(factura.Cliente.Direccion);
 
             foreach (var item in factura.Items ?? Enumerable.Empty<ItemDto>())
@@ -561,6 +666,105 @@ namespace DIAN_NET.Services
                     NormalizarImpuesto(impuesto, item);
                 }
             }
+
+            RecalcularTotalesFactura(factura);
+        }
+
+        private static void RecalcularTotalesFactura(FacturaDto factura)
+        {
+            var items = factura.Items ?? new List<ItemDto>();
+            var subtotal = items.Sum(i => i.Subtotal);
+            var impuestos = items.SelectMany(i => i.Impuestos ?? Enumerable.Empty<ImpuestoDto>()).ToList();
+            var taxAmount = impuestos.Where(i => !i.EsRetencion).Sum(i => i.Valor);
+            var withholdingAmount = impuestos.Where(i => i.EsRetencion).Sum(i => i.Valor);
+
+            factura.Totales ??= new TotalesDto();
+            factura.Totales.Subtotal = subtotal;
+            factura.Totales.TotalImpuestos = taxAmount;
+            var propina = factura.Totales.Propina;
+            factura.Totales.Total = subtotal + taxAmount - withholdingAmount + propina;
+        }
+
+        private static readonly HashSet<string> TaxLevelCodesEmisor = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "O-13", "O-15", "O-23", "O-47", "ZZ"
+        };
+
+        private static readonly HashSet<string> TaxLevelCodesAdquirente = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "O-13", "O-15", "O-23", "O-47", "ZZ",
+            "R-99-PN", "R-99-PJ"
+        };
+
+        private static string DefaultRegimenFiscalAdquirente(string? regimenFiscal, string? tipoIdentificacion)
+        {
+            if (!string.IsNullOrWhiteSpace(regimenFiscal))
+            {
+                return regimenFiscal.Trim();
+            }
+
+            return string.Equals(tipoIdentificacion, "31", StringComparison.OrdinalIgnoreCase)
+                ? "R-99-PJ"
+                : "R-99-PN";
+        }
+
+        private static string NormalizarTaxLevelCodeEmisor(string? regimenFiscal)
+        {
+            var tokens = Default(regimenFiscal, "ZZ")
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(token => token.ToUpperInvariant())
+                .Select(token => token switch
+                {
+                    "O-48" or "O-49" or "O-99" or "O-33" => "ZZ",
+                    _ => token
+                })
+                .Where(TaxLevelCodesEmisor.Contains)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return tokens.Length == 0 ? "ZZ" : string.Join(';', tokens);
+        }
+
+        private static string NormalizarTaxLevelCodeAdquirente(string? regimenFiscal, string? tipoIdentificacion)
+        {
+            var fallback = DefaultRegimenFiscalAdquirente(null, tipoIdentificacion);
+            var tokens = Default(regimenFiscal, fallback)
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(token => token.ToUpperInvariant())
+                .Select(token => token switch
+                {
+                    "O-48" or "O-49" or "O-99" => fallback,
+                    "O-33" => fallback,
+                    _ => token
+                })
+                .Where(TaxLevelCodesAdquirente.Contains)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return tokens.Length == 0 ? fallback : string.Join(';', tokens);
+        }
+
+        private static string NormalizarRazonSocial(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Consumidor final";
+            }
+
+            return string.Join(' ', value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static string NormalizarTipoIdentificacionDian(string? tipoIdentificacion)
+        {
+            var value = Default(tipoIdentificacion, "31").Trim().ToUpperInvariant();
+            return value switch
+            {
+                "CC" or "13" => "13",
+                "CE" or "22" => "22",
+                "PA" or "42" => "42",
+                "NIT" or "31" => "31",
+                _ => value
+            };
         }
 
         private static DireccionDto NormalizarDireccion(DireccionDto direccion)
@@ -588,6 +792,30 @@ namespace DIAN_NET.Services
         {
             return ObtenerDefinicionTributo(codigo).Nombre;
         }
+
+        private static void NormalizarTributoCliente(ClienteDto cliente)
+        {
+            if (string.Equals(cliente.TipoIdentificacion, "31", StringComparison.OrdinalIgnoreCase))
+            {
+                cliente.TributoId = Default(cliente.TributoId, "01");
+            }
+            else
+            {
+                cliente.TributoId = Default(cliente.TributoId, "ZZ");
+            }
+
+            cliente.TributoNombre = Default(cliente.TributoNombre, NombreTributo(cliente.TributoId));
+        }
+
+        private static string DescripcionConceptoNotaCredito(string? codigo) =>
+            (codigo ?? string.Empty).Trim() switch
+            {
+                "2" => "Anulación de factura electrónica",
+                "3" => "Rebaja  o descuento parcial o total",
+                "4" => "Ajuste de precio",
+                "5" => "Otros",
+                _ => "Devolución parcial de los bienes y/o no aceptación parcial del servicio"
+            };
 
         private static void NormalizarImpuesto(ImpuestoDto impuesto, ItemDto item)
         {
@@ -652,24 +880,36 @@ namespace DIAN_NET.Services
             notaCredito.CreditNoteTypeCode = Default(notaCredito.CreditNoteTypeCode, "91");
             notaCredito.Moneda = Default(notaCredito.Moneda, "COP");
             notaCredito.ConfiguracionDian ??= new ConfiguracionDianDto();
-            notaCredito.ConfiguracionDian.TipoAmbiente = Default(notaCredito.ConfiguracionDian.TipoAmbiente, "2");
 
             notaCredito.Emisor ??= new EmisorDto();
+            notaCredito.Emisor.Nit = DianNitHelper.NormalizarNit(notaCredito.Emisor.Nit);
+            notaCredito.Emisor.RazonSocial = NormalizarRazonSocial(notaCredito.Emisor.RazonSocial);
+            notaCredito.Emisor.NombreComercial = NormalizarRazonSocial(Default(notaCredito.Emisor.NombreComercial, notaCredito.Emisor.RazonSocial));
             notaCredito.Emisor.TipoIdentificacion = Default(notaCredito.Emisor.TipoIdentificacion, "31");
             notaCredito.Emisor.TipoPersona = Default(notaCredito.Emisor.TipoPersona, "1");
-            notaCredito.Emisor.Dv = Default(notaCredito.Emisor.Dv, "0");
-            notaCredito.Emisor.RegimenFiscal = Default(notaCredito.Emisor.RegimenFiscal, "R-99-PN");
+            notaCredito.Emisor.Dv = DianNitHelper.NormalizarDv(notaCredito.Emisor.Nit, notaCredito.Emisor.TipoIdentificacion, notaCredito.Emisor.Dv);
+            notaCredito.Emisor.RegimenFiscal = Default(notaCredito.Emisor.RegimenFiscal, "ZZ");
             notaCredito.Emisor.TributoId = Default(notaCredito.Emisor.TributoId, "01");
             notaCredito.Emisor.TributoNombre = Default(notaCredito.Emisor.TributoNombre, NombreTributo(notaCredito.Emisor.TributoId));
             notaCredito.Emisor.Direccion = NormalizarDireccion(notaCredito.Emisor.Direccion);
 
             notaCredito.Cliente ??= new ClienteDto();
-            notaCredito.Cliente.TipoIdentificacion = Default(notaCredito.Cliente.TipoIdentificacion, "31");
+            notaCredito.Cliente.NumeroIdentificacion = DianNitHelper.NormalizarNit(notaCredito.Cliente.NumeroIdentificacion);
+            notaCredito.Cliente.RazonSocial = NormalizarRazonSocial(notaCredito.Cliente.RazonSocial);
+            notaCredito.Cliente.NombreComercial = NormalizarRazonSocial(Default(notaCredito.Cliente.NombreComercial, notaCredito.Cliente.RazonSocial));
+            notaCredito.Cliente.TipoIdentificacion = NormalizarTipoIdentificacionDian(notaCredito.Cliente.TipoIdentificacion);
             notaCredito.Cliente.TipoPersona = Default(notaCredito.Cliente.TipoPersona, "1");
-            notaCredito.Cliente.Dv = Default(notaCredito.Cliente.Dv, "0");
-            notaCredito.Cliente.RegimenFiscal = Default(notaCredito.Cliente.RegimenFiscal, "R-99-PN");
-            notaCredito.Cliente.TributoId = Default(notaCredito.Cliente.TributoId, "ZZ");
-            notaCredito.Cliente.TributoNombre = Default(notaCredito.Cliente.TributoNombre, NombreTributo(notaCredito.Cliente.TributoId));
+            notaCredito.Cliente.Dv = DianNitHelper.NormalizarDv(
+                notaCredito.Cliente.NumeroIdentificacion,
+                notaCredito.Cliente.TipoIdentificacion,
+                notaCredito.Cliente.Dv);
+            notaCredito.Cliente.RegimenFiscal = DefaultRegimenFiscalAdquirente(
+                notaCredito.Cliente.RegimenFiscal,
+                notaCredito.Cliente.TipoIdentificacion);
+            notaCredito.Cliente.TipoPersona = string.Equals(notaCredito.Cliente.TipoIdentificacion, "31", StringComparison.OrdinalIgnoreCase)
+                ? "1"
+                : "2";
+            NormalizarTributoCliente(notaCredito.Cliente);
             notaCredito.Cliente.Direccion = NormalizarDireccion(notaCredito.Cliente.Direccion);
 
             notaCredito.FacturaReferencia ??= new ReferenciaDocumentoDto();
@@ -679,7 +919,20 @@ namespace DIAN_NET.Services
             {
                 concepto.ReferenceID = Default(concepto.ReferenceID, notaCredito.FacturaReferencia.NumeroDocumento);
                 concepto.Codigo = Default(concepto.Codigo, "1");
-                concepto.Descripcion = Default(concepto.Descripcion, "Devolución parcial de los bienes y/o no aceptación parcial del servicio");
+                concepto.Descripcion = DescripcionConceptoNotaCredito(concepto.Codigo);
+            }
+
+            if (notaCredito.ConceptosCorreccion == null || notaCredito.ConceptosCorreccion.Count == 0)
+            {
+                notaCredito.ConceptosCorreccion = new List<ConceptoCorreccionDto>
+                {
+                    new()
+                    {
+                        ReferenceID = notaCredito.FacturaReferencia.NumeroDocumento,
+                        Codigo = "1",
+                        Descripcion = DescripcionConceptoNotaCredito("1")
+                    }
+                };
             }
 
             foreach (var item in notaCredito.Items ?? Enumerable.Empty<ItemDto>())
@@ -723,8 +976,8 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyID", "195"),
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 string.Empty));
-            creditNote.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), notaCredito.FechaEmision.ToString("yyyy-MM-dd")));
-            creditNote.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), notaCredito.FechaEmision.ToString("HH:mm:ss") + "-05:00"));
+            creditNote.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), DianColombiaHelper.FormatIssueDate(notaCredito.FechaEmision)));
+            creditNote.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), DianColombiaHelper.FormatIssueTime(notaCredito.FechaEmision)));
             creditNote.Add(new XElement(XName.Get("CreditNoteTypeCode", CBC_NAMESPACE), notaCredito.CreditNoteTypeCode));
 
             foreach (var nota in notaCredito.Notas ?? Enumerable.Empty<string>())
@@ -734,13 +987,28 @@ namespace DIAN_NET.Services
 
             creditNote.Add(new XElement(XName.Get("DocumentCurrencyCode", CBC_NAMESPACE), notaCredito.Moneda));
             creditNote.Add(new XElement(XName.Get("LineCountNumeric", CBC_NAMESPACE), notaCredito.Items.Count));
-            creditNote.Add(CrearDiscrepancyResponse(notaCredito));
-            creditNote.Add(CrearBillingReferenceNotaCredito(notaCredito.FacturaReferencia));
-            creditNote.Add(CrearAccountingSupplierParty(notaCredito.Emisor));
+
+            foreach (var discrepancy in CrearDiscrepancyResponses(notaCredito.ConceptosCorreccion))
+            {
+                creditNote.Add(discrepancy);
+            }
+
+            var billingReference = CrearBillingReferenceNotaCredito(notaCredito.FacturaReferencia);
+            if (billingReference != null)
+            {
+                creditNote.Add(billingReference);
+            }
+
+            creditNote.Add(CrearAccountingSupplierParty(notaCredito.Emisor, notaCredito.ConfiguracionDian.Prefijo));
             creditNote.Add(CrearAccountingCustomerParty(notaCredito.Cliente));
-            creditNote.Add(CrearTaxTotals(notaCredito.Items));
-            creditNote.Add(CrearWithholdingTaxTotals(notaCredito.Items));
-            creditNote.Add(CrearLegalMonetaryTotal(notaCredito.Totales));
+            creditNote.Add(CrearPaymentMeans(notaCredito.FechaEmision));
+
+            foreach (var taxTotal in CrearTaxTotals(notaCredito.Items, incluirRetenciones: true))
+            {
+                creditNote.Add(taxTotal);
+            }
+
+            creditNote.Add(CrearLegalMonetaryTotal(notaCredito.Totales, notaCredito.Items));
 
             foreach (var item in notaCredito.Items)
             {
@@ -761,24 +1029,36 @@ namespace DIAN_NET.Services
             notaDebito.DebitNoteTypeCode = Default(notaDebito.DebitNoteTypeCode, "92");
             notaDebito.Moneda = Default(notaDebito.Moneda, "COP");
             notaDebito.ConfiguracionDian ??= new ConfiguracionDianDto();
-            notaDebito.ConfiguracionDian.TipoAmbiente = Default(notaDebito.ConfiguracionDian.TipoAmbiente, "2");
 
             notaDebito.Emisor ??= new EmisorDto();
+            notaDebito.Emisor.Nit = DianNitHelper.NormalizarNit(notaDebito.Emisor.Nit);
+            notaDebito.Emisor.RazonSocial = NormalizarRazonSocial(notaDebito.Emisor.RazonSocial);
+            notaDebito.Emisor.NombreComercial = NormalizarRazonSocial(Default(notaDebito.Emisor.NombreComercial, notaDebito.Emisor.RazonSocial));
             notaDebito.Emisor.TipoIdentificacion = Default(notaDebito.Emisor.TipoIdentificacion, "31");
             notaDebito.Emisor.TipoPersona = Default(notaDebito.Emisor.TipoPersona, "1");
-            notaDebito.Emisor.Dv = Default(notaDebito.Emisor.Dv, "0");
-            notaDebito.Emisor.RegimenFiscal = Default(notaDebito.Emisor.RegimenFiscal, "R-99-PN");
+            notaDebito.Emisor.Dv = DianNitHelper.NormalizarDv(notaDebito.Emisor.Nit, notaDebito.Emisor.TipoIdentificacion, notaDebito.Emisor.Dv);
+            notaDebito.Emisor.RegimenFiscal = Default(notaDebito.Emisor.RegimenFiscal, "ZZ");
             notaDebito.Emisor.TributoId = Default(notaDebito.Emisor.TributoId, "01");
             notaDebito.Emisor.TributoNombre = Default(notaDebito.Emisor.TributoNombre, NombreTributo(notaDebito.Emisor.TributoId));
             notaDebito.Emisor.Direccion = NormalizarDireccion(notaDebito.Emisor.Direccion);
 
             notaDebito.Cliente ??= new ClienteDto();
-            notaDebito.Cliente.TipoIdentificacion = Default(notaDebito.Cliente.TipoIdentificacion, "31");
+            notaDebito.Cliente.NumeroIdentificacion = DianNitHelper.NormalizarNit(notaDebito.Cliente.NumeroIdentificacion);
+            notaDebito.Cliente.RazonSocial = NormalizarRazonSocial(notaDebito.Cliente.RazonSocial);
+            notaDebito.Cliente.NombreComercial = NormalizarRazonSocial(Default(notaDebito.Cliente.NombreComercial, notaDebito.Cliente.RazonSocial));
+            notaDebito.Cliente.TipoIdentificacion = NormalizarTipoIdentificacionDian(notaDebito.Cliente.TipoIdentificacion);
             notaDebito.Cliente.TipoPersona = Default(notaDebito.Cliente.TipoPersona, "1");
-            notaDebito.Cliente.Dv = Default(notaDebito.Cliente.Dv, "0");
-            notaDebito.Cliente.RegimenFiscal = Default(notaDebito.Cliente.RegimenFiscal, "R-99-PN");
-            notaDebito.Cliente.TributoId = Default(notaDebito.Cliente.TributoId, "ZZ");
-            notaDebito.Cliente.TributoNombre = Default(notaDebito.Cliente.TributoNombre, NombreTributo(notaDebito.Cliente.TributoId));
+            notaDebito.Cliente.Dv = DianNitHelper.NormalizarDv(
+                notaDebito.Cliente.NumeroIdentificacion,
+                notaDebito.Cliente.TipoIdentificacion,
+                notaDebito.Cliente.Dv);
+            notaDebito.Cliente.RegimenFiscal = DefaultRegimenFiscalAdquirente(
+                notaDebito.Cliente.RegimenFiscal,
+                notaDebito.Cliente.TipoIdentificacion);
+            notaDebito.Cliente.TipoPersona = string.Equals(notaDebito.Cliente.TipoIdentificacion, "31", StringComparison.OrdinalIgnoreCase)
+                ? "1"
+                : "2";
+            NormalizarTributoCliente(notaDebito.Cliente);
             notaDebito.Cliente.Direccion = NormalizarDireccion(notaDebito.Cliente.Direccion);
 
             notaDebito.FacturaReferencia ??= new ReferenciaDocumentoDto();
@@ -789,6 +1069,19 @@ namespace DIAN_NET.Services
                 concepto.ReferenceID = Default(concepto.ReferenceID, notaDebito.FacturaReferencia.NumeroDocumento);
                 concepto.Codigo = Default(concepto.Codigo, "1");
                 concepto.Descripcion = Default(concepto.Descripcion, "Intereses");
+            }
+
+            if (notaDebito.ConceptosCorreccion == null || notaDebito.ConceptosCorreccion.Count == 0)
+            {
+                notaDebito.ConceptosCorreccion = new List<ConceptoCorreccionDto>
+                {
+                    new()
+                    {
+                        ReferenceID = notaDebito.FacturaReferencia.NumeroDocumento,
+                        Codigo = "1",
+                        Descripcion = "Intereses"
+                    }
+                };
             }
 
             foreach (var item in notaDebito.Items ?? Enumerable.Empty<ItemDto>())
@@ -829,8 +1122,8 @@ namespace DIAN_NET.Services
                 new XAttribute("schemeAgencyID", "195"),
                 new XAttribute("schemeAgencyName", "CO, DIAN (Dirección de Impuestos y Aduanas Nacionales)"),
                 string.Empty));
-            debitNote.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), notaDebito.FechaEmision.ToString("yyyy-MM-dd")));
-            debitNote.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), notaDebito.FechaEmision.ToString("HH:mm:ss") + "-05:00"));
+            debitNote.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE), DianColombiaHelper.FormatIssueDate(notaDebito.FechaEmision)));
+            debitNote.Add(new XElement(XName.Get("IssueTime", CBC_NAMESPACE), DianColombiaHelper.FormatIssueTime(notaDebito.FechaEmision)));
             debitNote.Add(new XElement(XName.Get("DebitNoteTypeCode", CBC_NAMESPACE), notaDebito.DebitNoteTypeCode));
 
             foreach (var nota in notaDebito.Notas ?? Enumerable.Empty<string>())
@@ -840,13 +1133,28 @@ namespace DIAN_NET.Services
 
             debitNote.Add(new XElement(XName.Get("DocumentCurrencyCode", CBC_NAMESPACE), notaDebito.Moneda));
             debitNote.Add(new XElement(XName.Get("LineCountNumeric", CBC_NAMESPACE), notaDebito.Items.Count));
-            debitNote.Add(CrearDiscrepancyResponseNotaDebito(notaDebito));
-            debitNote.Add(CrearBillingReferenceNotaCredito(notaDebito.FacturaReferencia));
-            debitNote.Add(CrearAccountingSupplierParty(notaDebito.Emisor));
+
+            foreach (var discrepancy in CrearDiscrepancyResponses(notaDebito.ConceptosCorreccion))
+            {
+                debitNote.Add(discrepancy);
+            }
+
+            var billingReference = CrearBillingReferenceNotaCredito(notaDebito.FacturaReferencia);
+            if (billingReference != null)
+            {
+                debitNote.Add(billingReference);
+            }
+
+            debitNote.Add(CrearAccountingSupplierParty(notaDebito.Emisor, notaDebito.ConfiguracionDian.Prefijo));
             debitNote.Add(CrearAccountingCustomerParty(notaDebito.Cliente));
-            debitNote.Add(CrearTaxTotals(notaDebito.Items));
-            debitNote.Add(CrearWithholdingTaxTotals(notaDebito.Items));
-            debitNote.Add(CrearLegalMonetaryTotal(notaDebito.Totales));
+            debitNote.Add(CrearPaymentMeans(notaDebito.FechaEmision));
+
+            foreach (var taxTotal in CrearTaxTotals(notaDebito.Items, incluirRetenciones: true))
+            {
+                debitNote.Add(taxTotal);
+            }
+
+            debitNote.Add(CrearLegalMonetaryTotal(notaDebito.Totales, notaDebito.Items));
 
             foreach (var item in notaDebito.Items)
             {
@@ -862,6 +1170,7 @@ namespace DIAN_NET.Services
             var extension1 = new XElement(XName.Get("UBLExtension", EXT_NAMESPACE));
             var extensionContent1 = new XElement(XName.Get("ExtensionContent", EXT_NAMESPACE));
             var dianExtensions = new XElement(XName.Get("DianExtensions", DIAN_NAMESPACE));
+            dianExtensions.Add(CrearInvoiceControl(notaDebito.ConfiguracionDian));
 
             dianExtensions.Add(new XElement(XName.Get("InvoiceSource", DIAN_NAMESPACE),
                 new XElement(XName.Get("IdentificationCode", CBC_NAMESPACE),
@@ -906,19 +1215,6 @@ namespace DIAN_NET.Services
             return extensions;
         }
 
-        private XElement CrearDiscrepancyResponseNotaDebito(NotaDebitoDto notaDebito)
-        {
-            var concepto = notaDebito.ConceptosCorreccion.First();
-            var discrepancy = new XElement(XName.Get("DiscrepancyResponse", CAC_NAMESPACE));
-            if (!string.IsNullOrWhiteSpace(concepto.ReferenceID))
-            {
-                discrepancy.Add(new XElement(XName.Get("ReferenceID", CBC_NAMESPACE), concepto.ReferenceID));
-            }
-            discrepancy.Add(new XElement(XName.Get("ResponseCode", CBC_NAMESPACE), concepto.Codigo));
-            discrepancy.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), concepto.Descripcion));
-            return discrepancy;
-        }
-
         private XElement CrearDebitNoteLine(ItemDto item)
         {
             var line = new XElement(XName.Get("DebitNoteLine", CAC_NAMESPACE));
@@ -929,18 +1225,23 @@ namespace DIAN_NET.Services
             line.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
                 item.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+            line.Add(new XElement(XName.Get("FreeOfChargeIndicator", CBC_NAMESPACE),
+                item.Subtotal <= 0 && item.PrecioUnitario <= 0 ? "true" : "false"));
+
+            if (item.Descuento > 0)
+            {
+                line.Add(CrearAllowanceChargeDescuento(item.Descuento, item.NumeroLinea));
+            }
 
             if (item.Impuestos != null && item.Impuestos.Count > 0)
             {
-                line.Add(CrearTaxTotals(new List<ItemDto> { item }));
-                line.Add(CrearWithholdingTaxTotals(new List<ItemDto> { item }));
+                foreach (var taxTotal in CrearTaxTotals(new List<ItemDto> { item }, incluirRetenciones: true))
+                {
+                    line.Add(taxTotal);
+                }
             }
 
-            var itemElement = new XElement(XName.Get("Item", CAC_NAMESPACE));
-            itemElement.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), item.Descripcion));
-            itemElement.Add(new XElement(XName.Get("SellersItemIdentification", CAC_NAMESPACE),
-                new XElement(XName.Get("ID", CBC_NAMESPACE), item.Codigo)));
-            line.Add(itemElement);
+            line.Add(CrearItemElement(item));
 
             line.Add(new XElement(XName.Get("Price", CAC_NAMESPACE),
                 new XElement(XName.Get("PriceAmount", CBC_NAMESPACE),
@@ -959,6 +1260,7 @@ namespace DIAN_NET.Services
             var extension1 = new XElement(XName.Get("UBLExtension", EXT_NAMESPACE));
             var extensionContent1 = new XElement(XName.Get("ExtensionContent", EXT_NAMESPACE));
             var dianExtensions = new XElement(XName.Get("DianExtensions", DIAN_NAMESPACE));
+            dianExtensions.Add(CrearInvoiceControl(notaCredito.ConfiguracionDian));
 
             dianExtensions.Add(new XElement(XName.Get("InvoiceSource", DIAN_NAMESPACE),
                 new XElement(XName.Get("IdentificationCode", CBC_NAMESPACE),
@@ -1003,28 +1305,45 @@ namespace DIAN_NET.Services
             return extensions;
         }
 
-        private XElement CrearDiscrepancyResponse(NotaCreditoDto notaCredito)
+        private static IEnumerable<XElement> CrearDiscrepancyResponses(IEnumerable<ConceptoCorreccionDto> conceptos)
         {
-            var concepto = notaCredito.ConceptosCorreccion.First();
-            var discrepancy = new XElement(XName.Get("DiscrepancyResponse", CAC_NAMESPACE));
-            if (!string.IsNullOrWhiteSpace(concepto.ReferenceID))
+            foreach (var concepto in conceptos ?? Enumerable.Empty<ConceptoCorreccionDto>())
             {
-                discrepancy.Add(new XElement(XName.Get("ReferenceID", CBC_NAMESPACE), concepto.ReferenceID));
+                var discrepancy = new XElement(XName.Get("DiscrepancyResponse", CAC_NAMESPACE));
+                if (!string.IsNullOrWhiteSpace(concepto.ReferenceID))
+                {
+                    discrepancy.Add(new XElement(XName.Get("ReferenceID", CBC_NAMESPACE), concepto.ReferenceID));
+                }
+                discrepancy.Add(new XElement(XName.Get("ResponseCode", CBC_NAMESPACE), concepto.Codigo));
+                discrepancy.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), concepto.Descripcion));
+                yield return discrepancy;
             }
-            discrepancy.Add(new XElement(XName.Get("ResponseCode", CBC_NAMESPACE), concepto.Codigo));
-            discrepancy.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), concepto.Descripcion));
-            return discrepancy;
         }
 
-        private XElement CrearBillingReferenceNotaCredito(ReferenciaDocumentoDto referencia)
+        private static XElement? CrearBillingReferenceNotaCredito(ReferenciaDocumentoDto referencia)
         {
-            return new XElement(XName.Get("BillingReference", CAC_NAMESPACE),
-                new XElement(XName.Get("InvoiceDocumentReference", CAC_NAMESPACE),
-                    new XElement(XName.Get("ID", CBC_NAMESPACE), referencia.NumeroDocumento),
-                    new XElement(XName.Get("UUID", CBC_NAMESPACE),
-                        new XAttribute("schemeName", string.IsNullOrWhiteSpace(referencia.SchemeName) ? "CUFE-SHA384" : referencia.SchemeName),
-                        referencia.CUFE),
-                    new XElement(XName.Get("IssueDate", CBC_NAMESPACE), referencia.FechaEmision.ToString("yyyy-MM-dd"))));
+            if (referencia == null || string.IsNullOrWhiteSpace(referencia.NumeroDocumento))
+            {
+                return null;
+            }
+
+            var invoiceDocumentReference = new XElement(XName.Get("InvoiceDocumentReference", CAC_NAMESPACE),
+                new XElement(XName.Get("ID", CBC_NAMESPACE), referencia.NumeroDocumento));
+
+            if (!string.IsNullOrWhiteSpace(referencia.CUFE))
+            {
+                invoiceDocumentReference.Add(new XElement(XName.Get("UUID", CBC_NAMESPACE),
+                    new XAttribute("schemeName", string.IsNullOrWhiteSpace(referencia.SchemeName) ? "CUFE-SHA384" : referencia.SchemeName),
+                    referencia.CUFE));
+            }
+
+            if (referencia.FechaEmision.Year > 1900)
+            {
+                invoiceDocumentReference.Add(new XElement(XName.Get("IssueDate", CBC_NAMESPACE),
+                    DianColombiaHelper.FormatIssueDate(referencia.FechaEmision)));
+            }
+
+            return new XElement(XName.Get("BillingReference", CAC_NAMESPACE), invoiceDocumentReference);
         }
 
         private XElement CrearCreditNoteLine(ItemDto item)
@@ -1037,18 +1356,23 @@ namespace DIAN_NET.Services
             line.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
                 new XAttribute("currencyID", "COP"),
                 item.Subtotal.ToString("F2", CultureInfo.InvariantCulture)));
+            line.Add(new XElement(XName.Get("FreeOfChargeIndicator", CBC_NAMESPACE),
+                item.Subtotal <= 0 && item.PrecioUnitario <= 0 ? "true" : "false"));
+
+            if (item.Descuento > 0)
+            {
+                line.Add(CrearAllowanceChargeDescuento(item.Descuento, item.NumeroLinea));
+            }
 
             if (item.Impuestos != null && item.Impuestos.Count > 0)
             {
-                line.Add(CrearTaxTotals(new List<ItemDto> { item }));
-                line.Add(CrearWithholdingTaxTotals(new List<ItemDto> { item }));
+                foreach (var taxTotal in CrearTaxTotals(new List<ItemDto> { item }, incluirRetenciones: true))
+                {
+                    line.Add(taxTotal);
+                }
             }
 
-            var itemElement = new XElement(XName.Get("Item", CAC_NAMESPACE));
-            itemElement.Add(new XElement(XName.Get("Description", CBC_NAMESPACE), item.Descripcion));
-            itemElement.Add(new XElement(XName.Get("SellersItemIdentification", CAC_NAMESPACE),
-                new XElement(XName.Get("ID", CBC_NAMESPACE), item.Codigo)));
-            line.Add(itemElement);
+            line.Add(CrearItemElement(item));
 
             line.Add(new XElement(XName.Get("Price", CAC_NAMESPACE),
                 new XElement(XName.Get("PriceAmount", CBC_NAMESPACE),

@@ -112,6 +112,7 @@ namespace DIAN_NET.Models
         public decimal Subtotal { get; set; }
         public decimal TotalDescuentos { get; set; }
         public decimal TotalImpuestos { get; set; }
+        public decimal Propina { get; set; }
         public decimal Total { get; set; }
     }
     

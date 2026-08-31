@@ -1,3 +1,4 @@
+using DIAN_NET.Middleware;
 using DIAN_NET.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -23,7 +24,11 @@ namespace DIAN_NET
                 .AddEnvironmentVariables();
 
             // Agregar servicios al contenedor
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options =>
+            {
+                // Payloads desde Core Go pueden omitir colecciones opcionales; no tratarlas como required implícito.
+                options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+            });
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -62,33 +67,32 @@ namespace DIAN_NET
             builder.Services.AddSingleton<ICufeQrService, CufeQrService>();
             builder.Services.AddSingleton<IXadesSignService, XadesSignService>();
             builder.Services.AddSingleton<IDianXmlDebugStore, DianXmlDebugStore>();
+            builder.Services.AddScoped<EmissionRequestContext>();
+            builder.Services.AddScoped<ITenantCertificateLoader>(provider =>
+                new TenantCertificateLoader(
+                    provider.GetRequiredService<EmissionRequestContext>(),
+                    provider.GetRequiredService<IConfiguration>(),
+                    certificatePath,
+                    certificatePassword));
 
             // Mock vs DIAN real se decide por ambiente de la sociedad en cada request.
             builder.Services.AddSingleton<MockDianService>();
-            builder.Services.AddScoped(_ => new DianManager(certificatePath, certificatePassword));
             builder.Services.AddScoped<IDianService>(provider =>
                 new AmbienteRoutingDianService(
                     provider.GetRequiredService<MockDianService>(),
-                    provider.GetRequiredService<DianManager>()));
+                    provider.GetRequiredService<ITenantCertificateLoader>()));
 
-            // Servicio de orquestación
+            // FacturacionService depende de ITenantCertificateLoader + EmissionRequestContext (scoped).
+            // EmissionCertificateMiddleware debe ejecutarse antes de controllers para poblar headers S3/tenant.
             builder.Services.AddScoped<IFacturacionService>(provider =>
-            {
-                var xmlTransform = provider.GetRequiredService<IXmlTransformService>();
-                var cufeQr = provider.GetRequiredService<ICufeQrService>();
-                var xadesSign = provider.GetRequiredService<IXadesSignService>();
-                var dianService = provider.GetRequiredService<IDianService>();
-                var xmlDebugStore = provider.GetRequiredService<IDianXmlDebugStore>();
-                
-                return new FacturacionService(
-                    xmlTransform,
-                    cufeQr,
-                    xadesSign,
-                    dianService,
-                    xmlDebugStore,
-                    certificatePath,
-                    certificatePassword);
-            });
+                new FacturacionService(
+                    provider.GetRequiredService<IXmlTransformService>(),
+                    provider.GetRequiredService<ICufeQrService>(),
+                    provider.GetRequiredService<IXadesSignService>(),
+                    provider.GetRequiredService<IDianService>(),
+                    provider.GetRequiredService<IDianXmlDebugStore>(),
+                    provider.GetRequiredService<ITenantCertificateLoader>()));
+            builder.Services.AddScoped<IDianResolutionService, DianResolutionService>();
             builder.Services.AddScoped<IEmissionService, EmissionService>();
             builder.Services.AddScoped<IRadianEventService>(provider =>
             {
@@ -116,6 +120,7 @@ namespace DIAN_NET
 
             app.UseHttpsRedirection();
             app.UseCors("AllowAll");
+            app.UseMiddleware<EmissionCertificateMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
 

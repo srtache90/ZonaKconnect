@@ -1,7 +1,7 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Facturación Manual | DIAN Connect')}"></th:block>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead(${pageTitle != null ? pageTitle + ' | Zona K e-Docs' : 'Facturación Manual | Zona K e-Docs'})}"></th:block>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -10,9 +10,14 @@
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="mb-5">
         <p class="dc-page-subtitle mb-1">Zona K / Emisión</p>
-        <h1 class="dc-page-title">Facturación Manual</h1>
-        <p class="dc-page-subtitle">Facturas estándar, notas crédito/débito y contingencia con cálculo fiscal controlado.</p>
+        <h1 class="dc-page-title" th:text="${pageTitle != null ? pageTitle : 'Facturación Manual'}">Facturación Manual</h1>
+        <p class="dc-page-subtitle"
+           th:text="${pageDescription != null ? pageDescription : 'Facturas estándar, notas crédito/débito y contingencia con cálculo fiscal controlado.'}">
+            Facturas estándar, notas crédito/débito y contingencia con cálculo fiscal controlado.
+        </p>
     </div>
+
+    <div class="alert alert-warning rounded-4" th:if="${prefillWarning != null}" th:text="${prefillWarning}"></div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
@@ -36,10 +41,10 @@
                         <div class="col-md-4">
                             <label class="form-label" for="tipoOperacion">Tipo de documento</label>
                             <select class="form-select" id="tipoOperacion" name="tipoOperacion" required>
-                                <option value="01">01 - Factura estándar</option>
-                                <option value="91">91 - Nota crédito</option>
-                                <option value="92">92 - Nota débito</option>
-                                <option value="05">05 - Factura de contingencia</option>
+                                <option value="01" th:selected="${selectedTipoOperacion == '01'}">01 - Factura estándar</option>
+                                <option value="91" th:selected="${selectedTipoOperacion == '91'}">91 - Nota crédito</option>
+                                <option value="92" th:selected="${selectedTipoOperacion == '92'}">92 - Nota débito</option>
+                                <option value="05" th:selected="${selectedTipoOperacion == '05'}">05 - Factura de contingencia</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -61,12 +66,18 @@
                                 <option th:each="punto : ${puntosVenta}"
                                         th:value="${punto.id}"
                                         th:data-sociedad-id="${punto.sociedadId}"
+                                        th:data-prefijo-fe="${punto.prefijo}"
+                                        th:data-numero-fe="${punto.numeroActual}"
+                                        th:data-prefijo-nc="${punto.prefijoNc}"
+                                        th:data-numero-nc="${punto.numeroActualNc}"
+                                        th:data-prefijo-nd="${punto.prefijoNd}"
+                                        th:data-numero-nd="${punto.numeroActualNd}"
                                         th:selected="${punto.id.toString() == selectedEmissionPointId}"
-                                        th:text="${punto.codigo + ' - ' + punto.nombre + ' (' + punto.prefijo + ', actual: ' + punto.numeroActual + ')'}">
+                                        th:text="${punto.codigo + ' - ' + punto.nombre + ' (FE: ' + punto.prefijo + ', NC: ' + punto.prefijoNc + ', ND: ' + punto.prefijoNd + ')'}">
                                     PV
                                 </option>
                             </select>
-                            <div class="form-text">El Core asigna prefijo y consecutivo del rango activo del punto seleccionado.</div>
+                            <div class="form-text" id="emissionPointHint">El Core asigna prefijo y consecutivo del rango activo del punto seleccionado.</div>
                         </div>
 
                         <div class="col-md-3">
@@ -85,21 +96,26 @@
                             </select>
                         </div>
 
-                        <div class="col-12 border rounded p-3 bg-white d-none" id="creditNoteFields">
+                        <div class="col-12 border rounded p-3 bg-white"
+                             id="creditNoteFields"
+                             th:classappend="${selectedTipoOperacion != '91' and selectedTipoOperacion != '92'} ? ' d-none' : ''">
                             <h3 class="h6" id="referenceNoteTitle">Referencia de nota crédito/débito</h3>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <label class="form-label" for="cufeReferencia">CUFE/CUDE referencia</label>
-                                    <input class="form-control" id="cufeReferencia" name="cufeReferencia" maxlength="96">
+                                    <input class="form-control" id="cufeReferencia" name="cufeReferencia" maxlength="96"
+                                           th:value="${prefillCufeReferencia}">
                                     <div class="form-text">Obligatorio para NC/ND. Debe tener 96 caracteres.</div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" for="numeroDocumentoReferencia">Factura referenciada</label>
-                                    <input class="form-control" id="numeroDocumentoReferencia" name="numeroDocumentoReferencia" placeholder="FE123">
+                                    <input class="form-control" id="numeroDocumentoReferencia" name="numeroDocumentoReferencia" placeholder="FE123"
+                                           th:value="${prefillNumeroDocumentoReferencia}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" for="fechaEmisionReferencia">Fecha factura</label>
-                                    <input class="form-control" id="fechaEmisionReferencia" name="fechaEmisionReferencia" type="date">
+                                    <input class="form-control" id="fechaEmisionReferencia" name="fechaEmisionReferencia" type="date"
+                                           th:value="${prefillFechaEmisionReferencia}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" for="conceptoCredito">Concepto</label>
@@ -134,11 +150,11 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="identificacion">Identificación</label>
-                            <input class="form-control" id="identificacion" name="identificacion" required>
+                            <input class="form-control" id="identificacion" name="identificacion" required th:value="${prefillIdentificacion}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="razonSocial">Razón social / Nombre</label>
-                            <input class="form-control" id="razonSocial" name="razonSocial" required>
+                            <input class="form-control" id="razonSocial" name="razonSocial" required th:value="${prefillRazonSocial}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="direccion">Dirección</label>
@@ -146,7 +162,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="email">Email</label>
-                            <input class="form-control" id="email" name="email" type="email">
+                            <input class="form-control" id="email" name="email" type="email" th:value="${prefillEmail}">
                         </div>
                     </div>
                 </div>
@@ -229,7 +245,8 @@
 
         <div class="d-flex justify-content-end gap-2 mt-4">
             <a class="btn btn-outline-secondary" th:href="@{/portal/invoices}">Cancelar</a>
-            <button class="btn btn-zk rounded-pill px-4" type="submit" th:disabled="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
+            <button class="btn btn-zk rounded-pill px-4" type="submit" th:disabled="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}"
+                    th:text="${submitLabel != null ? submitLabel : 'Emitir documento manual'}">
                 Emitir documento manual
             </button>
         </div>
@@ -267,6 +284,25 @@
         if (!puntoSelect.value || puntoSelect.selectedOptions[0]?.hidden) {
             puntoSelect.value = firstVisible;
         }
+        actualizarHintPuntoVenta();
+    }
+
+    function actualizarHintPuntoVenta() {
+        const hint = document.getElementById('emissionPointHint');
+        const selected = puntoSelect.selectedOptions[0];
+        if (!hint || !selected || !selected.value) {
+            return;
+        }
+        const tipo = tipoOperacion.value;
+        if (tipo === '91') {
+            hint.textContent = `Próximo consecutivo NC: ${selected.dataset.prefijoNc}${Number.parseInt(selected.dataset.numeroNc || '0', 10) + 1} (misma resolución DIAN del punto).`;
+            return;
+        }
+        if (tipo === '92') {
+            hint.textContent = `Próximo consecutivo ND: ${selected.dataset.prefijoNd}${Number.parseInt(selected.dataset.numeroNd || '0', 10) + 1} (misma resolución DIAN del punto).`;
+            return;
+        }
+        hint.textContent = `Próximo consecutivo FE: ${selected.dataset.prefijoFe}${Number.parseInt(selected.dataset.numeroFe || '0', 10) + 1}.`;
     }
 
     function toggleCreditNoteFields() {
@@ -281,6 +317,7 @@
                 ? 'Referencia de nota débito'
                 : 'Referencia de nota crédito';
         }
+        actualizarHintPuntoVenta();
     }
 
     function reindexItems() {
@@ -338,6 +375,7 @@
     document.getElementById('manualInvoiceForm').addEventListener('input', recalculate);
     tipoOperacion.addEventListener('change', toggleCreditNoteFields);
     sociedadSelect.addEventListener('change', actualizarPuntosVenta);
+    puntoSelect.addEventListener('change', actualizarHintPuntoVenta);
 
     document.querySelectorAll('[data-panel-target]').forEach(button => {
         button.addEventListener('click', () => {

@@ -28,6 +28,8 @@
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
 
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.410.7" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.400.7" />
   </ItemGroup>
 
   <ItemGroup>

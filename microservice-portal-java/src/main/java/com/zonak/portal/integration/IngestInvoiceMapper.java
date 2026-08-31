@@ -168,7 +168,8 @@ public class IngestInvoiceMapper {
                 valueOrDefault(detalle.getDescripcion(), valueOrDefault(detalle.getNombreProducto(), "Item SAP")),
                 valueOrDefault(detalle.getCantidad(), BigDecimal.ONE),
                 valueOrDefault(detalle.getValorunitario(), BigDecimal.ZERO),
-                BigDecimal.ZERO
+                BigDecimal.ZERO,
+                null
         );
     }
 
@@ -178,7 +179,8 @@ public class IngestInvoiceMapper {
                 valueOrDefault(item.descripcion(), "Item Simphony"),
                 valueOrDefault(item.cantidad(), BigDecimal.ONE),
                 valueOrDefault(item.precioUnitario(), BigDecimal.ZERO),
-                valueOrDefault(item.descuento(), BigDecimal.ZERO)
+                valueOrDefault(item.descuento(), BigDecimal.ZERO),
+                null
         );
     }
 
@@ -198,7 +200,8 @@ public class IngestInvoiceMapper {
                     "Propina",
                     BigDecimal.ONE,
                     tip,
-                    BigDecimal.ZERO
+                    BigDecimal.ZERO,
+                    List.of()
             ));
         }
         return items;
@@ -263,7 +266,7 @@ public class IngestInvoiceMapper {
             unit = subtotal.divide(qty, 2, java.math.RoundingMode.HALF_UP);
         }
         BigDecimal discount = parseDecimal(item != null ? item.descuento() : null);
-        return new CreateInvoiceRequestDTO.ItemDTO(code, name, qty, unit, discount);
+        return new CreateInvoiceRequestDTO.ItemDTO(code, name, qty, unit, discount, null);
     }
 
     private String normalizeFechaEmision(String raw) {
