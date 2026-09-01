@@ -6,7 +6,11 @@
 
 :80 {
 	encode gzip
-	reverse_proxy portal-java:8081
+	reverse_proxy portal-java:8081 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+	}
 
 	header {
 		X-Content-Type-Options nosniff
