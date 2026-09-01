@@ -1,0 +1,17 @@
+# Frente HTTP para acceso por IP pública (sin Let's Encrypt).
+# Dominio + HTTPS: usar deploy/hostinger/ (Caddy ACME).
+{
+	auto_https off
+}
+
+:80 {
+	encode gzip
+	reverse_proxy portal-java:8081
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
