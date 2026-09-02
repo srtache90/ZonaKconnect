@@ -45,7 +45,7 @@ data-theme="light">
     border-bottom:1px solid #3b3b3b;
 ">
 
-    <a class="zk-dashboard-brand" th:href="@{/portal}"
+    <a class="logo-zk zk-dashboard-brand" th:href="@{/portal}"
        style="
            display:flex;
            align-items:center;
@@ -53,6 +53,7 @@ data-theme="light">
            text-decoration:none;
            color:#ffffff;
            min-width:145px;
+           width: 145px;
        ">
 
        <img th:src="@{/imagen/Zonak1.png}"
@@ -72,16 +73,18 @@ data-theme="light">
 
         ">
          <span  style="
-         color:#bcb9b3; 
-         width: 10px; 
-         height: 10px;
-         font-size: 10px;
-         padding: 2px 6px;
-         display: flex;
-         justify-content: flex-end;
-         position: relative;
-         top: 15px;" >
-         e-Docs</span>
+        color: var(--dc-brand-subtitle) !important;
+        font-family: var(--dc-font);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: .16rem;
+        text-transform: none;
+        line-height: 1;
+        position: relative;
+        left: -40px;
+        top: 20px;
+        ">
+        e-Docs</span>
 
     </a> 
 
@@ -92,7 +95,7 @@ data-theme="light">
         gap:3px;
     ">
 
-        <a th:href="@{/portal}"
+        <a class="nav-zk" th:href="@{/portal}"
            style="
                height:100%;
                padding:0 16px;
@@ -102,11 +105,12 @@ data-theme="light">
                color:#bdbdbd;
                font-size:13px;
                font-weight:600;
+               width: 100px;
            ">
             Dashboard
         </a>
 
-        <a href="#"
+        <a class="nav-zk" href="#"
            style="
                height:100%;
                padding:0 16px;
@@ -116,11 +120,12 @@ data-theme="light">
                color:#bdbdbd;
                font-size:13px;
                font-weight:600;
+               width: 100px;
            ">
             Operaciones
         </a>
 
-        <a href="#"
+        <a class="nav-zk" href="#"
            style="
                height:100%;
                padding:0 16px;
@@ -130,11 +135,12 @@ data-theme="light">
                color:#bdbdbd;
                font-size:13px;
                font-weight:600;
+               width: 100px;
            ">
             Reportes
         </a>
 
-        <a th:href="@{/portal/configuraciones}"
+        <a class="nav-zk" th:href="@{/portal/configuraciones}"
            style="
                height:100%;
                padding:0 16px;
@@ -144,6 +150,7 @@ data-theme="light">
                color:#bdbdbd;
                font-size:13px;
                font-weight:600;
+                width: 100px;
            ">
             Configuración
         </a>
@@ -315,7 +322,7 @@ data-theme="light">
                 flex-shrink:0;
             ">
 
-                <button type="button"
+                <button class="exportar" type="button"
                         style="
                             height:36px;
                             padding:0 14px;
@@ -328,6 +335,8 @@ data-theme="light">
                             align-items:center;
                             gap:7px;
                             cursor:pointer;
+                            width: 100px;
+                            right: auto;
                         ">
 
                     <i class="bi bi-download"></i>
@@ -337,7 +346,7 @@ data-theme="light">
                 </button>
 
 
-                <a th:href="@{/portal/facturacion/manual}"
+                <a class="nueva-operacion" th:href="@{/portal/facturacion/manual}"
                    style="
                        height:36px;
                        padding:0 16px;
@@ -352,6 +361,8 @@ data-theme="light">
                        align-items:center;
                        gap:7px;
                        box-sizing:border-box;
+                       width: 110px;
+                       right: 0;
                    ">
 
                     <i class="bi bi-plus-lg"></i>

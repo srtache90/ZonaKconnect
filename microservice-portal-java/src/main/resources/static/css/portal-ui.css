@@ -29,7 +29,7 @@
     --dc-focus-gold: rgba(150, 113, 23, 0.14);
     --dc-shadow-panel: 0 10px 28px rgba(46, 38, 24, 0.055);
     --dc-radius: 0.75rem;
-    --dc-radius-sm: 10rem;
+    --dc-radius-sm: 1rem;
     --dc-radius-lg: 1rem;
     --dc-radius-card: 1rem;
     --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
@@ -179,6 +179,7 @@ h1, h2, h3, h4, h5 {
 .text-muted,
 small.text-muted {
     color: var(--dc-on-variant) !important;
+    height: 30px !important;
 }
 
 /* ---- Module shell (recepción / emisión / admin) ---- */
@@ -209,7 +210,7 @@ small.text-muted {
     font-family: var(--dc-font);
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: .16em;
+    letter-spacing: .16rem;
     text-transform: none;
     line-height: 1;
 }
@@ -364,7 +365,7 @@ button.btn {
     font-family: var(--dc-font);
     font-weight: 500;
     border-radius: var(--dc-radius-sm) !important;
-    letter-spacing: 0.01rem;
+    letter-spacing: 0.01rem;    
 }
 
 .btn-primary,
@@ -427,15 +428,20 @@ button.btn {
 
 .btn-sm {
     border-radius: 0.4rem !important;
-    margin:20px 0px;
+    margin:20px 0px !important;
 }
-
+.btn-b-zk{
+    background: black !important;
+    border-color: black !important;
+    color: var(--dc-on-primary) !important;
+}
 .rounded-pill {
     border-radius: 999px !important;
      white-space: nowrap !important;
     display:inline-flex !important;
     align-items:center !important;
-    margin:20px 0px;
+   
+    height: 35px !important;
 }
 
 .button-group .badge.rounded-pill {
@@ -443,8 +449,8 @@ button.btn {
     align-items: center !important;    
     justify-content: center !important;  
     height: 35px !important;            
-    padding: 0 19px !important;         
-    margin: 20px 0px !important;               
+    padding: 0 19px !important;    
+    margin-top:1px;           
     box-sizing: border-box !important;
     white-space: nowrap !important;
 
@@ -578,6 +584,7 @@ textarea.form-control {
 
 a:not(.btn):not(.nav-link):not(.zk-module-brand) {
     color: var(--dc-primary);
+    width:250px;
 }
 
 a:not(.btn):not(.nav-link):not(.zk-module-brand):hover {

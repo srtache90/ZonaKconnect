@@ -78,7 +78,7 @@ body.zk-body {
 }
 
 .zk-dashboard-header {
-    height: 58px !important;
+    height: 80px !important;
     padding: 0 24px !important;
     gap: 16px !important;
     background: #080808 !important;
@@ -136,6 +136,7 @@ body.zk-body {
 .zk-module-card {
     min-height: 146px !important;
     padding: 15px !important;
+    min-width: 390px !important;
 
 }
 
@@ -611,7 +612,7 @@ body {
     text-decoration: none;
     transition: transform .18s ease, box-shadow .18s ease;
     font-size: 11px;
-    width: 1195px;
+    min-width: 112%;
 }
 
 .zk-card:hover {

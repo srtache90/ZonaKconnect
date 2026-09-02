@@ -245,7 +245,7 @@
 
         <div class="d-flex justify-content-end gap-2 mt-4">
             <a class="btn btn-outline-secondary" th:href="@{/portal/invoices}">Cancelar</a>
-            <button class="btn btn-zk rounded-pill px-4" type="submit" th:disabled="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}"
+            <button class="btn-b-zk rounded-pill px-4" type="submit" th:disabled="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}"
                     th:text="${submitLabel != null ? submitLabel : 'Emitir documento manual'}">
                 Emitir documento manual
             </button>
