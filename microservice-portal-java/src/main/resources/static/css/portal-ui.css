@@ -584,7 +584,7 @@ textarea.form-control {
 
 a:not(.btn):not(.nav-link):not(.zk-module-brand) {
     color: var(--dc-primary);
-    width:250px;
+    width:35px;
 }
 
 a:not(.btn):not(.nav-link):not(.zk-module-brand):hover {
