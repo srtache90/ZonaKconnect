@@ -25,8 +25,10 @@ WHERE c.id = s.id
 
 
 ALTER TABLE sociedades
-
     DROP CONSTRAINT IF EXISTS chk_sociedades_dian_regimen_fiscal;
+
+ALTER TABLE sociedades
+    DROP CONSTRAINT IF EXISTS sociedades_dian_regimen_fiscal_check;
 
 
 
