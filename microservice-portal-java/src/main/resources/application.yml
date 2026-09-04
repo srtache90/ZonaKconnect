@@ -1,5 +1,11 @@
 server:
   port: 8081
+  tomcat:
+    connection-timeout: 180s
+
+zonak:
+  sap:
+    dian-wait-timeout: ${SAP_DIAN_WAIT_TIMEOUT:120s}
 
 services:
   core-go:

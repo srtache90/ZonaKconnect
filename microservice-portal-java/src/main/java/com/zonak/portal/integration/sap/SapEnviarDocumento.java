@@ -29,6 +29,8 @@ public class SapEnviarDocumento {
         private String idEmpresa;
         private String consecutivo;
         private String prefijo;
+        private String usuario;
+        private String contrasenia;
         private OffsetDateTime fechafacturacion;
 
         @JacksonXmlElementWrapper(useWrapping = false)
@@ -67,6 +69,22 @@ public class SapEnviarDocumento {
 
         public void setPrefijo(String prefijo) {
             this.prefijo = prefijo;
+        }
+
+        public String getUsuario() {
+            return usuario;
+        }
+
+        public void setUsuario(String usuario) {
+            this.usuario = usuario;
+        }
+
+        public String getContrasenia() {
+            return contrasenia;
+        }
+
+        public void setContrasenia(String contrasenia) {
+            this.contrasenia = contrasenia;
         }
 
         public OffsetDateTime getFechafacturacion() {
@@ -124,6 +142,10 @@ public class SapEnviarDocumento {
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "listaImpuestos")
         private List<Impuesto> listaImpuestos = new ArrayList<>();
+
+        @JacksonXmlElementWrapper(useWrapping = false)
+        @JacksonXmlProperty(localName = "listaDescuentos")
+        private List<Descuento> listaDescuentos = new ArrayList<>();
 
         public BigDecimal getCantidad() {
             return cantidad;
@@ -196,6 +218,54 @@ public class SapEnviarDocumento {
 
         public void setListaImpuestos(List<Impuesto> listaImpuestos) {
             this.listaImpuestos = listaImpuestos;
+        }
+
+        public List<Descuento> getListaDescuentos() {
+            return listaDescuentos;
+        }
+
+        public void setListaDescuentos(List<Descuento> listaDescuentos) {
+            this.listaDescuentos = listaDescuentos;
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Descuento {
+        private String codigoDescuento;
+        private String descripcion;
+        private BigDecimal descuento;
+        private BigDecimal porcentajeDescuento;
+
+        public String getCodigoDescuento() {
+            return codigoDescuento;
+        }
+
+        public void setCodigoDescuento(String codigoDescuento) {
+            this.codigoDescuento = codigoDescuento;
+        }
+
+        public String getDescripcion() {
+            return descripcion;
+        }
+
+        public void setDescripcion(String descripcion) {
+            this.descripcion = descripcion;
+        }
+
+        public BigDecimal getDescuento() {
+            return descuento;
+        }
+
+        public void setDescuento(BigDecimal descuento) {
+            this.descuento = descuento;
+        }
+
+        public BigDecimal getPorcentajeDescuento() {
+            return porcentajeDescuento;
+        }
+
+        public void setPorcentajeDescuento(BigDecimal porcentajeDescuento) {
+            this.porcentajeDescuento = porcentajeDescuento;
         }
     }
 

@@ -43,7 +43,10 @@ public class AdminPortalRepository {
                                (
                                    s.dian_software_pin_enc IS NOT NULL
                                    OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
-                               ) AS dian_software_pin_configured
+                               ) AS dian_software_pin_configured,
+                               s.id_empresa,
+                               s.sap_usuario,
+                               (s.sap_password_enc IS NOT NULL AND BTRIM(s.sap_password_enc) <> '') AS sap_password_configured
                         FROM sociedades s
                         LEFT JOIN companies c ON c.id = s.id
                         ORDER BY CASE WHEN s.id = ? THEN 0 ELSE 1 END, s.razon_social ASC
@@ -64,7 +67,10 @@ public class AdminPortalRepository {
                         rs.getString("dian_ambiente"),
                         rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
-                        rs.getBoolean("dian_software_pin_configured")
+                        rs.getBoolean("dian_software_pin_configured"),
+                        rs.getObject("id_empresa", Integer.class),
+                        rs.getString("sap_usuario"),
+                        rs.getBoolean("sap_password_configured")
                 ),
                 PROTECTED_SOCIEDAD_ID
         );
@@ -93,7 +99,10 @@ public class AdminPortalRepository {
                                (
                                    s.dian_software_pin_enc IS NOT NULL
                                    OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
-                               ) AS dian_software_pin_configured
+                               ) AS dian_software_pin_configured,
+                               s.id_empresa,
+                               s.sap_usuario,
+                               (s.sap_password_enc IS NOT NULL AND BTRIM(s.sap_password_enc) <> '') AS sap_password_configured
                         FROM sociedades s
                         LEFT JOIN companies c ON c.id = s.id
                         WHERE s.id IN (%s)
@@ -115,7 +124,10 @@ public class AdminPortalRepository {
                         rs.getString("dian_ambiente"),
                         rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
-                        rs.getBoolean("dian_software_pin_configured")
+                        rs.getBoolean("dian_software_pin_configured"),
+                        rs.getObject("id_empresa", Integer.class),
+                        rs.getString("sap_usuario"),
+                        rs.getBoolean("sap_password_configured")
                 ),
                 append(ids, PROTECTED_SOCIEDAD_ID)
         );
@@ -149,7 +161,10 @@ public class AdminPortalRepository {
             String dianRegimenFiscal,
             String dianSoftwareId,
             String dianSoftwarePinEnc,
-            String dianSoftwarePinPlaintext
+            String dianSoftwarePinPlaintext,
+            Integer idEmpresa,
+            String sapUsuario,
+            String sapPasswordEnc
     ) {
         jdbcTemplate.update(
                 """
@@ -157,9 +172,10 @@ public class AdminPortalRepository {
                             id, razon_social, nit, api_key, correo_emision, correo_recepcion,
                             host_smtp, puerto_smtp, usuario_smtp, password_smtp_enc,
                             host_imap, puerto_imap, usuario_imap, password_imap_enc,
-                            dian_ambiente, dian_regimen_fiscal, dian_software_id, dian_software_pin_enc
+                            dian_ambiente, dian_regimen_fiscal, dian_software_id, dian_software_pin_enc,
+                            id_empresa, sap_usuario, sap_password_enc
                         )
-                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?)
+                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NULLIF(?, ''), ?)
                         ON CONFLICT (id) DO UPDATE SET
                             razon_social = EXCLUDED.razon_social,
                             nit = EXCLUDED.nit,
@@ -177,7 +193,10 @@ public class AdminPortalRepository {
                             dian_ambiente = EXCLUDED.dian_ambiente,
                             dian_regimen_fiscal = EXCLUDED.dian_regimen_fiscal,
                             dian_software_id = COALESCE(NULLIF(EXCLUDED.dian_software_id, ''), sociedades.dian_software_id),
-                            dian_software_pin_enc = COALESCE(EXCLUDED.dian_software_pin_enc, sociedades.dian_software_pin_enc)
+                            dian_software_pin_enc = COALESCE(EXCLUDED.dian_software_pin_enc, sociedades.dian_software_pin_enc),
+                            id_empresa = EXCLUDED.id_empresa,
+                            sap_usuario = EXCLUDED.sap_usuario,
+                            sap_password_enc = COALESCE(EXCLUDED.sap_password_enc, sociedades.sap_password_enc)
                         """,
                 id,
                 razonSocial,
@@ -196,7 +215,10 @@ public class AdminPortalRepository {
                 normalizeDianAmbiente(dianAmbiente),
                 DianRegimenFiscal.normalize(dianRegimenFiscal),
                 dianSoftwareId,
-                dianSoftwarePinEnc
+                dianSoftwarePinEnc,
+                idEmpresa,
+                sapUsuario,
+                sapPasswordEnc
         );
         ensureCompanyForSociedad(id);
         syncCompanyDianConfig(id, dianSoftwarePinPlaintext);

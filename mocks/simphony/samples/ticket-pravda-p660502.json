@@ -1,0 +1,122 @@
+{
+  "numero_factura": "P660502",
+  "fecha_procesamiento": "2026-09-03T10:49:16.427800300",
+  "numero_ticket": "26096",
+  "check_id": "HPL000049544",
+  "harmony_id": "369187",
+  "caja_wsid": "17401",
+  "fecha_hora": "2026-09-02T15:15:34.8257479-05:00",
+  "condicion_venta": "01",
+  "codigo_fiscal": "48",
+  "guid_transaccion": "1fdf467993b74a6ead730780f3c6d17600017401",
+  "tipo_ambiente": "2",
+  "numero_factura_completo": "P660502",
+  "clave_tecnica_xml": "e3e0eb95b191080c608175f03c5d01fc5e8699f6be293892fcceac2b51fb2822",
+  "Resolucion": "18764106488367",
+  "ResolucionIni": "2026-02-27",
+  "ResolucionFin": "2027-02-27",
+  "FechaResolucion": "2026-02-27",
+  "propina": "41167.00",
+  "total": "485767.00",
+  "restaurante": "Pravda",
+  "workstation": "Aux1Pravda",
+  "empleado": "Roa, Cristian ",
+  "identificacion_cliente": "2222222222",
+  "cliente": null,
+  "cliente_encontrado": false,
+  "impuestos": [
+    {
+      "codigo_impuesto": "04",
+      "nombre_impuesto": "INC 8%",
+      "numero_impuesto": "1",
+      "porcentaje_impuesto": "8.00",
+      "base_imponible": "411667.00",
+      "monto_impuesto": "32933.33"
+    }
+  ],
+  "items": [
+    {
+      "nombre": "Aromatica",
+      "cantidad": "1",
+      "precio": "7800.00",
+      "subtotal": "7800.00"
+    },
+    {
+      "nombre": "AromaHierba",
+      "cantidad": "1",
+      "precio": "6800.00",
+      "subtotal": "6800.00"
+    },
+    {
+      "nombre": "DipEspiAlcach",
+      "cantidad": "1",
+      "precio": "69800.00",
+      "subtotal": "69800.00"
+    },
+    {
+      "nombre": "NewYork380",
+      "cantidad": "1",
+      "precio": "82800.00",
+      "subtotal": "82800.00"
+    },
+    {
+      "nombre": "NewYork380",
+      "cantidad": "1",
+      "precio": "82800.00",
+      "subtotal": "82800.00"
+    },
+    {
+      "nombre": "BabyBeef250",
+      "cantidad": "1",
+      "precio": "76800.00",
+      "subtotal": "76800.00"
+    },
+    {
+      "nombre": "BabyBeef250",
+      "cantidad": "1",
+      "precio": "76800.00",
+      "subtotal": "76800.00"
+    },
+    {
+      "nombre": "JgMandarina",
+      "cantidad": "1",
+      "precio": "11800.00",
+      "subtotal": "11800.00"
+    },
+    {
+      "nombre": "Limonada",
+      "cantidad": "1",
+      "precio": "10800.00",
+      "subtotal": "10800.00"
+    },
+    {
+      "nombre": "ExTorrilla",
+      "cantidad": "1",
+      "precio": "1800.00",
+      "subtotal": "1800.00"
+    },
+    {
+      "nombre": "AromaHierba",
+      "cantidad": "1",
+      "precio": "6800.00",
+      "subtotal": "6800.00"
+    },
+    {
+      "nombre": "Ginger Schweppes",
+      "cantidad": "1",
+      "precio": "9800.00",
+      "subtotal": "9800.00"
+    }
+  ],
+  "pagos": [
+    {
+      "tenderMediaId": 52,
+      "tenderName": "Tarjeta",
+      "tenderAmount": 485767,
+      "tipAmount": 0
+    }
+  ],
+  "cufe": "b647c9ecdab4f5bf2928fe4aeeba3b623032568761c379fbc53aaf6c493f73997e475973e8d0904ba5f88d21cd7a9cb3",
+  "qr": "https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=b647c9ecdab4f5bf2928fe4aeeba3b623032568761c379fbc53aaf6c493f73997e475973e8d0904ba5f88d21cd7a9cb3",
+  "qr_url": "https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=b647c9ecdab4f5bf2928fe4aeeba3b623032568761c379fbc53aaf6c493f73997e475973e8d0904ba5f88d21cd7a9cb3"
+}

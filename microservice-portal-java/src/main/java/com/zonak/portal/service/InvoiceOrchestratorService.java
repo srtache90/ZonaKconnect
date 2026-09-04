@@ -1,12 +1,15 @@
 package com.zonak.portal.service;
 
+import com.zonak.portal.auth.ApiTenant;
 import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
 import com.zonak.portal.dto.CreateDebitNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.dto.InvoiceResponseDTO;
 import com.zonak.portal.exception.InvoiceStorageException;
+import com.zonak.portal.integration.sap.SapDianStatus;
 import com.zonak.portal.mail.InvoiceMailDispatchService;
+import com.zonak.portal.support.InvoiceDianStatus;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,6 +93,84 @@ public class InvoiceOrchestratorService {
             String emissionPointId
     ) {
         return processAndPersistInvoice(requestDTO, tenantId, emissionPointId, customerEmail(requestDTO.customer()));
+    }
+
+    public SapEmissionOutcome processSapInvoiceAndWait(
+            CreateInvoiceRequestDTO requestDTO,
+            ApiTenant tenant,
+            Duration waitTimeout
+    ) {
+        UUID invoiceId = processAndPersistInvoice(
+                requestDTO,
+                tenant.tenantId().toString(),
+                tenant.emissionPointId().toString()
+        ).block(waitTimeout == null ? Duration.ofSeconds(120) : waitTimeout.plusSeconds(15));
+        if (invoiceId == null) {
+            throw new InvoiceStorageException("SAP no recibió invoiceId del core");
+        }
+        return waitForSapDian(tenant.tenantId(), invoiceId, waitTimeout);
+    }
+
+    public record SapEmissionOutcome(
+            UUID invoiceId,
+            String documentNumber,
+            String cufe,
+            String estadoDian,
+            String mensaje,
+            boolean accepted
+    ) {
+    }
+
+    private SapEmissionOutcome waitForSapDian(UUID tenantId, UUID invoiceId, Duration waitTimeout) {
+        Duration timeout = waitTimeout == null || waitTimeout.isNegative() || waitTimeout.isZero()
+                ? Duration.ofSeconds(120)
+                : waitTimeout;
+        long deadline = System.nanoTime() + timeout.toNanos();
+        SapDianStatus last = null;
+        while (System.nanoTime() < deadline) {
+            last = invoiceReportRepository.findSapDianStatus(tenantId, invoiceId).orElse(null);
+            if (last != null && InvoiceDianStatus.isValidated(last.estadoDian(), last.cufe())) {
+                return new SapEmissionOutcome(
+                        invoiceId,
+                        last.documentNumber(),
+                        last.cufe(),
+                        last.estadoDian(),
+                        firstText(last.mensajeDian(), "Procesado Correctamente."),
+                        true
+                );
+            }
+            if (last != null && InvoiceDianStatus.isRejected(last.estadoDian())) {
+                return new SapEmissionOutcome(
+                        invoiceId,
+                        last.documentNumber(),
+                        last.cufe(),
+                        last.estadoDian(),
+                        firstText(last.mensajeDian(), "Documento rechazado por DIAN"),
+                        false
+                );
+            }
+            try {
+                Thread.sleep(APPROVAL_POLL_INTERVAL.toMillis());
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new InvoiceStorageException("espera DIAN interrumpida para documento SAP", ex);
+            }
+        }
+        String pendingMessage = last == null
+                ? "Timeout esperando respuesta DIAN"
+                : firstText(last.mensajeDian(), "Timeout esperando respuesta DIAN (" + last.estadoDian() + ")");
+        return new SapEmissionOutcome(
+                invoiceId,
+                last == null ? "" : last.documentNumber(),
+                last == null ? "" : last.cufe(),
+                last == null ? "TIMEOUT" : last.estadoDian(),
+                pendingMessage,
+                false
+        );
+    }
+
+    private static String firstText(String value, String fallback) {
+        return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 
     private Mono<UUID> processAndPersistInvoice(

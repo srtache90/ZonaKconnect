@@ -295,6 +295,25 @@ services:
     networks:
       - local_infra
 
+  simphony-mock:
+    build:
+      context: ./mocks/simphony
+    container_name: zona-k-simphony-mock
+    restart: unless-stopped
+    environment:
+      SIMPHONY_TARGET_URL: http://portal-java:8081/api/v1/ingest/pos
+      SIMPHONY_API_KEY: local-sap-simphony-api-key
+      SIMPHONY_MOCK_PORT: "8080"
+      SIMPHONY_REQUEST_TIMEOUT: "90"
+      SIMPHONY_MAX_BATCH_SIZE: "200"
+    ports:
+      - "8096:8080"
+    depends_on:
+      portal-java:
+        condition: service_started
+    networks:
+      - local_infra
+
 networks:
   local_infra:
     name: zona-k-local-infra

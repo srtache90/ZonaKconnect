@@ -6,6 +6,13 @@ Este servicio simula el envío de documentos desde SAP hacia el portal Zona K us
 
 ```text
 POST http://portal-java:8081/ws/enviardocumento
+
+En SOAMANAGER (SAP) la URL del logical port es esa misma ruta en el host publicado:
+
+```text
+Local:       http://<host>:8080/ws/enviardocumento
+Producción:  https://<dominio>/ws/enviardocumento
+```
 ```
 
 En el host queda expuesto por:
@@ -25,7 +32,7 @@ Deben coincidir con la sociedad local (`id_empresa = 1`) y el punto de venta `EP
 | Usuario SAP | `ULocalSap` |
 | Contraseña SAP | `SapMock2026!` |
 
-La migración `database/migrations/014_local_sap_mock_credentials.sql` carga estas credenciales en la sociedad local.
+La migración `database/migrations/023_sap_soap_credentials.sql` carga estas credenciales en la sociedad local.
 
 ## Interfaz web
 
@@ -54,7 +61,7 @@ Si también necesitas toda la infraestructura local:
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
-Asegúrate de aplicar las migraciones `013` y `014` en PostgreSQL antes de probar.
+Asegúrate de aplicar la migración `023_sap_soap_credentials.sql` en PostgreSQL antes de probar.
 
 ## Verificar salud
 

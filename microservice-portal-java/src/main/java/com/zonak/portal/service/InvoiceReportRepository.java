@@ -6,6 +6,7 @@ import com.zonak.portal.config.DianGraphicRepresentationProperties;
 import com.zonak.portal.dto.DianFiscalContext;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.exception.InvoiceStorageException;
+import com.zonak.portal.integration.sap.SapDianStatus;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -111,6 +112,40 @@ public class InvoiceReportRepository {
                 invoiceId
         );
         return invoices.stream().findFirst();
+    }
+
+    public Optional<SapDianStatus> findSapDianStatus(UUID tenantId, UUID invoiceId) {
+        List<SapDianStatus> rows = jdbcTemplate.query(
+                """
+                        SELECT i.id,
+                               i.prefijo,
+                               i.numero,
+                               i.estado_dian,
+                               i.uuid_cude,
+                               COALESCE(
+                                   NULLIF(i.dian_response_jsonb->>'statusMessage', ''),
+                                   NULLIF(i.dian_response_jsonb->>'statusDescription', ''),
+                                   NULLIF(i.dian_response_jsonb->>'dian_error_description', ''),
+                                   NULLIF(i.dian_response_jsonb->>'mensaje', ''),
+                                   NULLIF(i.dian_response_jsonb->>'status', ''),
+                                   i.estado_dian
+                               ) AS mensaje_dian
+                        FROM invoices i
+                        WHERE i.company_id = ?
+                          AND i.id = ?
+                        """,
+                (rs, rowNum) -> new SapDianStatus(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("prefijo"),
+                        rs.getLong("numero"),
+                        rs.getString("estado_dian"),
+                        rs.getString("uuid_cude"),
+                        rs.getString("mensaje_dian")
+                ),
+                tenantId,
+                invoiceId
+        );
+        return rows.stream().findFirst();
     }
 
     public Optional<String> findPdfS3Url(UUID tenantId, UUID invoiceId) {

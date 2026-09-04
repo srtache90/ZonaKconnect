@@ -114,6 +114,23 @@
                     <input class="form-control" id="dianSoftwarePin" name="dianSoftwarePin" type="password"
                            autocomplete="new-password" placeholder="Dejar vacío conserva el actual">
                 </div>
+                <div class="col-12">
+                    <h2 class="h6 border-bottom pb-2 mb-0">Integración SAP (SOAP Dispapeles)</h2>
+                    <p class="text-muted small mb-0">Deben coincidir con <code>idEmpresa</code>, <code>usuario</code> y <code>contrasenia</code> del XML que envía SAP.</p>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="idEmpresa">ID Empresa SAP</label>
+                    <input class="form-control" id="idEmpresa" name="idEmpresa" type="number" min="1" placeholder="Ej. 154">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="sapUsuario">Usuario SAP</label>
+                    <input class="form-control" id="sapUsuario" name="sapUsuario" autocomplete="off">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="sapPassword">Contraseña SAP</label>
+                    <input class="form-control" id="sapPassword" name="sapPassword" type="password"
+                           autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                </div>
                 <div class="col-12 text-end">
                     <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar Sociedad</button>
                 </div>
@@ -141,6 +158,7 @@
                     <th>DIAN</th>
                     <th>TaxLevelCode</th>
                     <th>Software</th>
+                    <th>SAP</th>
                     <th class="text-end">Acción</th>
                 </tr>
                 </thead>
@@ -184,6 +202,21 @@
                             PIN pendiente
                         </span>
                     </td>
+                    <td>
+                        <div class="small">
+                            <span class="text-muted">idEmpresa:</span>
+                            <span th:text="${sociedad.idEmpresa != null} ? ${sociedad.idEmpresa} : '—'">—</span>
+                        </div>
+                        <div class="small">
+                            <span class="text-muted">usuario:</span>
+                            <span th:text="${sociedad.sapUsuario != null and !#strings.isEmpty(sociedad.sapUsuario)} ? ${sociedad.sapUsuario} : '—'">—</span>
+                        </div>
+                        <span class="badge"
+                              th:classappend="${sociedad.sapPasswordConfigured} ? ' text-bg-success' : ' text-bg-secondary'"
+                              th:text="${sociedad.sapPasswordConfigured} ? 'Clave SOAP' : 'Sin clave'">
+                            Clave SOAP
+                        </span>
+                    </td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
                             <button
@@ -196,7 +229,7 @@
                             <button
                                     type="button"
                                     class="btn btn-sm btn-outline-primary"
-                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-regimen-fiscal=${sociedad.dianRegimenFiscal},data-software-id=${sociedad.dianSoftwareId}"
+                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-regimen-fiscal=${sociedad.dianRegimenFiscal},data-software-id=${sociedad.dianSoftwareId},data-id-empresa=${sociedad.idEmpresa},data-sap-usuario=${sociedad.sapUsuario}"
                                     onclick="editarSociedad(this)">
                                 Editar
                             </button>
@@ -211,7 +244,7 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(sociedades)}">
-                        <td colspan="11" class="text-center text-muted py-4">No hay sociedades registradas.</td>
+                        <td colspan="12" class="text-center text-muted py-4">No hay sociedades registradas.</td>
                 </tr>
                 </tbody>
             </table>
@@ -246,6 +279,9 @@
         document.getElementById('dianRegimenFiscal').value = button.dataset.regimenFiscal || 'O-99';
         document.getElementById('dianSoftwareId').value = button.dataset.softwareId || '';
         document.getElementById('dianSoftwarePin').value = '';
+        document.getElementById('idEmpresa').value = button.dataset.idEmpresa || '';
+        document.getElementById('sapUsuario').value = button.dataset.sapUsuario || '';
+        document.getElementById('sapPassword').value = '';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 

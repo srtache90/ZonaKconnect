@@ -91,6 +91,10 @@ public class AdminPortalController {
                 ? cryptoService.encrypt(dianSoftwarePinPlaintext)
                 : null;
 
+        String sapPasswordEnc = StringUtils.hasText(form.getSapPassword())
+                ? cryptoService.encrypt(form.getSapPassword())
+                : null;
+
         try {
             adminPortalRepository.saveSociedad(
                     id,
@@ -111,7 +115,10 @@ public class AdminPortalController {
                     DianRegimenFiscal.normalize(form.getDianRegimenFiscal()),
                     trimToNull(form.getDianSoftwareId()),
                     dianSoftwarePinEnc,
-                    dianSoftwarePinPlaintext
+                    dianSoftwarePinPlaintext,
+                    form.getIdEmpresa(),
+                    trimToNull(form.getSapUsuario()),
+                    sapPasswordEnc
             );
         } catch (DataIntegrityViolationException ex) {
             redirectAttributes.addFlashAttribute("error", mapSociedadSaveError(ex));
@@ -284,8 +291,8 @@ public class AdminPortalController {
         if (message == null) {
             return "No se pudo guardar la sociedad. Verifique NIT y API Key únicos.";
         }
-        if (message.contains("uq_sociedades_api_key") || message.contains("api_key")) {
-            return "La API Key de ingesta ya está asignada a otra sociedad.";
+        if (message.contains("uq_sociedades_id_empresa") || message.contains("id_empresa")) {
+            return "El idEmpresa SAP ya está asignado a otra sociedad.";
         }
         if (message.contains("sociedades_nit") || message.contains("(nit)")) {
             return "El NIT ya está registrado en otra sociedad.";
@@ -315,6 +322,9 @@ public class AdminPortalController {
         private String dianRegimenFiscal = DianRegimenFiscal.DEFAULT;
         private String dianSoftwareId;
         private String dianSoftwarePin;
+        private Integer idEmpresa;
+        private String sapUsuario;
+        private String sapPassword;
 
         public String getId() {
             return id;
@@ -458,6 +468,30 @@ public class AdminPortalController {
 
         public void setDianSoftwarePin(String dianSoftwarePin) {
             this.dianSoftwarePin = dianSoftwarePin;
+        }
+
+        public Integer getIdEmpresa() {
+            return idEmpresa;
+        }
+
+        public void setIdEmpresa(Integer idEmpresa) {
+            this.idEmpresa = idEmpresa;
+        }
+
+        public String getSapUsuario() {
+            return sapUsuario;
+        }
+
+        public void setSapUsuario(String sapUsuario) {
+            this.sapUsuario = sapUsuario;
+        }
+
+        public String getSapPassword() {
+            return sapPassword;
+        }
+
+        public void setSapPassword(String sapPassword) {
+            this.sapPassword = sapPassword;
         }
     }
 

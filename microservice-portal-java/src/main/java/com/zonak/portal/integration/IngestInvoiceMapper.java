@@ -163,14 +163,44 @@ public class IngestInvoiceMapper {
     }
 
     private CreateInvoiceRequestDTO.ItemDTO mapSapItem(SapEnviarDocumento.Detalle detalle) {
+        List<CreateInvoiceRequestDTO.TaxDTO> taxes = safeList(detalle.getListaImpuestos()).stream()
+                .map(this::mapSapTax)
+                .toList();
         return new CreateInvoiceRequestDTO.ItemDTO(
                 valueOrDefault(detalle.getCodigoproducto(), "SAP-SIN-CODIGO"),
                 valueOrDefault(detalle.getDescripcion(), valueOrDefault(detalle.getNombreProducto(), "Item SAP")),
                 valueOrDefault(detalle.getCantidad(), BigDecimal.ONE),
                 valueOrDefault(detalle.getValorunitario(), BigDecimal.ZERO),
-                BigDecimal.ZERO,
-                null
+                sumSapDiscounts(detalle.getListaDescuentos()),
+                taxes.isEmpty() ? null : taxes
         );
+    }
+
+    private CreateInvoiceRequestDTO.TaxDTO mapSapTax(SapEnviarDocumento.Impuesto impuesto) {
+        String code = valueOrDefault(impuesto.getCodigoImpuestoRetencion(), "01");
+        return new CreateInvoiceRequestDTO.TaxDTO(
+                code,
+                taxName(code),
+                valueOrDefault(impuesto.getPorcentaje(), BigDecimal.ZERO),
+                valueOrDefault(impuesto.getBaseimponible(), BigDecimal.ZERO),
+                valueOrDefault(impuesto.getValorImpuestoRetencion(), BigDecimal.ZERO)
+        );
+    }
+
+    private String taxName(String code) {
+        return switch (code) {
+            case "01" -> "IVA";
+            case "04" -> "INC";
+            case "ZA" -> "IVA 0%";
+            default -> "IMPUESTO-" + code;
+        };
+    }
+
+    private BigDecimal sumSapDiscounts(List<SapEnviarDocumento.Descuento> descuentos) {
+        return safeList(descuentos).stream()
+                .map(SapEnviarDocumento.Descuento::getDescuento)
+                .map(value -> valueOrDefault(value, BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private CreateInvoiceRequestDTO.ItemDTO mapSimphonyItem(SimphonyTicketRequest.Item item) {

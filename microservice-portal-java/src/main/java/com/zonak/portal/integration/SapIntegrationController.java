@@ -4,6 +4,8 @@ import com.zonak.portal.auth.ApiKeyAuthenticationFilter;
 import com.zonak.portal.auth.ApiTenant;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.exception.InvoiceEmissionException;
+import com.zonak.portal.integration.sap.SapEnviarDocumento;
+import com.zonak.portal.integration.sap.SapTenantResolver;
 import com.zonak.portal.integration.sap.SapXmlDocumentParser;
 import com.zonak.portal.service.InvoiceOrchestratorService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +24,18 @@ import reactor.core.scheduler.Schedulers;
 @RequestMapping("/api/v1/ingest")
 public class SapIntegrationController {
     private final SapXmlDocumentParser sapXmlDocumentParser;
+    private final SapTenantResolver sapTenantResolver;
     private final IngestInvoiceMapper ingestInvoiceMapper;
     private final InvoiceOrchestratorService invoiceOrchestratorService;
 
     public SapIntegrationController(
             SapXmlDocumentParser sapXmlDocumentParser,
+            SapTenantResolver sapTenantResolver,
             IngestInvoiceMapper ingestInvoiceMapper,
             InvoiceOrchestratorService invoiceOrchestratorService
     ) {
         this.sapXmlDocumentParser = sapXmlDocumentParser;
+        this.sapTenantResolver = sapTenantResolver;
         this.ingestInvoiceMapper = ingestInvoiceMapper;
         this.invoiceOrchestratorService = invoiceOrchestratorService;
     }
@@ -44,23 +49,24 @@ public class SapIntegrationController {
             @RequestBody String xml,
             HttpServletRequest request
     ) {
-        ApiTenant apiTenant = requireTenant(request);
-
         return Mono.fromCallable(() -> sapXmlDocumentParser.parse(xml))
                 .subscribeOn(Schedulers.boundedElastic())
-                .map(ingestInvoiceMapper::fromSap)
-                .flatMap(dto -> emit(dto, apiTenant))
-                .map(invoiceId -> ResponseEntity.accepted().body(Map.<String, Object>of(
-                        "status", "SAP_RECIBIDO_EN_PROCESAMIENTO",
-                        "tenantId", apiTenant.tenantId(),
-                        "emissionPointId", apiTenant.emissionPointId(),
-                        "invoiceId", invoiceId
-                )))
+                .flatMap(documento -> {
+                    ApiTenant tenant = resolveTenant(request, documento);
+                    return emit(documento, tenant)
+                            .map(invoiceId -> ResponseEntity.accepted().body(Map.<String, Object>of(
+                                    "status", "SAP_RECIBIDO_EN_PROCESAMIENTO",
+                                    "tenantId", tenant.tenantId(),
+                                    "emissionPointId", tenant.emissionPointId(),
+                                    "invoiceId", invoiceId
+                            )));
+                })
                 .onErrorResume(IllegalArgumentException.class, ex -> badRequest(ex.getMessage()))
                 .onErrorResume(InvoiceEmissionException.class, ex -> badGateway(ex.getMessage()));
     }
 
-    private Mono<java.util.UUID> emit(CreateInvoiceRequestDTO dto, ApiTenant apiTenant) {
+    private Mono<java.util.UUID> emit(SapEnviarDocumento documento, ApiTenant apiTenant) {
+        CreateInvoiceRequestDTO dto = ingestInvoiceMapper.fromSap(documento);
         return invoiceOrchestratorService.processAndPersistInvoice(
                 dto,
                 apiTenant.tenantId().toString(),
@@ -68,12 +74,12 @@ public class SapIntegrationController {
         );
     }
 
-    private ApiTenant requireTenant(HttpServletRequest request) {
+    private ApiTenant resolveTenant(HttpServletRequest request, SapEnviarDocumento documento) {
         Object value = request.getAttribute(ApiKeyAuthenticationFilter.API_TENANT_ATTRIBUTE);
         if (value instanceof ApiTenant apiTenant) {
             return apiTenant;
         }
-        throw new IllegalArgumentException("Tenant API no autenticado");
+        return sapTenantResolver.requireFromDocumento(documento);
     }
 
     private Mono<ResponseEntity<Map<String, Object>>> badRequest(String message) {

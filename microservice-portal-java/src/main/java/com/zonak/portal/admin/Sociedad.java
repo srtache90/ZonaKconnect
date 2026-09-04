@@ -18,6 +18,9 @@ public record Sociedad(
         String dianAmbiente,
         String dianRegimenFiscal,
         String dianSoftwareId,
-        boolean dianSoftwarePinConfigured
+        boolean dianSoftwarePinConfigured,
+        Integer idEmpresa,
+        String sapUsuario,
+        boolean sapPasswordConfigured
 ) {
 }

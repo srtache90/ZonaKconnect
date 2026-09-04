@@ -52,7 +52,7 @@ public class SecurityConfig {
     @Order(0)
     public SecurityFilterChain sapSoapSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .securityMatcher("/ws/**", "/dispapeles/**", "/api/v1/ingest/sap")
+                .securityMatcher("/ws/**", "/dispapeles/**", "/WSEnviarDocumento", "/WSEnviarDocumento/**", "/api/v1/ingest/sap")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
@@ -123,7 +123,7 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers("/login", "/logout", "/error", "/webjars/**", "/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
-                        .pathMatchers("/ws/**", "/dispapeles/**", "/api/v1/ingest/sap").permitAll()
+                        .pathMatchers("/ws/**", "/dispapeles/**", "/WSEnviarDocumento", "/WSEnviarDocumento/**", "/api/v1/ingest/sap").permitAll()
                         .pathMatchers("/api/v1/ingest/**").hasRole("API_INGEST")
                         .pathMatchers("/portal/admin/**").hasRole("ADMIN")
                         .pathMatchers("/portal/facturacion/manual").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")

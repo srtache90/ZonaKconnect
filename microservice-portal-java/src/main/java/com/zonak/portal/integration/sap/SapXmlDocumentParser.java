@@ -19,7 +19,13 @@ public class SapXmlDocumentParser {
         this.xmlMapper.findAndRegisterModules();
     }
 
-    public SapEnviarDocumento parse(String xml) throws java.io.IOException {
-        return xmlMapper.readValue(xml, SapEnviarDocumento.class);
+    public SapEnviarDocumento parse(String xml) {
+        try {
+            return xmlMapper.readValue(SapXmlNormalizer.unwrap(xml), SapEnviarDocumento.class);
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("XML SAP inválido o no compatible: " + ex.getMessage(), ex);
+        }
     }
 }

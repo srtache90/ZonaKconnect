@@ -208,8 +208,15 @@ CREATE TABLE IF NOT EXISTS sociedades (
         )),
     dian_software_id VARCHAR(64),
     dian_software_pin_enc TEXT,
+    id_empresa INTEGER,
+    sap_usuario VARCHAR(120),
+    sap_password_enc TEXT,
     creado_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sociedades_id_empresa
+    ON sociedades (id_empresa)
+    WHERE id_empresa IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS certificados_digitales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

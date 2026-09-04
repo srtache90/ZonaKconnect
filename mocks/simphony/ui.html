@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simphony POS Mock — Zona K</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface-2: #243044;
+      --border: #2d3a4f;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --mono: "Cascadia Code", "Consolas", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.875rem; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .badge.ok { color: var(--success); border-color: #166534; }
+    main {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: calc(100vh - 88px);
+    }
+    @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+    .panel {
+      padding: 1.5rem;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #0c1017;
+    }
+    section { margin-bottom: 1.4rem; }
+    section h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    textarea { font-family: var(--mono); font-size: 0.78rem; line-height: 1.45; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary { background: var(--accent); color: white; }
+    button.primary:hover { background: var(--accent-hover); }
+    button.secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+      line-height: 1.4;
+    }
+    .warn {
+      background: #2a2110;
+      border: 1px solid #7c5a12;
+      color: #fcd34d;
+      border-radius: 8px;
+      padding: 0.7rem 0.8rem;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+    }
+    .file-list {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .file-list li { margin: 0.2rem 0; }
+    .output-block { flex: 1; display: flex; flex-direction: column; min-height: 160px; }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .output-header h3 {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    textarea.output { flex: 1; min-height: 160px; resize: vertical; }
+    .history { border-top: 1px solid var(--border); padding-top: 1rem; }
+    .history-item {
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      background: var(--surface);
+      font-size: 0.82rem;
+    }
+    .history-item:hover { border-color: var(--accent); }
+    .history-item .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .status-ok { color: var(--success); }
+    .status-fail { color: var(--danger); }
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { border-color: var(--danger); color: #fecaca; }
+    .toast.success { border-color: var(--success); color: #bbf7d0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Simphony POS Mock</h1>
+      <p id="target-info">Cargando configuracion...</p>
+    </div>
+    <span class="badge" id="health-badge">Verificando...</span>
+  </header>
+
+  <main>
+    <div class="panel">
+      <div class="warn">
+        El 401 no lo causa el JSON. <code>/api/v1/ingest/**</code> exige header
+        <code>X-API-Key</code>. Local: <code>local-sap-simphony-api-key</code>.
+        El contrato Harmony entra por <code>POST /api/v1/ingest/pos</code>.
+      </div>
+
+      <section>
+        <h2>Destino</h2>
+        <label for="targetUrl">URL ingest</label>
+        <input id="targetUrl" value="">
+        <div class="grid-2" style="margin-top: 0.75rem">
+          <div>
+            <label for="apiKey">X-API-Key</label>
+            <input id="apiKey" autocomplete="off">
+          </div>
+          <div>
+            <label for="emissionPointId">X-Emission-Point-ID (opcional)</label>
+            <input id="emissionPointId" placeholder="UUID del PV">
+          </div>
+        </div>
+        <p class="hint">
+          Si dejas el PV vacio, el filtro toma el primer emission_point activo de la sociedad
+          y el controller rerutea por <code>Resolucion</code> o <code>caja_wsid</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Archivos JSON</h2>
+        <input id="files" type="file" accept=".json,application/json" multiple>
+        <div class="actions" style="margin-top: 0.75rem">
+          <button type="button" class="secondary" id="btn-sample">Cargar muestra Pravda</button>
+          <button type="button" class="secondary" id="btn-analyze">Analizar JSON</button>
+        </div>
+        <ul class="file-list" id="file-list"></ul>
+      </section>
+
+      <section>
+        <h2>Payload</h2>
+        <textarea id="payload" rows="16" placeholder="Pega aqui el JSON Harmony/Simphony..."></textarea>
+        <div class="grid-2" style="margin-top: 0.75rem">
+          <div>
+            <label for="delayMs">Delay lote (ms)</label>
+            <input id="delayMs" type="number" min="0" value="250">
+          </div>
+          <div>
+            <label>Archivos en cola</label>
+            <input id="queue-count" value="0" readonly>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="primary" id="btn-send">Inyectar actual</button>
+          <button type="button" class="secondary" id="btn-batch">Inyectar todos los archivos</button>
+        </div>
+      </section>
+
+      <section class="history">
+        <h2>Historial</h2>
+        <div id="history-list">
+          <p style="color: var(--muted); font-size: 0.85rem;">Sin envios aun.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="panel panel-right">
+      <div class="output-block">
+        <div class="output-header"><h3>Diagnostico</h3></div>
+        <textarea class="output" id="analysis-output" readonly placeholder="Analisis del JSON..."></textarea>
+      </div>
+      <div class="output-block">
+        <div class="output-header"><h3>Request (headers + body)</h3></div>
+        <textarea class="output" id="request-output" readonly></textarea>
+      </div>
+      <div class="output-block">
+        <div class="output-header"><h3>Respuesta portal</h3></div>
+        <textarea class="output" id="response-output" readonly></textarea>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const payloadEl = document.getElementById("payload");
+    const analysisOutput = document.getElementById("analysis-output");
+    const requestOutput = document.getElementById("request-output");
+    const responseOutput = document.getElementById("response-output");
+    const historyList = document.getElementById("history-list");
+    const fileList = document.getElementById("file-list");
+    const toast = document.getElementById("toast");
+    let queuedTickets = [];
+
+    function showToast(message, type = "") {
+      toast.textContent = message;
+      toast.className = "toast show" + (type ? " " + type : "");
+      setTimeout(() => toast.classList.remove("show"), 3500);
+    }
+
+    function pretty(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    function parseCurrentPayload() {
+      const raw = payloadEl.value.trim();
+      if (!raw) throw new Error("No hay JSON en el editor");
+      return JSON.parse(raw);
+    }
+
+    function authConfig() {
+      return {
+        targetUrl: document.getElementById("targetUrl").value.trim(),
+        apiKey: document.getElementById("apiKey").value.trim(),
+        emissionPointId: document.getElementById("emissionPointId").value.trim(),
+        delayMs: Number(document.getElementById("delayMs").value || 0),
+      };
+    }
+
+    function renderQueue() {
+      document.getElementById("queue-count").value = String(queuedTickets.length);
+      if (!queuedTickets.length) {
+        fileList.innerHTML = "";
+        return;
+      }
+      fileList.innerHTML = queuedTickets
+        .map((item) => `<li>${item.name} · ticket ${item.json?.numero_ticket || "—"} · ${item.json?.restaurante || ""}</li>`)
+        .join("");
+    }
+
+    async function loadConfig() {
+      const [configRes, healthRes] = await Promise.all([fetch("/api/config"), fetch("/health")]);
+      const config = await configRes.json();
+      const health = await healthRes.json();
+      document.getElementById("targetUrl").value = config.targetUrl || "";
+      document.getElementById("apiKey").value = config.apiKey || "";
+      document.getElementById("emissionPointId").value = config.emissionPointId || "";
+      document.getElementById("target-info").textContent =
+        `Destino: ${config.targetUrl} · API Key ${config.apiKey ? "cargada" : "VACIA"}`;
+      const badge = document.getElementById("health-badge");
+      badge.textContent = health.portalStatus === "ok" ? "Portal reachable" : "Portal " + health.portalStatus;
+      badge.classList.toggle("ok", health.portalStatus === "ok");
+    }
+
+    async function loadSample() {
+      const res = await fetch("/api/sample");
+      const data = await res.json();
+      payloadEl.value = pretty(data.payload);
+      queuedTickets = [{ name: data.name, json: data.payload }];
+      renderQueue();
+      analysisOutput.value = pretty(data.summary);
+      showToast("Muestra Pravda P660502 cargada", "success");
+    }
+
+    async function analyze() {
+      try {
+        const payload = parseCurrentPayload();
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload }),
+        });
+        const data = await res.json();
+        analysisOutput.value = pretty(data);
+        showToast(data.valid ? "JSON analizado" : "JSON invalido", data.valid ? "success" : "error");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function sendTickets(tickets) {
+      const cfg = authConfig();
+      if (!cfg.apiKey) {
+        showToast("X-API-Key vacia: el portal devolvera 401", "error");
+      }
+      const buttons = document.querySelectorAll(".actions button");
+      buttons.forEach((b) => (b.disabled = true));
+      try {
+        const res = await fetch("/api/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...cfg,
+            tickets,
+          }),
+        });
+        const data = await res.json();
+        const first = data.results?.[0] || data;
+        requestOutput.value = pretty({
+          targetUrl: data.targetUrl || cfg.targetUrl,
+          headers: first.requestHeaders || {
+            "X-API-Key": cfg.apiKey ? "(presente)" : "(vacio)",
+            "X-Emission-Point-ID": cfg.emissionPointId || "",
+          },
+          body: tickets[0]?.json,
+        });
+        responseOutput.value = pretty(data);
+        analysisOutput.value = pretty(first.summary || first);
+        const failed401 = (data.results || []).some((item) => item.httpStatus === 401);
+        showToast(
+          failed401
+            ? "401: falta o es invalida X-API-Key"
+            : `Inyectados ${data.accepted}/${data.requested}`,
+          data.failed > 0 ? "error" : "success"
+        );
+        await loadHistory();
+      } catch (err) {
+        showToast("Error de red: " + err.message, "error");
+      } finally {
+        buttons.forEach((b) => (b.disabled = false));
+      }
+    }
+
+    async function sendCurrent() {
+      try {
+        const payload = parseCurrentPayload();
+        await sendTickets([{ name: "editor.json", json: payload }]);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function sendBatch() {
+      if (!queuedTickets.length) {
+        showToast("Carga uno o mas archivos JSON", "error");
+        return;
+      }
+      await sendTickets(queuedTickets);
+    }
+
+    async function loadHistory() {
+      const res = await fetch("/api/history");
+      const items = await res.json();
+      if (!items.length) {
+        historyList.innerHTML = '<p style="color: var(--muted); font-size: 0.85rem;">Sin envios aun.</p>';
+        return;
+      }
+      historyList.innerHTML = items.map((item) => `
+        <div class="history-item" data-id="${item.id}">
+          <div class="meta">
+            <span>${item.filename}</span>
+            <span class="${item.accepted ? "status-ok" : "status-fail"}">${item.httpStatus}</span>
+          </div>
+          <div>${item.numeroFactura || "—"} · ${item.checkId || ""}</div>
+          <div style="color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem;">
+            ${item.diagnosis || ""}
+          </div>
+        </div>`).join("");
+
+      historyList.querySelectorAll(".history-item").forEach((el) => {
+        el.addEventListener("click", async () => {
+          const detailRes = await fetch(`/api/history/${el.dataset.id}`);
+          const detail = await detailRes.json();
+          payloadEl.value = pretty(detail.payload || {});
+          requestOutput.value = pretty({
+            targetUrl: detail.targetUrl,
+            headers: detail.requestHeaders,
+            body: detail.payload,
+          });
+          responseOutput.value = pretty({
+            httpStatus: detail.httpStatus,
+            diagnosis: detail.diagnosis,
+            response: detail.response,
+          });
+        });
+      });
+    }
+
+    document.getElementById("files").addEventListener("change", async (event) => {
+      const files = Array.from(event.target.files || []);
+      queuedTickets = [];
+      for (const file of files) {
+        const text = await file.text();
+        try {
+          queuedTickets.push({ name: file.name, json: JSON.parse(text) });
+        } catch {
+          showToast("JSON invalido: " + file.name, "error");
+        }
+      }
+      renderQueue();
+      if (queuedTickets[0]) {
+        payloadEl.value = pretty(queuedTickets[0].json);
+      }
+    });
+
+    document.getElementById("btn-sample").addEventListener("click", loadSample);
+    document.getElementById("btn-analyze").addEventListener("click", analyze);
+    document.getElementById("btn-send").addEventListener("click", sendCurrent);
+    document.getElementById("btn-batch").addEventListener("click", sendBatch);
+
+    loadConfig();
+    loadHistory();
+  </script>
+</body>
+</html>
