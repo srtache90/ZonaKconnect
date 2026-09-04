@@ -8,7 +8,7 @@ import org.springframework.util.StringUtils;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PosTicketRequest(
-        @JsonProperty("numero_factura") Integer numeroFactura,
+        @JsonProperty("numero_factura") String numeroFactura,
         @JsonProperty("fecha_procesamiento") String fechaProcesamiento,
         @JsonProperty("numero_ticket") String numeroTicket,
         @JsonProperty("check_id") String checkId,
@@ -22,6 +22,9 @@ public record PosTicketRequest(
         @JsonProperty("credit_note_type_code") String creditNoteTypeCode,
         @JsonProperty("customization_id") String customizationId,
         @JsonProperty("guid_transaccion") String guidTransaccion,
+        @JsonProperty("tipo_ambiente") String tipoAmbiente,
+        String ambiente,
+        @JsonProperty("numero_factura_completo") String numeroFacturaCompleto,
         @JsonAlias({"Resolucion", "resolucion"}) String resolucion,
         @JsonAlias({"Prefijo", "prefijo"}) String prefijo,
         @JsonAlias({"ResolucionIni", "resolucion_ini"}) String resolucionIni,
@@ -59,16 +62,38 @@ public record PosTicketRequest(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Cliente(
-            @JsonProperty("tipo_identificacion") String tipoIdentificacion,
-            @JsonProperty("numero_identificacion") String numeroIdentificacion,
+            @JsonProperty("tipo_identificacion")
+            @JsonAlias({"tipo_id", "tipoCliente"}) String tipoIdentificacion,
+            @JsonProperty("numero_identificacion")
+            @JsonAlias({"identificacion"}) String numeroIdentificacion,
             String dv,
             @JsonProperty("tipo_persona") String tipoPersona,
             @JsonProperty("razon_social") String razonSocial,
             @JsonProperty("nombre_comercial") String nombreComercial,
+            String nombre,
+            String apellido,
             String email,
+            List<String> emails,
             String telefono,
-            Direccion direccion
+            String direccion
     ) {
+        public String resolvedName() {
+            if (StringUtils.hasText(razonSocial)) {
+                return razonSocial.trim();
+            }
+            String full = ((nombre == null ? "" : nombre.trim()) + " " + (apellido == null ? "" : apellido.trim())).trim();
+            return StringUtils.hasText(full) ? full : null;
+        }
+
+        public String resolvedEmail() {
+            if (StringUtils.hasText(email)) {
+                return email.trim();
+            }
+            if (emails == null || emails.isEmpty()) {
+                return null;
+            }
+            return emails.stream().filter(StringUtils::hasText).findFirst().orElse(null);
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -90,7 +115,7 @@ public record PosTicketRequest(
             @JsonProperty("numero_impuesto") String numero,
             @JsonAlias({"porcentaje_impuesto", "porcentaje"}) String porcentaje,
             @JsonAlias({"base_imponible", "base"}) String base,
-            @JsonAlias({"valor_impuesto", "valor"}) String valor
+            @JsonAlias({"valor_impuesto", "valor", "monto_impuesto"}) String valor
     ) {
     }
 
@@ -120,9 +145,10 @@ public record PosTicketRequest(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Pago(
             @JsonProperty("forma_pago") String formaPago,
-            @JsonProperty("medio_pago") String medioPago,
+            @JsonProperty("medio_pago")
+            @JsonAlias({"tenderName"}) String medioPago,
             @JsonProperty("fecha_pago") String fechaPago,
-            String valor
+            @JsonAlias({"tenderAmount", "valor"}) String valor
     ) {
     }
 
@@ -145,7 +171,85 @@ public record PosTicketRequest(
     }
 
     public String referenciaNumero() {
-        return facturaReferencia == null ? null : facturaReferencia.numeroDocumento();
+        if (facturaReferencia != null && StringUtils.hasText(facturaReferencia.numeroDocumento())) {
+            return facturaReferencia.numeroDocumento();
+        }
+        return firstText(numeroFacturaCompleto, numeroFactura);
+    }
+
+    public String resolvedPrefijo() {
+        if (StringUtils.hasText(prefijo)) {
+            return prefijo.trim();
+        }
+        return leadingLetters(firstText(numeroFacturaCompleto, numeroFactura));
+    }
+
+    public String resolvedAmbiente() {
+        return normalizeAmbiente(firstText(tipoAmbiente, ambiente));
+    }
+
+    public Long resolvedNumero() {
+        return trailingLong(firstText(numeroFacturaCompleto, numeroFactura));
+    }
+
+    public static String normalizeAmbiente(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        return switch (raw.trim().toLowerCase()) {
+            case "1", "produccion", "producción", "prod" -> "Produccion";
+            case "2", "habilitacion", "habilitación", "hab" -> "Habilitacion";
+            default -> raw.trim();
+        };
+    }
+
+    private static String firstText(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private static String leadingLetters(String documentNumber) {
+        if (!StringUtils.hasText(documentNumber)) {
+            return null;
+        }
+        StringBuilder letters = new StringBuilder();
+        for (char ch : documentNumber.trim().toCharArray()) {
+            if (Character.isLetter(ch)) {
+                letters.append(ch);
+            } else if (letters.length() > 0) {
+                break;
+            }
+        }
+        return letters.length() == 0 ? null : letters.toString();
+    }
+
+    private static Long trailingLong(String documentNumber) {
+        if (!StringUtils.hasText(documentNumber)) {
+            return null;
+        }
+        StringBuilder digits = new StringBuilder();
+        for (char ch : documentNumber.trim().toCharArray()) {
+            if (Character.isDigit(ch)) {
+                digits.append(ch);
+            } else if (digits.length() > 0) {
+                break;
+            }
+        }
+        if (digits.length() == 0) {
+            return null;
+        }
+        try {
+            return Long.parseLong(digits.toString());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     public boolean hasExplicitPropinaCargo() {

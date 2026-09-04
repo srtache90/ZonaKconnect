@@ -102,7 +102,7 @@ public class IngestInvoiceMapper {
         Map<String, Object> totals = posTotals(ticket, items, tip);
 
         return new CreateInvoiceRequestDTO(
-                "Habilitacion",
+                ticket.resolvedAmbiente(),
                 mapPosCustomer(ticket.cliente()),
                 items,
                 "",
@@ -145,7 +145,7 @@ public class IngestInvoiceMapper {
         }
 
         return new CreateCreditNoteRequestDTO(
-                "Habilitacion",
+                ticket.resolvedAmbiente(),
                 valueOrDefault(ticket.customizationId(), "20"),
                 valueOrDefault(ticket.creditNoteTypeCode(), "91"),
                 mapPosCustomer(ticket.cliente()),
@@ -239,11 +239,28 @@ public class IngestInvoiceMapper {
 
     private CreateInvoiceRequestDTO.CustomerDTO mapPosCustomer(PosTicketRequest.Cliente cliente) {
         return new CreateInvoiceRequestDTO.CustomerDTO(
-                valueOrDefault(cliente != null ? cliente.tipoIdentificacion() : null, "13"),
+                mapIdentificationType(cliente != null ? cliente.tipoIdentificacion() : null),
                 valueOrDefault(cliente != null ? cliente.numeroIdentificacion() : null, "222222222222"),
-                valueOrDefault(cliente != null ? cliente.razonSocial() : null, "CONSUMIDOR FINAL"),
-                cliente != null ? cliente.email() : null
+                valueOrDefault(cliente != null ? cliente.resolvedName() : null, "CONSUMIDOR FINAL"),
+                cliente != null ? cliente.resolvedEmail() : null
         );
+    }
+
+    private static String mapIdentificationType(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "13";
+        }
+        String value = raw.trim().toUpperCase();
+        return switch (value) {
+            case "CC", "C.C", "C.C.", "13" -> "13";
+            case "NIT", "31" -> "31";
+            case "CE", "C.E", "22" -> "22";
+            case "PA", "PASAPORTE", "41" -> "41";
+            case "TI", "12" -> "12";
+            case "RC", "11" -> "11";
+            case "NUIP", "91" -> "91";
+            default -> value.matches("\\d+") ? value : "13";
+        };
     }
 
     private Map<String, Object> posTotals(
@@ -269,7 +286,14 @@ public class IngestInvoiceMapper {
         totals.put("codigo_fiscal", valueOrDefault(ticket.codigoFiscal(), "48"));
         totals.put("condicion_venta", valueOrDefault(ticket.condicionVenta(), "01"));
         totals.put("resolucion", valueOrDefault(ticket.resolucion(), ""));
-        totals.put("prefijo", valueOrDefault(ticket.prefijo(), ""));
+        totals.put("prefijo", valueOrDefault(ticket.resolvedPrefijo(), ""));
+        totals.put("numero_factura", valueOrDefault(ticket.referenciaNumero(), ""));
+        if (ticket.resolvedNumero() != null) {
+            totals.put("consecutivo", ticket.resolvedNumero());
+            totals.put("numero", ticket.resolvedNumero());
+        }
+        totals.put("tipo_ambiente", valueOrDefault(ticket.tipoAmbiente(), ""));
+        totals.put("ambiente", valueOrDefault(ticket.resolvedAmbiente(), ""));
         totals.put("restaurante", valueOrDefault(ticket.restaurante(), ""));
         totals.put("workstation", valueOrDefault(ticket.workstation(), ""));
         totals.put("empleado", valueOrDefault(ticket.empleado(), ""));

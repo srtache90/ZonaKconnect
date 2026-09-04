@@ -64,6 +64,7 @@ BEGIN
           AND table_name = 'sociedades'
           AND column_name = 'dian_regimen_fiscal'
     ) THEN
+        ALTER TABLE sociedades DROP CONSTRAINT IF EXISTS sociedades_dian_regimen_fiscal_check;
         ALTER TABLE sociedades ALTER COLUMN dian_regimen_fiscal SET DEFAULT 'ZZ';
         INSERT INTO sociedades (
             id,

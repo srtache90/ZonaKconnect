@@ -8,7 +8,10 @@ ALTER TABLE sociedades
 
     DROP CONSTRAINT IF EXISTS chk_sociedades_dian_regimen_fiscal;
 
-
+UPDATE sociedades
+SET dian_regimen_fiscal = 'ZZ'
+WHERE dian_regimen_fiscal IS NULL
+   OR dian_regimen_fiscal !~ '^(O-13|O-15|O-23|O-47|ZZ)(;(O-13|O-15|O-23|O-47|ZZ))*$';
 
 ALTER TABLE sociedades
 

@@ -7,11 +7,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.CreateSecretRequest;
+import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRequest;
 import software.amazon.awssdk.services.secretsmanager.model.PutSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.ResourceExistsException;
 import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
@@ -53,19 +58,66 @@ public class DianCertificateProvisioningService {
         provision(sociedadId, pfxBytes, passwordPlaintext.trim());
     }
 
-    public void provisionFromStoredCertificate(AdminPortalRepository.CertificadoProvisionRow row) {
+    public SociedadDianContext ensureAvailable(SociedadDianContext context) {
+        if (context == null || context.sociedadId() == null) {
+            throw new IllegalArgumentException("Contexto DIAN de la sociedad requerido");
+        }
+
+        UUID sociedadId = context.sociedadId();
+        String objectKey = StringUtils.hasText(context.s3CertificateKey())
+                ? context.s3CertificateKey().trim()
+                : certificateObjectKey(sociedadId);
+        String secretName = StringUtils.hasText(context.secretsManagerPasswordKey())
+                ? context.secretsManagerPasswordKey().trim()
+                : certificateSecretName(sociedadId);
+
+        if (objectExists(objectKey) && secretExists(secretName)) {
+            if (!StringUtils.hasText(context.s3CertificateKey())
+                    || !StringUtils.hasText(context.secretsManagerPasswordKey())) {
+                adminPortalRepository.syncDianCertificateKeys(sociedadId, objectKey, secretName);
+                return reloadContext(sociedadId);
+            }
+            return context;
+        }
+
+        log.warn(
+                "Certificado DIAN ausente en S3/Secrets para sociedad_id={} key={} secret={}. Re-publicando desde BD.",
+                sociedadId,
+                objectKey,
+                secretName
+        );
+        republishFromDatabase(sociedadId);
+        return reloadContext(sociedadId);
+    }
+
+    public void ensureStoredCertificatePublished(AdminPortalRepository.CertificadoProvisionRow row) {
         if (row == null || row.sociedadId() == null) {
             return;
         }
+        String objectKey = certificateObjectKey(row.sociedadId());
+        String secretName = certificateSecretName(row.sociedadId());
+        if (objectExists(objectKey) && secretExists(secretName)) {
+            adminPortalRepository.syncDianCertificateKeys(row.sociedadId(), objectKey, secretName);
+            return;
+        }
+        provisionFromStoredCertificate(row);
+    }
+
+    public void provisionFromStoredCertificate(AdminPortalRepository.CertificadoProvisionRow row) {
+        if (row == null || row.sociedadId() == null) {
+            throw new IllegalArgumentException("Certificado de sociedad requerido");
+        }
         String certBase64 = cryptoService.decryptToString(row.contenidoBase64Enc());
         if (certBase64 == null || certBase64.isBlank()) {
-            log.warn("Certificado sociedad_id={} sin contenido descifrable", row.sociedadId());
-            return;
+            throw new IllegalStateException(
+                    "Certificado sociedad_id=" + row.sociedadId() + " sin contenido descifrable"
+            );
         }
         String password = cryptoService.decryptToString(row.passwordEnc());
         if (password == null || password.isBlank()) {
-            log.warn("Certificado sociedad_id={} sin contraseña descifrable", row.sociedadId());
-            return;
+            throw new IllegalStateException(
+                    "Certificado sociedad_id=" + row.sociedadId() + " sin contraseña descifrable"
+            );
         }
         byte[] pfxBytes = Base64.getDecoder().decode(certBase64);
         provision(row.sociedadId(), pfxBytes, password.trim());
@@ -134,6 +186,58 @@ public class DianCertificateProvisioningService {
                                 .build()
                 );
             }
+        }
+    }
+
+    private void republishFromDatabase(UUID sociedadId) {
+        AdminPortalRepository.CertificadoProvisionRow row =
+                adminPortalRepository.findActiveCertificadoForProvision(sociedadId);
+        if (row == null) {
+            throw new IllegalStateException(
+                    "El certificado digital no está en S3 y la sociedad no tiene un .p12 activo. "
+                            + "Cargue el certificado en Configuración > Certificados e intente de nuevo."
+            );
+        }
+        provisionFromStoredCertificate(row);
+    }
+
+    private SociedadDianContext reloadContext(UUID sociedadId) {
+        SociedadDianContext updated = adminPortalRepository.findSociedadDianContext(sociedadId);
+        if (updated == null) {
+            throw new IllegalStateException("Sociedad no encontrada tras publicar el certificado DIAN");
+        }
+        return updated;
+    }
+
+    private boolean objectExists(String objectKey) {
+        try {
+            s3Client.headObject(
+                    HeadObjectRequest.builder()
+                            .bucket(invoiceDocumentsBucket)
+                            .key(objectKey)
+                            .build()
+            );
+            return true;
+        } catch (NoSuchKeyException ex) {
+            return false;
+        } catch (S3Exception ex) {
+            if (ex.statusCode() == 404) {
+                return false;
+            }
+            throw ex;
+        }
+    }
+
+    private boolean secretExists(String secretName) {
+        try {
+            secretsManagerClient.describeSecret(
+                    DescribeSecretRequest.builder()
+                            .secretId(secretName)
+                            .build()
+            );
+            return true;
+        } catch (ResourceNotFoundException ex) {
+            return false;
         }
     }
 

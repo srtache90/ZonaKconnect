@@ -15,6 +15,7 @@
     </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
     <div class="alert alert-danger rounded-4 d-none" id="dianResolutionAlert"></div>
 
     <section class="card zk-card mb-4">
@@ -58,7 +59,7 @@
                             Consultar DIAN
                         </button>
                     </div>
-                    <div class="form-text">Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.</div>
+                    <div class="form-text">Factura electrónica (01/05). Consulte DIAN y elija la resolución autorizada; se autocompletan clave, prefijo y rangos.</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="claveTecnica">Clave técnica</label>
@@ -76,6 +77,7 @@
                 <div class="col-md-2">
                     <label class="form-label" for="numeroActual">Número actual</label>
                     <input class="form-control" id="numeroActual" name="numeroActual" type="number" min="0" value="0" required>
+                    <div class="form-text">Último emitido. Sin emisiones: rango desde − 1.</div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label" for="vigenciaDesde">Vigencia desde</label>
@@ -89,6 +91,14 @@
                     <div class="form-check">
                         <input class="form-check-input" id="activo" name="activo" type="checkbox" value="true" checked>
                         <label class="form-check-label" for="activo">Activo</label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-none" id="dianResolutionPickerWrap">
+                    <label class="form-label" for="dianResolutionPicker">Resoluciones autorizadas por DIAN</label>
+                    <select class="form-select" id="dianResolutionPicker"></select>
+                    <div class="form-text">
+                        Seleccione prefijo y rango. Se autocompletan resolución, clave técnica, numeración y vigencia.
                     </div>
                 </div>
 
@@ -220,6 +230,9 @@
 </main>
 
 <script>
+    let dianResolutionsCache = [];
+    let dianDocKind = 'fe';
+
     function showDianAlert(message, isError) {
         const alert = document.getElementById('dianResolutionAlert');
         alert.textContent = message;
@@ -242,6 +255,72 @@
         return trimmed;
     }
 
+    function equalsIgnoreCase(left, right) {
+        return (left || '').trim().toLowerCase() === (right || '').trim().toLowerCase();
+    }
+
+    function resolutionOptionLabel(item) {
+        const prefix = item.prefix || '(sin prefijo)';
+        const number = item.resolutionNumber || '';
+        const from = item.fromNumber ?? '';
+        const to = item.toNumber ?? '';
+        const fromDate = parseDianDate(item.validDateFrom) || '?';
+        const toDate = parseDianDate(item.validDateTo) || '?';
+        return `${prefix} · ${number} · ${from}-${to} · ${fromDate} a ${toDate}`;
+    }
+
+    function hideResolutionPicker() {
+        document.getElementById('dianResolutionPickerWrap').classList.add('d-none');
+    }
+
+    function fillResolutionPicker(resolutions, selectedIndex) {
+        const wrap = document.getElementById('dianResolutionPickerWrap');
+        const select = document.getElementById('dianResolutionPicker');
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = `Seleccione una resolución (${resolutions.length} autorizadas)`;
+        select.appendChild(placeholder);
+        resolutions.forEach((item, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = resolutionOptionLabel(item);
+            select.appendChild(option);
+        });
+        if (selectedIndex >= 0) {
+            select.value = String(selectedIndex);
+        }
+        wrap.classList.remove('d-none');
+    }
+
+    function matchResolutionIndexes(resolutions, resolucion, prefijo) {
+        return resolutions
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => {
+                const prefixOk = !prefijo || equalsIgnoreCase(item.prefix, prefijo);
+                const resolutionOk = !resolucion || equalsIgnoreCase(item.resolutionNumber, resolucion);
+                return prefixOk && resolutionOk;
+            })
+            .map(({ index }) => index);
+    }
+
+    function syncNumeroActualToRange(inputId, fromNumber, toNumber) {
+        const input = document.getElementById(inputId);
+        if (!input || fromNumber == null) {
+            return;
+        }
+        const from = Number(fromNumber);
+        const to = toNumber == null || toNumber === '' ? NaN : Number(toNumber);
+        if (!Number.isFinite(from)) {
+            return;
+        }
+        const minAllowed = Math.max(from - 1, 0);
+        const actual = Number(input.value);
+        if (!Number.isFinite(actual) || actual < minAllowed || (Number.isFinite(to) && actual > to)) {
+            input.value = String(minAllowed);
+        }
+    }
+
     function aplicarResolucionDian(resolution, docKind) {
         if (!resolution) {
             return;
@@ -250,14 +329,21 @@
             if (resolution.resolutionNumber) {
                 document.getElementById('resolucionDian').value = resolution.resolutionNumber;
             }
-            if (resolution.technicalKey) {
-                document.getElementById('claveTecnica').value = resolution.technicalKey;
-            }
+            document.getElementById('claveTecnica').value = resolution.technicalKey || '';
             if (resolution.fromNumber != null) {
                 document.getElementById('rangoDesde').value = resolution.fromNumber;
             }
             if (resolution.toNumber != null) {
                 document.getElementById('rangoHasta').value = resolution.toNumber;
+            }
+            if (docKind === 'fe') {
+                syncNumeroActualToRange('numeroActual', resolution.fromNumber, resolution.toNumber);
+            }
+            if (docKind === 'nc') {
+                syncNumeroActualToRange('numeroActualNc', resolution.fromNumber, resolution.toNumber);
+            }
+            if (docKind === 'nd') {
+                syncNumeroActualToRange('numeroActualNd', resolution.fromNumber, resolution.toNumber);
             }
             if (resolution.validDateFrom) {
                 document.getElementById('vigenciaDesde').value = parseDianDate(resolution.validDateFrom);
@@ -298,17 +384,10 @@
             return;
         }
 
-        const params = new URLSearchParams({ sociedadId });
-        if (resolucion) {
-            params.set('resolutionNumber', resolucion);
-        }
-        if (prefijo) {
-            params.set('prefix', prefijo);
-        }
-
         button.disabled = true;
         button.textContent = 'Consultando...';
         try {
+            const params = new URLSearchParams({ sociedadId });
             const response = await fetch(`/portal/admin/api/dian/resoluciones?${params.toString()}`, {
                 headers: { 'Accept': 'application/json' }
             });
@@ -317,29 +396,50 @@
                 throw new Error(payload.error || 'No fue posible consultar DIAN');
             }
 
-            const resolutions = Array.isArray(payload.resolutions) ? payload.resolutions : [];
-            if (resolutions.length === 0) {
-                const code = payload.operationCode || 'sin código';
-                const description = payload.operationDescription || 'DIAN no devolvió resoluciones para los filtros indicados.';
-                showDianAlert(`DIAN (${code}): ${description}`, true);
-                return;
-            }
+            const resolutions = Array.isArray(payload.resolutions) ? payload.resolutions.slice() : [];
+            resolutions.sort((a, b) => {
+                const prefixCmp = (a.prefix || '').localeCompare(b.prefix || '', 'es', { sensitivity: 'base' });
+                if (prefixCmp !== 0) {
+                    return prefixCmp;
+                }
+                return Number(a.fromNumber || 0) - Number(b.fromNumber || 0);
+            });
+            dianResolutionsCache = resolutions;
+            dianDocKind = docKind;
 
-            if (resolutions.length > 1 && !resolucion && !prefijo) {
+            if (resolutions.length === 0) {
+                hideResolutionPicker();
                 showDianAlert(
-                    `DIAN devolvió ${resolutions.length} resoluciones. Indique número de resolución o prefijo para seleccionar una.`,
+                    `DIAN (${payload.operationCode || '100'}) no devolvió resoluciones autorizadas para esta sociedad.`,
                     true
                 );
                 return;
             }
 
-            const selected = resolutions.find(item => prefijo && item.prefix === prefijo) || resolutions[0];
-            aplicarResolucionDian(selected, docKind);
+            const matches = matchResolutionIndexes(resolutions, resolucion, prefijo);
+            const uniqueIndex = matches.length === 1 ? matches[0] : -1;
+            fillResolutionPicker(resolutions, uniqueIndex);
+
+            if (uniqueIndex >= 0) {
+                const selected = resolutions[uniqueIndex];
+                aplicarResolucionDian(selected, docKind);
+                showDianAlert(
+                    `Resolución ${selected.resolutionNumber || ''} (${selected.prefix || prefijo}) cargada desde DIAN.`,
+                    false
+                );
+                return;
+            }
+
             showDianAlert(
-                `Resolución ${selected.resolutionNumber || ''} (${selected.prefix || prefijo}) cargada desde DIAN (${payload.operationCode || 'OK'}).`,
+                `DIAN devolvió ${resolutions.length} resoluciones autorizadas`
+                    + (prefijo || resolucion
+                        ? ` (ninguna coincide con ${[prefijo, resolucion].filter(Boolean).join(' / ')}).`
+                        : '.')
+                    + ' Seleccione una de la lista para autocompletar el formulario.',
                 false
             );
         } catch (error) {
+            hideResolutionPicker();
             showDianAlert(error.message || 'Error consultando DIAN', true);
         } finally {
             button.disabled = false;
@@ -350,6 +450,18 @@
     document.getElementById('btnConsultarDianFe').addEventListener('click', () => consultarResolucionDian('fe'));
     document.getElementById('btnConsultarDianNc').addEventListener('click', () => consultarResolucionDian('nc'));
     document.getElementById('btnConsultarDianNd').addEventListener('click', () => consultarResolucionDian('nd'));
+    document.getElementById('dianResolutionPicker').addEventListener('change', (event) => {
+        const index = Number(event.target.value);
+        if (!Number.isInteger(index) || index < 0 || index >= dianResolutionsCache.length) {
+            return;
+        }
+        const selected = dianResolutionsCache[index];
+        aplicarResolucionDian(selected, dianDocKind);
+        showDianAlert(
+            `Resolución ${selected.resolutionNumber || ''} (${selected.prefix || ''}) aplicada al formulario.`,
+            false
+        );
+    });
 
     function editarPuntoVenta(button) {
         document.getElementById('puntoVentaId').value = button.dataset.id || '';

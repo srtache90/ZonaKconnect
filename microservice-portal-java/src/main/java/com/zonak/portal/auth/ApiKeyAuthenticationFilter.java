@@ -37,7 +37,7 @@ public class ApiKeyAuthenticationFilter extends GenericFilterBean {
 
         try {
             ApiTenant apiTenant = apiTenantResolver
-                    .resolve(request.getHeader(API_KEY_HEADER), request.getHeader(EMISSION_POINT_HEADER))
+                    .resolve(resolveApiKey(request), request.getHeader(EMISSION_POINT_HEADER))
                     .orElse(null);
 
             if (apiTenant == null) {
@@ -58,6 +58,37 @@ public class ApiKeyAuthenticationFilter extends GenericFilterBean {
         } finally {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    private static String resolveApiKey(HttpServletRequest request) {
+        String[] headers = {
+                API_KEY_HEADER,
+                "Api-Key",
+                "api-key",
+                "api_key",
+                "X-Api-Key"
+        };
+        for (String header : headers) {
+            String value = request.getHeader(header);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        String queryKey = request.getParameter("api_key");
+        if (queryKey != null && !queryKey.isBlank()) {
+            return queryKey.trim();
+        }
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authorization != null && !authorization.isBlank()) {
+            String raw = authorization.trim();
+            if (raw.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                return raw.substring(7).trim();
+            }
+            if (raw.regionMatches(true, 0, "ApiKey ", 0, 7)) {
+                return raw.substring(7).trim();
+            }
+        }
+        return null;
     }
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {

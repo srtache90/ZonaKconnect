@@ -182,30 +182,42 @@ public class AdminPortalController {
                 : UUID.randomUUID();
         long rangoDesde = form.getRangoDesde() != null ? form.getRangoDesde() : 1L;
         long rangoHasta = form.getRangoHasta() != null ? form.getRangoHasta() : rangoDesde;
-        long numeroActual = form.getNumeroActual() != null ? form.getNumeroActual() : rangoDesde - 1;
-        long numeroActualNc = form.getNumeroActualNc() != null ? form.getNumeroActualNc() : rangoDesde - 1;
-        long numeroActualNd = form.getNumeroActualNd() != null ? form.getNumeroActualNd() : rangoDesde - 1;
+        if (rangoHasta < rangoDesde) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "El rango hasta (" + rangoHasta + ") no puede ser menor que el rango desde (" + rangoDesde + ")."
+            );
+            return "redirect:/portal/admin/puntos-venta";
+        }
+        long numeroActual = normalizeConsecutivo(form.getNumeroActual(), rangoDesde, rangoHasta);
+        long numeroActualNc = form.getNumeroActualNc() != null ? form.getNumeroActualNc() : 0L;
+        long numeroActualNd = form.getNumeroActualNd() != null ? form.getNumeroActualNd() : 0L;
 
-        adminPortalRepository.savePuntoVenta(
-                id,
-                form.getSociedadId(),
-                form.getCodigo(),
-                form.getNombre(),
-                form.getDireccion(),
-                form.getPrefijo(),
-                form.getResolucionDian(),
-                form.getClaveTecnica(),
-                rangoDesde,
-                rangoHasta,
-                numeroActual,
-                form.getPrefijoNc(),
-                numeroActualNc,
-                form.getPrefijoNd(),
-                numeroActualNd,
-                form.getVigenciaDesde(),
-                form.getVigenciaHasta(),
-                form.isActivo()
-        );
+        try {
+            adminPortalRepository.savePuntoVenta(
+                    id,
+                    form.getSociedadId(),
+                    form.getCodigo(),
+                    form.getNombre(),
+                    form.getDireccion(),
+                    form.getPrefijo(),
+                    form.getResolucionDian(),
+                    form.getClaveTecnica(),
+                    rangoDesde,
+                    rangoHasta,
+                    numeroActual,
+                    form.getPrefijoNc(),
+                    numeroActualNc,
+                    form.getPrefijoNd(),
+                    numeroActualNd,
+                    form.getVigenciaDesde(),
+                    form.getVigenciaHasta(),
+                    form.isActivo()
+            );
+        } catch (DataIntegrityViolationException ex) {
+            redirectAttributes.addFlashAttribute("error", mapPuntoVentaSaveError(ex));
+            return "redirect:/portal/admin/puntos-venta";
+        }
         redirectAttributes.addFlashAttribute("success", "Punto de venta guardado correctamente");
         return "redirect:/portal/admin/puntos-venta";
     }
@@ -301,6 +313,37 @@ public class AdminPortalController {
             return "El NIT ya existe en otra empresa del sistema.";
         }
         return "No se pudo guardar la sociedad. Verifique NIT y API Key únicos.";
+    }
+
+    private static long normalizeConsecutivo(Long requested, long rangoDesde, long rangoHasta) {
+        long fallback = Math.max(rangoDesde - 1, 0L);
+        long value = requested != null ? requested : fallback;
+        if (value < rangoDesde - 1 || value > rangoHasta) {
+            return fallback;
+        }
+        return value;
+    }
+
+    private static String mapPuntoVentaSaveError(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+        if (message == null) {
+            return "No se pudo guardar el punto de venta. Verifique código, prefijo y resolución.";
+        }
+        if (message.contains("emission_points_check1") || message.contains("numero_actual")) {
+            return "El número actual está fuera del rango autorizado por DIAN. Debe estar entre (rango desde − 1) y rango hasta.";
+        }
+        if (message.contains("emission_points_check") || message.contains("rango_desde")) {
+            return "El rango desde no puede ser mayor que el rango hasta.";
+        }
+        if (message.contains("company_id_codigo") || message.contains("(company_id, codigo)")) {
+            return "Ya existe un punto de venta con ese código en la sociedad.";
+        }
+        if (message.contains("prefijo_resolucion_dian") || message.contains("prefijo, resolucion")) {
+            return "Ya existe un punto de venta con ese prefijo y resolución en la sociedad.";
+        }
+        return "No se pudo guardar el punto de venta. Verifique código, prefijo y resolución.";
     }
 
     public static class SociedadForm {

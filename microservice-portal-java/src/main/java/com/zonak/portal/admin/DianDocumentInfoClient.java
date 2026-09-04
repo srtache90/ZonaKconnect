@@ -12,13 +12,16 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class DianDocumentInfoClient {
     private final WebClient dianNetWebClient;
     private final ObjectMapper objectMapper;
+    private final DianCertificateProvisioningService certificateProvisioningService;
 
     public DianDocumentInfoClient(
             @Qualifier("dianNetWebClient") WebClient dianNetWebClient,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            DianCertificateProvisioningService certificateProvisioningService
     ) {
         this.dianNetWebClient = dianNetWebClient;
         this.objectMapper = objectMapper;
+        this.certificateProvisioningService = certificateProvisioningService;
     }
 
     public JsonNode consultarEventosPorCufe(SociedadDianContext context, String cufe) {
@@ -28,7 +31,8 @@ public class DianDocumentInfoClient {
         if (!StringUtils.hasText(cufe)) {
             throw new IllegalArgumentException("CUFE/CUDE requerido para consultar eventos RADIAN");
         }
-        if (!StringUtils.hasText(context.s3CertificateKey()) || !StringUtils.hasText(context.secretsManagerPasswordKey())) {
+        final SociedadDianContext resolved = certificateProvisioningService.ensureAvailable(context);
+        if (!StringUtils.hasText(resolved.s3CertificateKey()) || !StringUtils.hasText(resolved.secretsManagerPasswordKey())) {
             throw new IllegalStateException(
                     "La sociedad no tiene certificado DIAN provisionado en S3/Secrets Manager. "
                             + "Cargue el certificado en Configuración > Certificados."
@@ -40,12 +44,12 @@ public class DianDocumentInfoClient {
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/dian/document-info")
                             .queryParam("uuid", cufe.trim())
-                            .queryParam("ambiente", DianResolutionClient.normalizeAmbiente(context.ambiente()))
+                            .queryParam("ambiente", DianResolutionClient.normalizeAmbiente(resolved.ambiente()))
                             .build())
-                    .header("X-Tenant-ID", context.sociedadId().toString())
-                    .header("X-Cert-S3-Key", context.s3CertificateKey())
-                    .header("X-Cert-Password-Secret-Key", context.secretsManagerPasswordKey())
-                    .header("X-DIAN-Ambiente", DianResolutionClient.normalizeAmbiente(context.ambiente()))
+                    .header("X-Tenant-ID", resolved.sociedadId().toString())
+                    .header("X-Cert-S3-Key", resolved.s3CertificateKey())
+                    .header("X-Cert-Password-Secret-Key", resolved.secretsManagerPasswordKey())
+                    .header("X-DIAN-Ambiente", DianResolutionClient.normalizeAmbiente(resolved.ambiente()))
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();

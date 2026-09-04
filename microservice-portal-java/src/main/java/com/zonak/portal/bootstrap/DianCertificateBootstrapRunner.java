@@ -25,14 +25,14 @@ public class DianCertificateBootstrapRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        var pending = adminPortalRepository.findCertificadosPendingDianConfigSync();
-        if (pending.isEmpty()) {
+        var certificados = adminPortalRepository.findActiveCertificadosForProvision();
+        if (certificados.isEmpty()) {
             return;
         }
-        log.info("Sincronizando {} certificado(s) digital(es) pendientes hacia S3/dian_config", pending.size());
-        for (AdminPortalRepository.CertificadoProvisionRow row : pending) {
+        log.info("Verificando publicación S3/Secrets de {} certificado(s) digital(es) activos", certificados.size());
+        for (AdminPortalRepository.CertificadoProvisionRow row : certificados) {
             try {
-                dianCertificateProvisioningService.provisionFromStoredCertificate(row);
+                dianCertificateProvisioningService.ensureStoredCertificatePublished(row);
             } catch (RuntimeException ex) {
                 log.error("No fue posible provisionar certificado sociedad_id={}: {}", row.sociedadId(), ex.getMessage());
             }

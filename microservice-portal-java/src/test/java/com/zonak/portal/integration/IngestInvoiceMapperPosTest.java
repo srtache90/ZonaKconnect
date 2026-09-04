@@ -52,7 +52,32 @@ class IngestInvoiceMapperPosTest {
         assertEquals("17401", totals.get("caja_wsid"));
         assertEquals(new BigDecimal("160611.00"), totals.get("total"));
         assertTrue(totals.get("resolucion").toString().contains("18764089669852"));
+        assertEquals("", dto.ambiente());
         assertFalse(dto.items().isEmpty());
+    }
+
+    @Test
+    void fromPosUsesTipoAmbienteProduccionAndConsecutivoFromNumeroFactura() throws Exception {
+        String json = """
+                {
+                  "numero_factura": "P660502",
+                  "tipo_ambiente": "1",
+                  "Resolucion": "18764106488367",
+                  "total": "1000.00",
+                  "items": [
+                    {"nombre": "Item", "cantidad": "1", "precio": "1000.00", "subtotal": "1000.00"}
+                  ]
+                }
+                """;
+        PosTicketRequest ticket = objectMapper.readValue(json, PosTicketRequest.class);
+        CreateInvoiceRequestDTO dto = mapper.fromPos(ticket);
+
+        assertEquals("Produccion", dto.ambiente());
+        assertEquals(Long.valueOf(660502), ticket.resolvedNumero());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> totals = (Map<String, Object>) dto.totals();
+        assertEquals(660502L, ((Number) totals.get("consecutivo")).longValue());
+        assertEquals("P660502", totals.get("numero_factura"));
     }
 
     @Test

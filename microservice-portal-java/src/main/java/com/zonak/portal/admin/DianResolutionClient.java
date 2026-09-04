@@ -2,23 +2,26 @@ package com.zonak.portal.admin;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+
 @Service
 public class DianResolutionClient {
     private final WebClient dianNetWebClient;
     private final ObjectMapper objectMapper;
+    private final DianCertificateProvisioningService certificateProvisioningService;
 
     public DianResolutionClient(
             @Qualifier("dianNetWebClient") WebClient dianNetWebClient,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            DianCertificateProvisioningService certificateProvisioningService
     ) {
         this.dianNetWebClient = dianNetWebClient;
         this.objectMapper = objectMapper;
+        this.certificateProvisioningService = certificateProvisioningService;
     }
 
     public JsonNode consultarResoluciones(
@@ -29,13 +32,14 @@ public class DianResolutionClient {
         if (context == null) {
             throw new IllegalArgumentException("Contexto DIAN de la sociedad requerido");
         }
-        if (!StringUtils.hasText(context.nit())) {
+        final SociedadDianContext resolved = certificateProvisioningService.ensureAvailable(context);
+        if (!StringUtils.hasText(resolved.nit())) {
             throw new IllegalArgumentException("La sociedad no tiene NIT configurado");
         }
-        if (!StringUtils.hasText(context.softwareId())) {
+        if (!StringUtils.hasText(resolved.softwareId())) {
             throw new IllegalArgumentException("La sociedad no tiene Software ID DIAN configurado");
         }
-        if (!StringUtils.hasText(context.s3CertificateKey()) || !StringUtils.hasText(context.secretsManagerPasswordKey())) {
+        if (!StringUtils.hasText(resolved.s3CertificateKey()) || !StringUtils.hasText(resolved.secretsManagerPasswordKey())) {
             throw new IllegalStateException(
                     "La sociedad no tiene certificado DIAN provisionado en S3/Secrets Manager. "
                             + "Cargue el certificado en Configuración > Certificados."
@@ -47,9 +51,9 @@ public class DianResolutionClient {
                     .uri(uriBuilder -> {
                         var builder = uriBuilder
                                 .path("/api/v1/dian/numbering-ranges")
-                                .queryParam("nit", normalizeNit(context.nit()))
-                                .queryParam("softwareId", context.softwareId().trim())
-                                .queryParam("ambiente", normalizeAmbiente(context.ambiente()));
+                                .queryParam("nit", normalizeNit(resolved.nit()))
+                                .queryParam("softwareId", resolved.softwareId().trim())
+                                .queryParam("ambiente", normalizeAmbiente(resolved.ambiente()));
                         if (StringUtils.hasText(resolutionNumber)) {
                             builder = builder.queryParam("resolutionNumber", resolutionNumber.trim());
                         }
@@ -58,10 +62,10 @@ public class DianResolutionClient {
                         }
                         return builder.build();
                     })
-                    .header("X-Tenant-ID", context.sociedadId().toString())
-                    .header("X-Cert-S3-Key", context.s3CertificateKey())
-                    .header("X-Cert-Password-Secret-Key", context.secretsManagerPasswordKey())
-                    .header("X-DIAN-Ambiente", normalizeAmbiente(context.ambiente()))
+                    .header("X-Tenant-ID", resolved.sociedadId().toString())
+                    .header("X-Cert-S3-Key", resolved.s3CertificateKey())
+                    .header("X-Cert-Password-Secret-Key", resolved.secretsManagerPasswordKey())
+                    .header("X-DIAN-Ambiente", normalizeAmbiente(resolved.ambiente()))
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();

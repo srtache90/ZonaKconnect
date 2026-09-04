@@ -47,6 +47,38 @@
       }
     },
     {
+      "label": "Git pull (Docker)",
+      "type": "shell",
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/scripts/git-docker.ps1\" pull",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Git push (Docker)",
+      "type": "shell",
+      "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/scripts/git-docker.ps1\" push",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Levantar contenedores Docker (local)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.local.yml up -d --build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Estado contenedores Docker",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.local.yml ps",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
       "label": "Arrancar Ecosistema Zona K (ventanas externas)",
       "type": "shell",
       "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/start-services.ps1\"",

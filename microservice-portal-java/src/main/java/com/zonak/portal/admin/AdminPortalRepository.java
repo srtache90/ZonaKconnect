@@ -330,6 +330,10 @@ public class AdminPortalRepository {
     }
 
     public List<CertificadoProvisionRow> findCertificadosPendingDianConfigSync() {
+        return findActiveCertificadosForProvision();
+    }
+
+    public List<CertificadoProvisionRow> findActiveCertificadosForProvision() {
         return jdbcTemplate.query(
                 """
                         SELECT DISTINCT ON (c.sociedad_id)
@@ -340,17 +344,36 @@ public class AdminPortalRepository {
                         JOIN companies co ON co.id = c.sociedad_id
                         WHERE c.activo = TRUE
                           AND c.valido_hasta >= CURRENT_DATE
-                          AND (
-                              NULLIF(TRIM(co.dian_config->>'s3_certificate_key'), '') IS NULL
-                              OR NULLIF(TRIM(co.dian_config->>'secrets_manager_password_key'), '') IS NULL
-                          )
                         ORDER BY c.sociedad_id, c.valido_hasta DESC
                         """,
-                (rs, rowNum) -> new CertificadoProvisionRow(
-                        rs.getObject("sociedad_id", UUID.class),
-                        rs.getString("contenido_base64_enc"),
-                        rs.getString("password_enc")
-                )
+                (rs, rowNum) -> mapCertificadoProvisionRow(rs)
+        );
+    }
+
+    public CertificadoProvisionRow findActiveCertificadoForProvision(UUID sociedadId) {
+        List<CertificadoProvisionRow> rows = jdbcTemplate.query(
+                """
+                        SELECT c.sociedad_id,
+                               c.contenido_base64_enc,
+                               c.password_enc
+                        FROM certificados_digitales c
+                        WHERE c.sociedad_id = ?
+                          AND c.activo = TRUE
+                          AND c.valido_hasta >= CURRENT_DATE
+                        ORDER BY c.valido_hasta DESC
+                        LIMIT 1
+                        """,
+                (rs, rowNum) -> mapCertificadoProvisionRow(rs),
+                sociedadId
+        );
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private static CertificadoProvisionRow mapCertificadoProvisionRow(ResultSet rs) throws SQLException {
+        return new CertificadoProvisionRow(
+                rs.getObject("sociedad_id", UUID.class),
+                rs.getString("contenido_base64_enc"),
+                rs.getString("password_enc")
         );
     }
 

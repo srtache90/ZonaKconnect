@@ -626,28 +626,22 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 
 	var prefijo string
-	var numeroActual, rangoHasta int64
+	var numeroActual, rangoDesde, rangoHasta int64
 	err = tx.QueryRow(r.Context(), `
-		SELECT prefijo, numero_actual, rango_hasta
+		SELECT prefijo, numero_actual, rango_desde, rango_hasta
 		FROM emission_points
 		WHERE company_id = $1
 		  AND id = $2
 		  AND is_active = TRUE
 		  AND CURRENT_DATE BETWEEN vigencia_desde AND vigencia_hasta
 		FOR UPDATE
-	`, tenantID, emissionPointID).Scan(&prefijo, &numeroActual, &rangoHasta)
+	`, tenantID, emissionPointID).Scan(&prefijo, &numeroActual, &rangoDesde, &rangoHasta)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "punto de emisi?n no pertenece al tenant o no est? vigente", http.StatusBadRequest)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	nextNumber := numeroActual + 1
-	if nextNumber > rangoHasta {
-		http.Error(w, "rango de resoluci?n DIAN agotado", http.StatusBadRequest)
 		return
 	}
 
@@ -666,42 +660,92 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var invoiceID uuid.UUID
-	err = tx.QueryRow(r.Context(), `
-		INSERT INTO invoices (
-			company_id,
-			emission_point_id,
-			prefijo,
-			numero,
-			estado_dian,
-			totals_jsonb,
-			raw_dian_payload_jsonb,
-			document_kind
-		)
-		SELECT $1, $2, $3, $4, 'PENDIENTE', $5::jsonb, $6::jsonb, 'INVOICE'
-		WHERE EXISTS (
-			SELECT 1
-			FROM emission_points
-			WHERE company_id = $1
-			  AND id = $2
-		)
-		RETURNING id
-	`, tenantID, emissionPointID, prefijo, nextNumber, totals, rawPayload).Scan(&invoiceID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	nextNumber := numeroActual + 1
+	if requested, ok := requestedInvoiceNumber(totals); ok {
+		nextNumber = requested
+	}
+	if nextNumber < rangoDesde || nextNumber > rangoHasta {
+		http.Error(w, "consecutivo fuera del rango de resolucion DIAN del punto de venta", http.StatusBadRequest)
 		return
 	}
 
-	_, err = tx.Exec(r.Context(), `
-		UPDATE emission_points
-		SET numero_actual = $3,
-		    updated_at = now()
+	var invoiceID uuid.UUID
+	var existingEstado string
+	reused := false
+	err = tx.QueryRow(r.Context(), `
+		SELECT id, estado_dian
+		FROM invoices
 		WHERE company_id = $1
-		  AND id = $2
-	`, tenantID, emissionPointID, nextNumber)
-	if err != nil {
+		  AND prefijo = $2
+		  AND numero = $3
+		  AND COALESCE(document_kind, 'INVOICE') = 'INVOICE'
+		FOR UPDATE
+	`, tenantID, prefijo, nextNumber).Scan(&invoiceID, &existingEstado)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if err == nil {
+		if invoiceLockedForCorrection(existingEstado) {
+			http.Error(w, "factura "+prefijo+strconv.FormatInt(nextNumber, 10)+" ya fue aceptada por DIAN; no se pisa", http.StatusConflict)
+			return
+		}
+		_, err = tx.Exec(r.Context(), `
+			UPDATE invoices
+			SET emission_point_id = $2,
+			    estado_dian = 'PENDIENTE',
+			    totals_jsonb = $3::jsonb,
+			    raw_dian_payload_jsonb = $4::jsonb,
+			    uuid_cude = NULL,
+			    xml_s3_url = NULL,
+			    pdf_s3_url = NULL,
+			    dian_response_jsonb = '{}'::jsonb,
+			    updated_at = now()
+			WHERE company_id = $1
+			  AND id = $5
+		`, tenantID, emissionPointID, totals, rawPayload, invoiceID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reused = true
+	} else {
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO invoices (
+				company_id,
+				emission_point_id,
+				prefijo,
+				numero,
+				estado_dian,
+				totals_jsonb,
+				raw_dian_payload_jsonb,
+				document_kind
+			)
+			SELECT $1, $2, $3, $4, 'PENDIENTE', $5::jsonb, $6::jsonb, 'INVOICE'
+			WHERE EXISTS (
+				SELECT 1
+				FROM emission_points
+				WHERE company_id = $1
+				  AND id = $2
+			)
+			RETURNING id
+		`, tenantID, emissionPointID, prefijo, nextNumber, totals, rawPayload).Scan(&invoiceID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		_, err = tx.Exec(r.Context(), `
+			UPDATE emission_points
+			SET numero_actual = GREATEST(numero_actual, $3),
+			    updated_at = now()
+			WHERE company_id = $1
+			  AND id = $2
+		`, tenantID, emissionPointID, nextNumber)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
@@ -721,9 +765,16 @@ func (a *app) handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 		}
 	}(tenantID, emissionPointID, invoiceID, prefijo, nextNumber, req)
 
+	status := "PERSISTIDA_EN_PROCESAMIENTO"
+	if reused {
+		status = "REUTILIZADA_EN_CORRECCION"
+	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
-		"id":     invoiceID,
-		"status": "PERSISTIDA_EN_PROCESAMIENTO",
+		"id":      invoiceID,
+		"status":  status,
+		"reused":  reused,
+		"prefijo": prefijo,
+		"numero":  nextNumber,
 	})
 }
 
@@ -2444,10 +2495,10 @@ func normalizeDianAmbiente(ambiente string) string {
 		return "Habilitacion"
 	case "mock":
 		return "Mock"
-	case "habilitacion", "habilitación", "hab":
-		return "Habilitacion"
-	case "produccion", "producción", "prod":
+	case "1", "produccion", "producción", "prod":
 		return "Produccion"
+	case "2", "habilitacion", "habilitación", "hab":
+		return "Habilitacion"
 	default:
 		return strings.TrimSpace(ambiente)
 	}

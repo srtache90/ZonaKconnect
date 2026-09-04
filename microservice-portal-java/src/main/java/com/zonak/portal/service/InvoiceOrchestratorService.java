@@ -92,7 +92,22 @@ public class InvoiceOrchestratorService {
             String tenantId,
             String emissionPointId
     ) {
-        return processAndPersistInvoice(requestDTO, tenantId, emissionPointId, customerEmail(requestDTO.customer()));
+        return processAndPersistInvoiceResult(requestDTO, tenantId, emissionPointId)
+                .map(InvoiceResponseDTO::id);
+    }
+
+    public Mono<InvoiceResponseDTO> processAndPersistInvoiceResult(
+            CreateInvoiceRequestDTO requestDTO,
+            String tenantId,
+            String emissionPointId
+    ) {
+        return invoiceClientService.emitInvoice(requestDTO, tenantId, emissionPointId)
+                .doOnNext(response -> schedulePostEmissionArtifacts(
+                        response,
+                        tenantId,
+                        emissionPointId,
+                        customerEmail(requestDTO.customer())
+                ));
     }
 
     public SapEmissionOutcome processSapInvoiceAndWait(
@@ -171,22 +186,6 @@ public class InvoiceOrchestratorService {
 
     private static String firstText(String value, String fallback) {
         return StringUtils.hasText(value) ? value.trim() : fallback;
-    }
-
-    private Mono<UUID> processAndPersistInvoice(
-            CreateInvoiceRequestDTO requestDTO,
-            String tenantId,
-            String emissionPointId,
-            String customerEmail
-    ) {
-        return invoiceClientService.emitInvoice(requestDTO, tenantId, emissionPointId)
-                .doOnNext(response -> schedulePostEmissionArtifacts(
-                        response,
-                        tenantId,
-                        emissionPointId,
-                        customerEmail
-                ))
-                .map(InvoiceResponseDTO::id);
     }
 
     private void schedulePostEmissionArtifacts(
