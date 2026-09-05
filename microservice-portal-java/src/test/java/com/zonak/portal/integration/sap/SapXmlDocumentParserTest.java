@@ -160,5 +160,6 @@ class SapXmlDocumentParserTest {
         assertTrue(xml.contains("<cufe>CUFE-TEST</cufe>"));
         assertTrue(xml.contains("<consecutivo>170016795</consecutivo>"));
         assertTrue(xml.contains("<codigoUltimoEstadoDian>0</codigoUltimoEstadoDian>"));
+        assertTrue(xml.contains("<fechaFactura>2026-09-05T04:22:38Z</fechaFactura>"));
     }
 }
