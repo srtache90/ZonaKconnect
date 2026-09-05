@@ -11,7 +11,7 @@ final class SapConsultarEstadoResponse {
     static final int ESTADO_EXITOSO = 1;
     static final int ESTADO_PROCESANDO = 4;
 
-    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
             .withZone(ZoneOffset.UTC);
 
     private SapConsultarEstadoResponse() {
