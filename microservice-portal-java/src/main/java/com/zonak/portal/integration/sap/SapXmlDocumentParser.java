@@ -20,8 +20,16 @@ public class SapXmlDocumentParser {
     }
 
     public SapEnviarDocumento parse(String xml) {
+        return read(xml, SapEnviarDocumento.class);
+    }
+
+    public SapConsultarEstado parseConsulta(String xml) {
+        return read(xml, SapConsultarEstado.class);
+    }
+
+    private <T> T read(String xml, Class<T> type) {
         try {
-            return xmlMapper.readValue(SapXmlNormalizer.unwrap(xml), SapEnviarDocumento.class);
+            return xmlMapper.readValue(SapXmlNormalizer.unwrap(xml), type);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {

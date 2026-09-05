@@ -88,4 +88,77 @@ class SapXmlDocumentParserTest {
         assertTrue(errorXml.contains("<codigo>2</codigo>"));
         assertTrue(errorXml.contains("<estadoProceso>2</estadoProceso>"));
     }
+
+    @Test
+    void parsesConsultarEstadoSoapPayload() {
+        String soap = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                  <soap:Body>
+                    <n0:consultarEstado xmlns:n0="http://wsconsultaestadofactura.webservice.dispapeles.com/">
+                      <felConsultaFactura>
+                        <idEmpresa>154</idEmpresa>
+                        <usuario>UInverleoka</usuario>
+                        <contrasenia>secret</contrasenia>
+                        <prefijo>NCR</prefijo>
+                        <consecutivo>170016795</consecutivo>
+                        <tipoDocumento>2</tipoDocumento>
+                      </felConsultaFactura>
+                    </n0:consultarEstado>
+                  </soap:Body>
+                </soap:Envelope>
+                """;
+        SapConsultarEstado consulta = parser.parseConsulta(soap);
+        assertEquals("154", consulta.getIdEmpresa());
+        assertEquals("UInverleoka", consulta.getUsuario());
+        assertEquals("NCR", consulta.getPrefijo());
+        assertEquals("170016795", consulta.getConsecutivo());
+        assertEquals("2", consulta.getTipoDocumento());
+    }
+
+    @Test
+    void parsesConsultarEstadoWithoutWrapper() {
+        String soap = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                  <soap:Body>
+                    <n0:consultarEstado xmlns:n0="http://wsconsultaestadofactura.webservice.dispapeles.com/">
+                      <idEmpresa>154</idEmpresa>
+                      <usuario>UInverleoka</usuario>
+                      <contrasenia>secret</contrasenia>
+                      <prefijo>NCR</prefijo>
+                      <consecutivo>170016795</consecutivo>
+                      <tipoDocumento>2</tipoDocumento>
+                    </n0:consultarEstado>
+                  </soap:Body>
+                </soap:Envelope>
+                """;
+        SapConsultarEstado consulta = parser.parseConsulta(soap);
+        assertEquals("154", consulta.getIdEmpresa());
+        assertEquals("NCR", consulta.getPrefijo());
+        assertEquals("170016795", consulta.getConsecutivo());
+    }
+
+    @Test
+    void consultarEstadoResponseUsesIntegerEstadoProceso() {
+        SapConsultarEstado consulta = new SapConsultarEstado();
+        consulta.setTipoDocumento("2");
+        consulta.setPrefijo("NCR");
+        consulta.setConsecutivo("170016795");
+        SapConsultaDocumento documento = new SapConsultaDocumento(
+                java.util.UUID.fromString("00000000-0000-0000-0000-000000000099"),
+                "NCR",
+                170016795L,
+                "ENVIADO",
+                "CUFE-TEST",
+                "Procesado Correctamente.",
+                java.time.Instant.parse("2026-09-05T04:22:38Z")
+        );
+        String xml = SapConsultarEstadoResponse.found(consulta, documento);
+        assertTrue(xml.contains("consultarEstadoResponse"));
+        assertTrue(xml.contains("<estadoProceso>1</estadoProceso>"));
+        assertTrue(xml.contains("<cufe>CUFE-TEST</cufe>"));
+        assertTrue(xml.contains("<consecutivo>170016795</consecutivo>"));
+        assertTrue(xml.contains("<codigoUltimoEstadoDian>0</codigoUltimoEstadoDian>"));
+    }
 }
