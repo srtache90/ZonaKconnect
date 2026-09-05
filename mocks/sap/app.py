@@ -25,6 +25,7 @@ MAX_HISTORY_SIZE = int(os.getenv("SAP_MAX_HISTORY_SIZE", "50"))
 REQUEST_TIMEOUT = int(os.getenv("SAP_REQUEST_TIMEOUT", "150"))
 
 UI_PATH = Path(__file__).with_name("ui.html")
+SAMPLES_DIR = Path(__file__).resolve().parent / "samples"
 SEND_HISTORY = deque(maxlen=MAX_HISTORY_SIZE)
 SOAP_NAMESPACE = "http://wsenviardocumento.webservice.dispapeles.com/"
 
@@ -133,10 +134,51 @@ def wrap_soap_envelope(xml_document):
 
 
 def extract_xml_tag(xml_text, tag_name):
-    match = re.search(rf"<{tag_name}>(.*?)</{tag_name}>", xml_text, re.DOTALL | re.IGNORECASE)
+    match = re.search(
+        rf"<(?:[\w.-]+:)?{re.escape(tag_name)}\b[^>]*>(.*?)</(?:[\w.-]+:)?{re.escape(tag_name)}>",
+        xml_text or "",
+        re.DOTALL | re.IGNORECASE,
+    )
     if not match:
         return ""
     return html.unescape(match.group(1)).strip()
+
+
+def looks_like_soap(xml_text):
+    return bool(re.search(r"<(?:[\w.-]+:)?Envelope\b", xml_text or "", re.IGNORECASE))
+
+
+def prepare_request_body(xml_document):
+    trimmed = (xml_document or "").strip()
+    if not trimmed:
+        raise ValueError("XML SAP vacío")
+    if TRANSPORT_MODE != "soap" or looks_like_soap(trimmed):
+        return trimmed
+    inner = trimmed
+    if inner.startswith("<?xml"):
+        inner = inner.split("?>", 1)[1].strip()
+    if SOAP_NAMESPACE in inner or re.search(r"<(?:[\w.-]+:)enviarDocumento\b", inner):
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    {inner}
+  </soap:Body>
+</soap:Envelope>
+"""
+    return wrap_soap_envelope(trimmed)
+
+
+def list_samples():
+    if not SAMPLES_DIR.is_dir():
+        return []
+    return sorted(path.name for path in SAMPLES_DIR.glob("*.xml"))
+
+
+def load_sample(name="enviar-documento-kap.xml"):
+    path = SAMPLES_DIR / name
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8")
 
 
 def parse_portal_response(body):
@@ -151,6 +193,7 @@ def parse_portal_response(body):
             "mensaje": extract_xml_tag(trimmed, "mensaje"),
             "mensajeDian": extract_xml_tag(trimmed, "mensaje"),
             "cufe": extract_xml_tag(trimmed, "cufe"),
+            "estadoProceso": extract_xml_tag(trimmed, "estadoProceso"),
             "idDocumento": extract_xml_tag(trimmed, "idDocumento"),
             "numeroDocumento": extract_xml_tag(trimmed, "numeroDocumento"),
             "rawXml": trimmed,
@@ -168,18 +211,23 @@ def parse_portal_response(body):
         return {"body": trimmed}
 
 
-def send_xml(xml):
-    payload = wrap_soap_envelope(xml) if TRANSPORT_MODE == "soap" else xml
-    content_type = "application/soap+xml" if TRANSPORT_MODE == "soap" else "application/xml"
+def send_xml(xml, target_url=None):
+    url = (target_url or TARGET_URL).strip() or TARGET_URL
+    try:
+        payload = prepare_request_body(xml) if TRANSPORT_MODE == "soap" else xml
+    except ValueError as error:
+        return 400, {"error": str(error)}, xml
+    content_type = "text/xml; charset=utf-8" if TRANSPORT_MODE == "soap" else "application/xml"
     accept = "application/soap+xml, text/xml, application/xml, application/json"
 
     request = urllib.request.Request(
-        TARGET_URL,
+        url,
         data=payload.encode("utf-8"),
         method="POST",
         headers={
             "Content-Type": content_type,
             "Accept": accept,
+            "SOAPAction": "enviarDocumento",
         },
     )
 
@@ -198,7 +246,7 @@ def send_xml(xml):
         return 503, {
             "error": "No fue posible conectar con portal-java",
             "detail": str(error.reason),
-            "targetUrl": TARGET_URL,
+            "targetUrl": url,
         }, payload
 
 
@@ -238,13 +286,12 @@ def is_accepted(http_status, response):
 def process_send(payload):
     count = max(1, min(int(payload.get("count", 1)), MAX_BATCH_SIZE))
     delay_ms = max(0, int(payload.get("delayMs", 0)))
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     results = []
 
     for index in range(count):
         consecutivo = payload.get("consecutivo") or build_consecutivo(index + 1)
         xml = build_sap_xml(consecutivo, payload)
-        status, response, request_body = send_xml(xml)
+        status, response, request_body = send_xml(xml, payload.get("targetUrl"))
         record_history(consecutivo, payload, xml, request_body, status, response)
         results.append({
             "consecutivo": consecutivo,
@@ -260,12 +307,45 @@ def process_send(payload):
 
     accepted = sum(1 for result in results if result["accepted"])
     return {
-        "targetUrl": TARGET_URL,
+        "targetUrl": (payload.get("targetUrl") or TARGET_URL),
         "transportMode": TRANSPORT_MODE,
         "requested": count,
         "accepted": accepted,
         "failed": count - accepted,
         "results": results,
+    }
+
+
+def process_send_raw(payload):
+    xml = (payload.get("xml") or "").strip()
+    if not xml:
+        return {"error": "XML SAP vacío", "requested": 0, "accepted": 0, "failed": 1, "results": []}
+
+    consecutivo = extract_xml_tag(xml, "consecutivo") or build_consecutivo()
+    customer_name = extract_xml_tag(xml, "nombreCompleto")
+    total = extract_xml_tag(xml, "totalfactura") or 0
+    history_payload = {
+        "customerName": customer_name or "XML SAP pegado",
+        "total": total,
+        "source": "raw-xml",
+    }
+    status, response, request_body = send_xml(xml, payload.get("targetUrl"))
+    record_history(consecutivo, history_payload, xml, request_body, status, response)
+    accepted = is_accepted(status, response)
+    return {
+        "targetUrl": (payload.get("targetUrl") or TARGET_URL),
+        "transportMode": TRANSPORT_MODE,
+        "requested": 1,
+        "accepted": 1 if accepted else 0,
+        "failed": 0 if accepted else 1,
+        "results": [{
+            "consecutivo": consecutivo,
+            "httpStatus": status,
+            "xml": xml,
+            "requestBody": request_body,
+            "response": response,
+            "accepted": accepted,
+        }],
     }
 
 
@@ -304,12 +384,25 @@ class SapMockHandler(BaseHTTPRequestHandler):
                 "sapUsuario": SAP_USUARIO,
                 "requestTimeoutSeconds": REQUEST_TIMEOUT,
                 "maxBatchSize": MAX_BATCH_SIZE,
+                "samples": list_samples(),
             })
             return
 
         if path == "/sap/sample":
             xml = build_sap_xml(build_consecutivo(), {})
             self.respond_text(200, xml, "application/xml")
+            return
+
+        if path == "/sap/sample-kap":
+            sample = load_sample()
+            if not sample:
+                self.respond(404, {"error": "Muestra KAP no encontrada"})
+                return
+            self.respond(200, {
+                "name": "enviar-documento-kap.xml",
+                "xml": sample,
+                "samples": list_samples(),
+            })
             return
 
         if path == "/sap/history":
@@ -346,19 +439,28 @@ class SapMockHandler(BaseHTTPRequestHandler):
         payload = self.read_json_body()
 
         if path == "/sap/preview":
-            consecutivo = payload.get("consecutivo") or build_consecutivo()
-            xml = build_sap_xml(consecutivo, payload)
-            request_body = wrap_soap_envelope(xml) if TRANSPORT_MODE == "soap" else xml
-            self.respond(200, {
-                "consecutivo": consecutivo,
-                "xml": xml,
-                "requestBody": request_body,
-                "transportMode": TRANSPORT_MODE,
-            })
+            try:
+                consecutivo = payload.get("consecutivo") or build_consecutivo()
+                xml = payload.get("xml") or build_sap_xml(consecutivo, payload)
+                request_body = prepare_request_body(xml) if TRANSPORT_MODE == "soap" else xml
+                self.respond(200, {
+                    "consecutivo": extract_xml_tag(xml, "consecutivo") or consecutivo,
+                    "xml": xml,
+                    "requestBody": request_body,
+                    "transportMode": TRANSPORT_MODE,
+                })
+            except ValueError as error:
+                self.respond(400, {"error": str(error)})
             return
 
         if path == "/sap/send":
             self.respond(200, process_send(payload))
+            return
+
+        if path == "/sap/send-xml":
+            result = process_send_raw(payload)
+            status = 400 if result.get("error") and not result.get("results") else 200
+            self.respond(status, result)
             return
 
         self.respond(404, {"error": "Ruta no encontrada"})
