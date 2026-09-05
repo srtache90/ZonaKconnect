@@ -80,7 +80,12 @@ class SapXmlDocumentParserTest {
         String xml = SapSoapResponse.success("Procesado Correctamente.", "CUFE-1", "inv-1", "EPR10");
         assertTrue(xml.contains("<codigo>0</codigo>"));
         assertTrue(xml.contains("<cufe>CUFE-1</cufe>"));
+        assertTrue(xml.contains("<estadoProceso>PROCESADO</estadoProceso>"));
         assertTrue(xml.contains("<numeroDocumento>EPR10</numeroDocumento>"));
         assertTrue(xml.contains("enviarDocumentoResponse"));
+
+        String errorXml = SapSoapResponse.error(SapSoapResponse.CODIGO_AUTH, "Credenciales SAP inválidas");
+        assertTrue(errorXml.contains("<codigo>2</codigo>"));
+        assertTrue(errorXml.contains("<estadoProceso>ERROR</estadoProceso>"));
     }
 }

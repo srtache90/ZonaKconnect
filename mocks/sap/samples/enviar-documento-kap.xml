@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <n0:enviarDocumento xmlns:n0="http://wsenviardocumento.webservice.dispapeles.com/" xmlns:prx="urn:sap.com:proxy:KAP:/1SAI/TAS46FBCE707256B0BCB3FA:750">
+      <felCabezaDocumento>
+        <aplicafel>SI</aplicafel>
+        <cantidadLineas>1</cantidadLineas>
+        <codigoPlantillaPdf>1</codigoPlantillaPdf>
+        <consecutivo>202601010001</consecutivo>
+        <contrasenia>SapMock2026!</contrasenia>
+        <fechafacturacion>2026-09-04T18:00:00Z</fechafacturacion>
+        <idEmpresa>1</idEmpresa>
+        <prefijo>EPR</prefijo>
+        <usuario>ULocalSap</usuario>
+        <listaAdquirentes>
+          <ciudad>11001</ciudad>
+          <departamento>11</departamento>
+          <descripcionCiudad>BOGOTA</descripcionCiudad>
+          <digitoverificacion>1</digitoverificacion>
+          <direccion>CRA 7 26 20</direccion>
+          <email>cliente.sap@zonak.local</email>
+          <nombreCompleto>Cliente Mock SAP SAS</nombreCompleto>
+          <numeroIdentificacion>900123456</numeroIdentificacion>
+          <tipoIdentificacion>31</tipoIdentificacion>
+        </listaAdquirentes>
+        <listaDetalle>
+          <cantidad>1.0</cantidad>
+          <codigoproducto>SAP-ITEM-001</codigoproducto>
+          <descripcion>Producto mock SAP</descripcion>
+          <nombreProducto>Producto mock SAP</nombreProducto>
+          <preciosinimpuestos>10000.0000</preciosinimpuestos>
+          <preciototal>11900.0000</preciototal>
+          <unidadmedida>EA</unidadmedida>
+          <valorunitario>10000.0000</valorunitario>
+          <listaImpuestos>
+            <baseimponible>10000.0000</baseimponible>
+            <codigoImpuestoRetencion>01</codigoImpuestoRetencion>
+            <porcentaje>19.0</porcentaje>
+            <valorImpuestoRetencion>1900.0000</valorImpuestoRetencion>
+          </listaImpuestos>
+        </listaDetalle>
+        <listaImpuestos>
+          <baseimponible>10000.0000</baseimponible>
+          <codigoImpuestoRetencion>01</codigoImpuestoRetencion>
+          <porcentaje>19.0</porcentaje>
+          <valorImpuestoRetencion>1900.0000</valorImpuestoRetencion>
+        </listaImpuestos>
+        <pago>
+          <moneda>COP</moneda>
+          <tipocompra>2</tipocompra>
+          <totalbaseconimpuestos>11900.0000</totalbaseconimpuestos>
+          <totalbaseimponible>10000.0000</totalbaseimponible>
+          <totalfactura>11900.0000</totalfactura>
+          <totalimportebruto>10000.0000</totalimportebruto>
+        </pago>
+      </felCabezaDocumento>
+    </n0:enviarDocumento>
+  </soap:Body>
+</soap:Envelope>

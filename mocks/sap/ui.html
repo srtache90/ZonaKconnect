@@ -15,13 +15,10 @@
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --success: #22c55e;
-      --warning: #f59e0b;
       --danger: #ef4444;
       --mono: "Cascadia Code", "Consolas", monospace;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: "Segoe UI", system-ui, sans-serif;
@@ -29,7 +26,6 @@
       color: var(--text);
       min-height: 100vh;
     }
-
     header {
       padding: 1.25rem 2rem;
       border-bottom: 1px solid var(--border);
@@ -40,19 +36,8 @@
       gap: 1rem;
       flex-wrap: wrap;
     }
-
-    header h1 {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-
-    header p {
-      margin: 0.25rem 0 0;
-      color: var(--muted);
-      font-size: 0.875rem;
-    }
-
+    header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.875rem; }
     .badge {
       font-size: 0.75rem;
       padding: 0.35rem 0.75rem;
@@ -61,37 +46,37 @@
       border: 1px solid var(--border);
       color: var(--muted);
     }
-
     .badge.ok { color: var(--success); border-color: #166534; }
-
     main {
       display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 0;
+      grid-template-columns: 420px 1fr;
       min-height: calc(100vh - 88px);
     }
-
-    @media (max-width: 1100px) {
-      main { grid-template-columns: 1fr; }
-    }
-
+    @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
     .panel {
       padding: 1.5rem;
       border-right: 1px solid var(--border);
       overflow-y: auto;
     }
-
     .panel-right {
       display: flex;
       flex-direction: column;
       gap: 1rem;
       background: #0c1017;
     }
-
-    section {
-      margin-bottom: 1.5rem;
+    .tabs { display: flex; gap: 0.4rem; margin-bottom: 1.1rem; }
+    .tab {
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8rem;
     }
-
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .mode { display: none; }
+    .mode.active { display: block; }
+    section { margin-bottom: 1.4rem; }
     section h2 {
       margin: 0 0 0.75rem;
       font-size: 0.8rem;
@@ -99,14 +84,12 @@
       letter-spacing: 0.06em;
       color: var(--muted);
     }
-
     label {
       display: block;
       font-size: 0.8rem;
       color: var(--muted);
       margin-bottom: 0.35rem;
     }
-
     input, select, textarea {
       width: 100%;
       padding: 0.55rem 0.7rem;
@@ -116,26 +99,14 @@
       color: var(--text);
       font-size: 0.9rem;
     }
-
+    textarea { font-family: var(--mono); font-size: 0.78rem; line-height: 1.45; }
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-top: 1rem;
-    }
-
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
     button {
       border: none;
       border-radius: 8px;
@@ -143,43 +114,38 @@
       font-size: 0.875rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
     }
-
-    button.primary {
-      background: var(--accent);
-      color: white;
-    }
-
+    button.primary { background: var(--accent); color: white; }
     button.primary:hover { background: var(--accent-hover); }
-
     button.secondary {
       background: var(--surface-2);
       color: var(--text);
       border: 1px solid var(--border);
     }
-
-    button.secondary:hover { background: var(--border); }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+      line-height: 1.4;
     }
-
-    .output-block {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 220px;
+    .warn {
+      background: #122033;
+      border: 1px solid #1e3a5f;
+      color: #93c5fd;
+      border-radius: 8px;
+      padding: 0.7rem 0.8rem;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      margin-bottom: 1rem;
     }
-
+    .output-block { flex: 1; display: flex; flex-direction: column; min-height: 160px; }
     .output-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.5rem;
     }
-
     .output-header h3 {
       margin: 0;
       font-size: 0.85rem;
@@ -187,21 +153,8 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-
-    textarea.output {
-      flex: 1;
-      min-height: 200px;
-      font-family: var(--mono);
-      font-size: 0.78rem;
-      line-height: 1.5;
-      resize: vertical;
-    }
-
-    .history {
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
-    }
-
+    textarea.output { flex: 1; min-height: 160px; resize: vertical; }
+    .history { border-top: 1px solid var(--border); padding-top: 1rem; }
     .history-item {
       padding: 0.65rem 0.75rem;
       border: 1px solid var(--border);
@@ -211,9 +164,7 @@
       background: var(--surface);
       font-size: 0.82rem;
     }
-
     .history-item:hover { border-color: var(--accent); }
-
     .history-item .meta {
       display: flex;
       justify-content: space-between;
@@ -222,10 +173,8 @@
       font-size: 0.75rem;
       margin-bottom: 0.25rem;
     }
-
     .status-ok { color: var(--success); }
     .status-fail { color: var(--danger); }
-
     .toast {
       position: fixed;
       bottom: 1.5rem;
@@ -241,12 +190,7 @@
       pointer-events: none;
       z-index: 100;
     }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
+    .toast.show { opacity: 1; transform: translateY(0); }
     .toast.error { border-color: var(--danger); color: #fecaca; }
     .toast.success { border-color: var(--success); color: #bbf7d0; }
   </style>
@@ -254,7 +198,7 @@
 <body>
   <header>
     <div>
-      <h1>SAP Mock — Simulador de envío</h1>
+      <h1>SAP Mock — envío XML Dispapeles</h1>
       <p id="target-info">Cargando configuración...</p>
     </div>
     <span class="badge" id="health-badge">Verificando...</span>
@@ -262,135 +206,169 @@
 
   <main>
     <div class="panel">
-      <form id="sap-form">
-        <section>
-          <h2>Documento</h2>
-          <div class="grid-2">
-            <div>
-              <label for="prefix">Prefijo</label>
-              <input id="prefix" name="prefix" value="EPR">
+      <div class="warn">
+        Simula el proxy SOAP de SAP (<code>KAP / enviarDocumento</code>).
+        Destino local: <code>POST /ws/enviardocumento</code>.
+        Credenciales: <code>idEmpresa=1</code>, <code>ULocalSap</code> / <code>SapMock2026!</code>, prefijo <code>EPR</code>.
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab active" data-mode="form">Generar XML</button>
+        <button type="button" class="tab" data-mode="paste">Pegar XML SAP</button>
+      </div>
+
+      <section>
+        <h2>Destino SOAP</h2>
+        <label for="targetUrl">URL logical port</label>
+        <input id="targetUrl" value="">
+        <p class="hint">Equivale a cambiar solo la URL en SOAMANAGER.</p>
+      </section>
+
+      <div id="mode-form" class="mode active">
+        <form id="sap-form">
+          <section>
+            <h2>Documento</h2>
+            <div class="grid-2">
+              <div>
+                <label for="prefix">Prefijo</label>
+                <input id="prefix" name="prefix" value="EPR">
+              </div>
+              <div>
+                <label for="companyId">ID Empresa</label>
+                <input id="companyId" name="companyId" type="number" min="1" value="1">
+              </div>
             </div>
-            <div>
-              <label for="companyId">ID Empresa</label>
-              <input id="companyId" name="companyId" type="number" min="1" value="1">
+            <div class="grid-2" style="margin-top: 0.75rem">
+              <div>
+                <label for="sapUsuario">Usuario SAP</label>
+                <input id="sapUsuario" name="sapUsuario" value="ULocalSap" autocomplete="off">
+              </div>
+              <div>
+                <label for="sapPassword">Contraseña SAP</label>
+                <input id="sapPassword" name="sapPassword" type="password" value="SapMock2026!" autocomplete="off">
+              </div>
             </div>
+          </section>
+
+          <section>
+            <h2>Cliente</h2>
+            <div class="grid-2">
+              <div>
+                <label for="customerDocumentType">Tipo ID</label>
+                <select id="customerDocumentType" name="customerDocumentType">
+                  <option value="31" selected>NIT (31)</option>
+                  <option value="13">Cédula (13)</option>
+                  <option value="22">Cédula extranjería (22)</option>
+                </select>
+              </div>
+              <div>
+                <label for="customerDocument">Número</label>
+                <input id="customerDocument" name="customerDocument" value="900123456">
+              </div>
+            </div>
+            <div style="margin-top: 0.75rem">
+              <label for="customerName">Nombre / Razón social</label>
+              <input id="customerName" name="customerName" value="Cliente Mock SAP">
+            </div>
+            <div class="grid-2" style="margin-top: 0.75rem">
+              <div>
+                <label for="customerEmail">Email</label>
+                <input id="customerEmail" name="customerEmail" value="cliente.sap@zonak.local">
+              </div>
+              <div>
+                <label for="customerAddress">Dirección</label>
+                <input id="customerAddress" name="customerAddress" value="Dirección mock SAP">
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2>Producto</h2>
+            <div class="grid-2">
+              <div>
+                <label for="itemCode">Código</label>
+                <input id="itemCode" name="itemCode" value="SAP-ITEM-001">
+              </div>
+              <div>
+                <label for="unit">Unidad</label>
+                <input id="unit" name="unit" value="EA">
+              </div>
+            </div>
+            <div style="margin-top: 0.75rem">
+              <label for="itemDescription">Descripción</label>
+              <input id="itemDescription" name="itemDescription" value="Producto mock SAP">
+            </div>
+            <div class="grid-2" style="margin-top: 0.75rem">
+              <div>
+                <label for="quantity">Cantidad</label>
+                <input id="quantity" name="quantity" type="number" step="0.01" value="1">
+              </div>
+              <div>
+                <label for="unitPrice">Precio unitario</label>
+                <input id="unitPrice" name="unitPrice" type="number" step="0.01" value="10000">
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2>Totales</h2>
+            <div class="grid-2">
+              <div>
+                <label for="subtotal">Subtotal</label>
+                <input id="subtotal" name="subtotal" type="number" step="0.01" value="10000">
+              </div>
+              <div>
+                <label for="discount">Descuento</label>
+                <input id="discount" name="discount" type="number" step="0.01" value="0">
+              </div>
+            </div>
+            <div class="grid-2" style="margin-top: 0.75rem">
+              <div>
+                <label for="tax">IVA (19%)</label>
+                <input id="tax" name="tax" type="number" step="0.01" value="1900">
+              </div>
+              <div>
+                <label for="total">Total</label>
+                <input id="total" name="total" type="number" step="0.01" value="11900">
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2>Lote</h2>
+            <div class="grid-2">
+              <div>
+                <label for="count">Cantidad documentos</label>
+                <input id="count" name="count" type="number" min="1" value="1">
+              </div>
+              <div>
+                <label for="delayMs">Delay (ms)</label>
+                <input id="delayMs" name="delayMs" type="number" min="0" value="0">
+              </div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <button type="button" class="secondary" id="btn-preview">Previsualizar SOAP</button>
+            <button type="button" class="primary" id="btn-send">Enviar al portal</button>
+            <button type="button" class="secondary" id="btn-batch">Enviar lote</button>
           </div>
-          <div class="grid-2" style="margin-top: 0.75rem">
-            <div>
-              <label for="sapUsuario">Usuario SAP</label>
-              <input id="sapUsuario" name="sapUsuario" value="ULocalSap" autocomplete="off">
-            </div>
-            <div>
-              <label for="sapPassword">Contraseña SAP</label>
-              <input id="sapPassword" name="sapPassword" type="password" value="SapMock2026!" autocomplete="off">
-            </div>
+        </form>
+      </div>
+
+      <div id="mode-paste" class="mode">
+        <section>
+          <h2>XML del proxy SAP</h2>
+          <input id="xml-file" type="file" accept=".xml,text/xml,application/xml">
+          <p class="hint">Pega el XML que SAP ya envía (con o sin sobre SOAP) o carga un .xml exportado.</p>
+          <textarea id="xml-paste" rows="16" placeholder="Pegar aquí &lt;n0:enviarDocumento xmlns:n0=&quot;http://wsenviardocumento.webservice.dispapeles.com/&quot;&gt;..."></textarea>
+          <div class="actions">
+            <button type="button" class="secondary" id="btn-sample-kap">Cargar muestra KAP</button>
+            <button type="button" class="secondary" id="btn-preview-xml">Armar SOAP</button>
+            <button type="button" class="primary" id="btn-send-xml">Enviar XML</button>
           </div>
         </section>
-
-        <section>
-          <h2>Cliente</h2>
-          <div class="grid-2">
-            <div>
-              <label for="customerDocumentType">Tipo ID</label>
-              <select id="customerDocumentType" name="customerDocumentType">
-                <option value="31" selected>NIT (31)</option>
-                <option value="13">Cédula (13)</option>
-                <option value="22">Cédula extranjería (22)</option>
-              </select>
-            </div>
-            <div>
-              <label for="customerDocument">Número</label>
-              <input id="customerDocument" name="customerDocument" value="900123456">
-            </div>
-          </div>
-          <div style="margin-top: 0.75rem">
-            <label for="customerName">Nombre / Razón social</label>
-            <input id="customerName" name="customerName" value="Cliente Mock SAP">
-          </div>
-          <div class="grid-2" style="margin-top: 0.75rem">
-            <div>
-              <label for="customerEmail">Email</label>
-              <input id="customerEmail" name="customerEmail" value="cliente.sap@zonak.local">
-            </div>
-            <div>
-              <label for="customerAddress">Dirección</label>
-              <input id="customerAddress" name="customerAddress" value="Dirección mock SAP">
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h2>Producto</h2>
-          <div class="grid-2">
-            <div>
-              <label for="itemCode">Código</label>
-              <input id="itemCode" name="itemCode" value="SAP-ITEM-001">
-            </div>
-            <div>
-              <label for="unit">Unidad</label>
-              <input id="unit" name="unit" value="EA">
-            </div>
-          </div>
-          <div style="margin-top: 0.75rem">
-            <label for="itemDescription">Descripción</label>
-            <input id="itemDescription" name="itemDescription" value="Producto mock SAP">
-          </div>
-          <div class="grid-2" style="margin-top: 0.75rem">
-            <div>
-              <label for="quantity">Cantidad</label>
-              <input id="quantity" name="quantity" type="number" step="0.01" value="1">
-            </div>
-            <div>
-              <label for="unitPrice">Precio unitario</label>
-              <input id="unitPrice" name="unitPrice" type="number" step="0.01" value="10000">
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h2>Totales</h2>
-          <div class="grid-2" style="margin-top: 0.75rem">
-            <div>
-              <label for="subtotal">Subtotal</label>
-              <input id="subtotal" name="subtotal" type="number" step="0.01" value="10000">
-            </div>
-            <div>
-              <label for="discount">Descuento</label>
-              <input id="discount" name="discount" type="number" step="0.01" value="0">
-            </div>
-          </div>
-          <div class="grid-2" style="margin-top: 0.75rem">
-            <div>
-              <label for="tax">IVA (19%)</label>
-              <input id="tax" name="tax" type="number" step="0.01" value="1900">
-            </div>
-            <div>
-              <label for="total">Total</label>
-              <input id="total" name="total" type="number" step="0.01" value="11900">
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h2>Envío por lote</h2>
-          <div class="grid-2">
-            <div>
-              <label for="count">Cantidad documentos</label>
-              <input id="count" name="count" type="number" min="1" value="1">
-            </div>
-            <div>
-              <label for="delayMs">Delay entre envíos (ms)</label>
-              <input id="delayMs" name="delayMs" type="number" min="0" value="0">
-            </div>
-          </div>
-        </section>
-
-        <div class="actions">
-          <button type="button" class="secondary" id="btn-preview">Previsualizar XML</button>
-          <button type="button" class="primary" id="btn-send">Enviar al portal</button>
-          <button type="button" class="secondary" id="btn-batch">Enviar lote</button>
-        </div>
-      </form>
+      </div>
 
       <section class="history">
         <h2>Historial reciente</h2>
@@ -403,24 +381,18 @@
     <div class="panel panel-right">
       <div class="output-block">
         <div class="output-header">
-          <h3>XML generado</h3>
+          <h3>XML de negocio</h3>
           <button type="button" class="secondary" id="btn-copy-xml" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">Copiar</button>
         </div>
-        <textarea class="output" id="xml-output" readonly placeholder="Haz clic en Previsualizar o Enviar para ver el XML..."></textarea>
+        <textarea class="output" id="xml-output" readonly placeholder="XML enviarDocumento..."></textarea>
       </div>
-
       <div class="output-block">
-        <div class="output-header">
-          <h3>Request enviado</h3>
-        </div>
-        <textarea class="output" id="request-output" readonly placeholder="El cuerpo SOAP/REST enviado aparecerá aquí..."></textarea>
+        <div class="output-header"><h3>Request SOAP enviado</h3></div>
+        <textarea class="output" id="request-output" readonly placeholder="Envelope SOAP 1.1..."></textarea>
       </div>
-
       <div class="output-block">
-        <div class="output-header">
-          <h3>Respuesta DIAN / portal</h3>
-        </div>
-        <textarea class="output" id="response-output" readonly placeholder="La respuesta del portal (mensaje DIAN) aparecerá aquí..."></textarea>
+        <div class="output-header"><h3>Respuesta DIAN / portal</h3></div>
+        <textarea class="output" id="response-output" readonly placeholder="codigo, mensaje, cufe..."></textarea>
       </div>
     </div>
   </main>
@@ -429,6 +401,7 @@
 
   <script>
     const form = document.getElementById("sap-form");
+    const xmlPaste = document.getElementById("xml-paste");
     const xmlOutput = document.getElementById("xml-output");
     const requestOutput = document.getElementById("request-output");
     const responseOutput = document.getElementById("response-output");
@@ -438,10 +411,18 @@
     function showToast(message, type = "") {
       toast.textContent = message;
       toast.className = "toast show" + (type ? " " + type : "");
-      setTimeout(() => toast.classList.remove("show"), 3000);
+      setTimeout(() => toast.classList.remove("show"), 3500);
     }
 
-    function getPayload() {
+    function pretty(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    function targetUrl() {
+      return document.getElementById("targetUrl").value.trim();
+    }
+
+    function getFormPayload() {
       const data = new FormData(form);
       const payload = Object.fromEntries(data.entries());
       ["quantity", "unitPrice", "subtotal", "discount", "tax", "total", "count", "delayMs", "companyId"].forEach((key) => {
@@ -449,31 +430,55 @@
           payload[key] = Number(payload[key]);
         }
       });
+      payload.targetUrl = targetUrl();
       return payload;
     }
 
-    async function loadConfig() {
-      const [configRes, healthRes] = await Promise.all([
-        fetch("/api/config"),
-        fetch("/health"),
-      ]);
-      const config = await configRes.json();
-      const health = await healthRes.json();
-
-      document.getElementById("target-info").textContent =
-        `Destino: ${config.targetUrl} · Modo: ${config.transportMode} · Empresa: ${config.companyId} · Prefijo: ${config.prefix}`;
-
-      const badge = document.getElementById("health-badge");
-      badge.textContent = health.status === "ok" ? "Conectado" : "Sin conexión";
-      badge.classList.toggle("ok", health.status === "ok");
+    function setMode(mode) {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
+      document.getElementById("mode-form").classList.toggle("active", mode === "form");
+      document.getElementById("mode-paste").classList.toggle("active", mode === "paste");
     }
 
-    async function previewXml() {
-      const payload = getPayload();
+    function showResult(data) {
+      const first = data.results?.[0] || data;
+      if (first.xml) xmlOutput.value = first.xml;
+      if (first.requestBody) requestOutput.value = first.requestBody;
+      responseOutput.value = pretty(data);
+      const mensaje = first.response?.mensajeDian || first.response?.mensaje || data.error;
+      showToast(
+        mensaje || `Enviados ${data.accepted}/${data.requested}`,
+        data.failed > 0 || data.error ? "error" : "success"
+      );
+    }
+
+    async function loadConfig() {
+      const [configRes, healthRes] = await Promise.all([fetch("/api/config"), fetch("/health")]);
+      const config = await configRes.json();
+      const health = await healthRes.json();
+      document.getElementById("targetUrl").value = config.targetUrl || "";
+      document.getElementById("target-info").textContent =
+        `Destino: ${config.targetUrl} · Modo: ${config.transportMode} · Empresa: ${config.companyId} · Prefijo: ${config.prefix}`;
+      const badge = document.getElementById("health-badge");
+      const ok = health.portalStatus === "ok" || health.status === "ok";
+      badge.textContent = health.portalStatus === "ok" ? "Portal reachable" : (health.portalStatus || health.status);
+      badge.classList.toggle("ok", health.portalStatus === "ok");
+      if (document.getElementById("companyId") && config.companyId) {
+        document.getElementById("companyId").value = config.companyId;
+      }
+      if (document.getElementById("prefix") && config.prefix) {
+        document.getElementById("prefix").value = config.prefix;
+      }
+      if (document.getElementById("sapUsuario") && config.sapUsuario) {
+        document.getElementById("sapUsuario").value = config.sapUsuario;
+      }
+    }
+
+    async function previewForm() {
       const res = await fetch("/sap/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(getFormPayload()),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -482,20 +487,18 @@
       }
       xmlOutput.value = data.xml;
       requestOutput.value = data.requestBody || data.xml;
-      responseOutput.value = JSON.stringify({ preview: true, consecutivo: data.consecutivo }, null, 2);
-      showToast("XML generado", "success");
+      responseOutput.value = pretty({ preview: true, consecutivo: data.consecutivo, transportMode: data.transportMode });
+      showToast("SOAP generado", "success");
     }
 
-    async function sendDocuments(batch = false) {
-      const payload = getPayload();
+    async function sendForm(batch) {
+      const payload = getFormPayload();
       if (!batch) {
         payload.count = 1;
         payload.delayMs = 0;
       }
-
       const buttons = document.querySelectorAll(".actions button");
-      buttons.forEach((b) => (b.disabled = true));
-
+      buttons.forEach((button) => (button.disabled = true));
       try {
         const res = await fetch("/sap/send", {
           method: "POST",
@@ -503,33 +506,67 @@
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!res.ok) {
-          showToast(data.error || "Error al enviar", "error");
-          responseOutput.value = JSON.stringify(data, null, 2);
-          return;
-        }
-
-        const first = data.results?.[0];
-        if (first?.xml) {
-          xmlOutput.value = first.xml;
-        }
-        if (first?.requestBody) {
-          requestOutput.value = first.requestBody;
-        }
-        responseOutput.value = JSON.stringify(data, null, 2);
-        const mensajeDian = first?.response?.mensajeDian || first?.response?.mensaje;
-        showToast(
-          mensajeDian
-            ? `DIAN: ${mensajeDian}`
-            : `Enviados: ${data.accepted}/${data.requested} aceptados`,
-          data.failed > 0 ? "error" : "success"
-        );
+        showResult(data);
         await loadHistory();
       } catch (err) {
         showToast("Error de red: " + err.message, "error");
       } finally {
-        buttons.forEach((b) => (b.disabled = false));
+        buttons.forEach((button) => (button.disabled = false));
       }
+    }
+
+    async function previewPastedXml() {
+      const xml = xmlPaste.value.trim();
+      if (!xml) {
+        showToast("Pega o carga un XML SAP", "error");
+        return;
+      }
+      const res = await fetch("/sap/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xml, targetUrl: targetUrl() }),
+      });
+      const data = await res.json();
+      xmlOutput.value = data.xml;
+      requestOutput.value = data.requestBody;
+      responseOutput.value = pretty({ preview: true, consecutivo: data.consecutivo });
+      showToast("Envelope SOAP listo", "success");
+    }
+
+    async function sendPastedXml() {
+      const xml = xmlPaste.value.trim();
+      if (!xml) {
+        showToast("Pega o carga un XML SAP", "error");
+        return;
+      }
+      const buttons = document.querySelectorAll(".actions button");
+      buttons.forEach((button) => (button.disabled = true));
+      try {
+        const res = await fetch("/sap/send-xml", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ xml, targetUrl: targetUrl() }),
+        });
+        const data = await res.json();
+        showResult(data);
+        await loadHistory();
+      } catch (err) {
+        showToast("Error de red: " + err.message, "error");
+      } finally {
+        buttons.forEach((button) => (button.disabled = false));
+      }
+    }
+
+    async function loadSampleKap() {
+      const res = await fetch("/sap/sample-kap");
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "No hay muestra KAP", "error");
+        return;
+      }
+      xmlPaste.value = data.xml;
+      xmlOutput.value = data.xml;
+      showToast("Muestra KAP cargada (idEmpresa=1 / EPR)", "success");
     }
 
     async function loadHistory() {
@@ -539,54 +576,56 @@
         historyList.innerHTML = '<p style="color: var(--muted); font-size: 0.85rem;">Sin envíos aún.</p>';
         return;
       }
-
-      historyList.innerHTML = items
-        .map(
-          (item) => `
-          <div class="history-item" data-id="${item.id}">
-            <div class="meta">
-              <span>${item.consecutivo}</span>
-              <span class="${item.exitoso ? "status-ok" : "status-fail"}">
-                ${item.exitoso ? "DIAN OK" : `Cod ${item.codigo || item.httpStatus}`}
-              </span>
-            </div>
-            <div>${item.customerName || "—"} · $${Number(item.total || 0).toLocaleString("es-CO")}</div>
-            <div style="color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem;">
-              ${item.mensajeDian || "Sin mensaje DIAN"}
-            </div>
-          </div>`
-        )
-        .join("");
+      historyList.innerHTML = items.map((item) => `
+        <div class="history-item" data-id="${item.id}">
+          <div class="meta">
+            <span>${item.consecutivo}</span>
+            <span class="${item.exitoso ? "status-ok" : "status-fail"}">
+              ${item.exitoso ? "DIAN OK" : `Cod ${item.codigo || item.httpStatus}`}
+            </span>
+          </div>
+          <div>${item.customerName || "—"} · $${Number(item.total || 0).toLocaleString("es-CO")}</div>
+          <div style="color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem;">
+            ${item.mensajeDian || "Sin mensaje DIAN"}
+          </div>
+        </div>`).join("");
 
       historyList.querySelectorAll(".history-item").forEach((el) => {
         el.addEventListener("click", async () => {
-          const res = await fetch(`/sap/history/${el.dataset.id}`);
-          const detail = await res.json();
+          const detailRes = await fetch(`/sap/history/${el.dataset.id}`);
+          const detail = await detailRes.json();
           xmlOutput.value = detail.xml || "";
           requestOutput.value = detail.requestBody || detail.xml || "";
-          responseOutput.value = JSON.stringify(
-            {
-              consecutivo: detail.consecutivo,
-              httpStatus: detail.httpStatus,
-              mensajeDian: detail.mensajeDian,
-              response: detail.response,
-            },
-            null,
-            2
-          );
+          responseOutput.value = pretty({
+            consecutivo: detail.consecutivo,
+            httpStatus: detail.httpStatus,
+            mensajeDian: detail.mensajeDian,
+            response: detail.response,
+          });
         });
       });
     }
 
-    document.getElementById("btn-preview").addEventListener("click", previewXml);
-    document.getElementById("btn-send").addEventListener("click", () => sendDocuments(false));
-    document.getElementById("btn-batch").addEventListener("click", () => sendDocuments(true));
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => setMode(tab.dataset.mode));
+    });
+    document.getElementById("btn-preview").addEventListener("click", previewForm);
+    document.getElementById("btn-send").addEventListener("click", () => sendForm(false));
+    document.getElementById("btn-batch").addEventListener("click", () => sendForm(true));
+    document.getElementById("btn-sample-kap").addEventListener("click", loadSampleKap);
+    document.getElementById("btn-preview-xml").addEventListener("click", previewPastedXml);
+    document.getElementById("btn-send-xml").addEventListener("click", sendPastedXml);
     document.getElementById("btn-copy-xml").addEventListener("click", () => {
       if (!xmlOutput.value) return;
       navigator.clipboard.writeText(xmlOutput.value);
       showToast("XML copiado", "success");
     });
-
+    document.getElementById("xml-file").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      xmlPaste.value = await file.text();
+      showToast("Archivo cargado: " + file.name, "success");
+    });
     ["subtotal", "unitPrice", "quantity", "discount"].forEach((id) => {
       document.getElementById(id).addEventListener("change", () => {
         const subtotal = Number(document.getElementById("subtotal").value) || 0;

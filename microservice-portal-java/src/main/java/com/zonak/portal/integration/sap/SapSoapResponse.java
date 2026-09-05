@@ -46,6 +46,7 @@ final class SapSoapResponse {
             String invoiceId,
             String numeroDocumento
     ) {
+        String estadoProceso = CODIGO_OK.equals(codigo) ? "PROCESADO" : "ERROR";
         return """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -55,6 +56,7 @@ final class SapSoapResponse {
                         <codigo>%s</codigo>
                         <mensaje>%s</mensaje>
                         <cufe>%s</cufe>
+                        <estadoProceso>%s</estadoProceso>
                         <idDocumento>%s</idDocumento>
                         <numeroDocumento>%s</numeroDocumento>
                       </return>
@@ -66,6 +68,7 @@ final class SapSoapResponse {
                 xmlEscape(codigo),
                 xmlEscape(mensaje),
                 xmlEscape(nullToEmpty(cufe)),
+                xmlEscape(estadoProceso),
                 xmlEscape(nullToEmpty(invoiceId)),
                 xmlEscape(nullToEmpty(numeroDocumento))
         );
