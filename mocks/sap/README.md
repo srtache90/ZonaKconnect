@@ -19,6 +19,11 @@ SOAMANAGER (SAP real) usa la misma ruta publicada:
 ```text
 Local:       http://<host>:8080/ws/enviardocumento
 Producción:  https://<dominio>/ws/enviardocumento
+
+consultarEstado (LP PORT_CONSULTAR_DOCUMENTO / proxy ZFECDCO_CONSULTAR_ESTADO):
+
+Local:       http://<host>:8080/ws/consultarestado
+Producción:  https://<dominio>/ws/consultarestado
 ```
 
 ## Credenciales locales

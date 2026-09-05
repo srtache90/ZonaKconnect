@@ -28,17 +28,36 @@ public class SapTenantResolver {
         if (cabeza == null) {
             throw new IllegalArgumentException("felCabezaDocumento requerido");
         }
-        Integer idEmpresa = parseIdEmpresa(cabeza.getIdEmpresa());
-        String usuario = trim(cabeza.getUsuario());
-        String contrasenia = trim(cabeza.getContrasenia());
-        String prefijo = trim(cabeza.getPrefijo());
+        SociedadRow sociedad = requireSociedad(
+                cabeza.getIdEmpresa(),
+                cabeza.getUsuario(),
+                cabeza.getContrasenia()
+        );
+        UUID emissionPointId = resolveEmissionPoint(sociedad.id(), trim(cabeza.getPrefijo()));
+        return new ApiTenant(sociedad.id(), emissionPointId, sociedad.razonSocial());
+    }
+
+    public UUID requireCompanyId(SapConsultarEstado consulta) {
+        if (consulta == null) {
+            throw new IllegalArgumentException("consultarEstado requerido");
+        }
+        return requireSociedad(
+                consulta.getIdEmpresa(),
+                consulta.getUsuario(),
+                consulta.getContrasenia()
+        ).id();
+    }
+
+    private SociedadRow requireSociedad(String idEmpresaRaw, String usuarioRaw, String contraseniaRaw) {
+        Integer idEmpresa = parseIdEmpresa(idEmpresaRaw);
+        String usuario = trim(usuarioRaw);
+        String contrasenia = trim(contraseniaRaw);
         if (idEmpresa == null) {
             throw new IllegalArgumentException("idEmpresa requerido para autenticar SAP");
         }
         if (!StringUtils.hasText(usuario) || !StringUtils.hasText(contrasenia)) {
             throw new IllegalArgumentException("usuario y contrasenia SAP son obligatorios");
         }
-
         SociedadRow sociedad = findByIdEmpresa(idEmpresa)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No hay sociedad con idEmpresa " + idEmpresa
@@ -46,9 +65,7 @@ public class SapTenantResolver {
         if (!constantEquals(usuario, sociedad.sapUsuario()) || !passwordMatches(contrasenia, sociedad.sapPasswordEnc())) {
             throw new IllegalArgumentException("Credenciales SAP inválidas para idEmpresa " + idEmpresa);
         }
-
-        UUID emissionPointId = resolveEmissionPoint(sociedad.id(), prefijo);
-        return new ApiTenant(sociedad.id(), emissionPointId, sociedad.razonSocial());
+        return sociedad;
     }
 
     private Optional<SociedadRow> findByIdEmpresa(Integer idEmpresa) {

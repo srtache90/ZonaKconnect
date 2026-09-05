@@ -6,8 +6,10 @@ import com.zonak.portal.config.DianGraphicRepresentationProperties;
 import com.zonak.portal.dto.DianFiscalContext;
 import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.exception.InvoiceStorageException;
+import com.zonak.portal.integration.sap.SapConsultaDocumento;
 import com.zonak.portal.integration.sap.SapDianStatus;
 import java.io.ByteArrayInputStream;
+import java.time.Instant;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -145,6 +147,57 @@ public class InvoiceReportRepository {
                 tenantId,
                 invoiceId
         );
+        return rows.stream().findFirst();
+    }
+
+    public Optional<SapConsultaDocumento> findSapDocumento(UUID tenantId, String prefijo, long numero) {
+        List<SapConsultaDocumento> rows = jdbcTemplate.query(
+                """
+                        SELECT i.id,
+                               i.prefijo,
+                               i.numero,
+                               i.estado_dian,
+                               i.uuid_cude,
+                               i.created_at,
+                               COALESCE(
+                                   NULLIF(i.dian_response_jsonb->>'statusMessage', ''),
+                                   NULLIF(i.dian_response_jsonb->>'statusDescription', ''),
+                                   NULLIF(i.dian_response_jsonb->>'dian_error_description', ''),
+                                   NULLIF(i.dian_response_jsonb->>'mensaje', ''),
+                                   NULLIF(i.dian_response_jsonb->>'status', ''),
+                                   i.estado_dian
+                               ) AS mensaje_dian
+                        FROM invoices i
+                        WHERE i.company_id = ?
+                          AND i.numero = ?
+                          AND (
+                                ? = ''
+                             OR BTRIM(i.prefijo) ILIKE BTRIM(?)
+                              )
+                        ORDER BY i.updated_at DESC
+                        LIMIT 2
+                        """,
+                (rs, rowNum) -> new SapConsultaDocumento(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("prefijo"),
+                        rs.getLong("numero"),
+                        rs.getString("estado_dian"),
+                        rs.getString("uuid_cude"),
+                        rs.getString("mensaje_dian"),
+                        rs.getTimestamp("created_at") == null
+                                ? null
+                                : rs.getTimestamp("created_at").toInstant()
+                ),
+                tenantId,
+                numero,
+                prefijo == null ? "" : prefijo.trim(),
+                prefijo == null ? "" : prefijo.trim()
+        );
+        if (rows.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Hay varios documentos con consecutivo " + numero + ". Envíe prefijo."
+            );
+        }
         return rows.stream().findFirst();
     }
 
