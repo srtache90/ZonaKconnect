@@ -1,7 +1,12 @@
 ﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
+    
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Reportes de Emisión | Zona K e-Docs')}"></th:block>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zona K e-Docs</title>
+    <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'inicio')}"></div>
@@ -14,9 +19,9 @@
         <p class="dc-page-subtitle">Consultas analíticas y exportaciones normativas de facturación electrónica.</p>
     </div>
 
-    <section class="row g-4">
-        <div class="col-md-6">
-            <article class="card zk-card h-100">
+    <section class="row g-4" style="margin-left: 120px;">
+        <div class="col-md-4">
+            <article class="card zk-card h-80">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Reporte detallado de ventas</h3>
                     <p class="text-muted small mb-4">
@@ -29,8 +34,8 @@
                 </div>
             </article>
         </div>
-        <div class="col-md-6">
-            <article class="card zk-card h-100">
+        <div class="col-md-4">
+            <article class="card zk-card h-80">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Medios magnéticos DIAN</h3>
                     <p class="text-muted small mb-4">
@@ -43,8 +48,8 @@
                 </div>
             </article>
         </div>
-        <div class="col-md-6">
-            <article class="card zk-card h-100">
+        <div class="col-md-4">
+            <article class="card zk-card h-80">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Documentos y eventos RADIAN</h3>
                     <p class="text-muted small mb-4">

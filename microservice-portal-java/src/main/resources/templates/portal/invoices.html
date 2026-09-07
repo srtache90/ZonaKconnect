@@ -126,7 +126,7 @@
         </p>
     </section>
 
-    <section class="zk-filter-card p-4 mb-4">
+    <section class="zk-filter-card p-4 mb-4"  style="font-size: 11px;">
         <form class="grid grid-cols-1 md:grid-cols-4 gap-6" method="get" th:action="@{/portal/invoices}">
             <input name="sociedadId" th:value="${selectedSociedadId}" type="hidden">
             <input name="emissionPointId" th:value="${selectedEmissionPointId}" type="hidden">
@@ -134,7 +134,7 @@
                 <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Filtrar por Estado</label>
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">person_search</span>
-                    <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
+                    <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md" style="text-transform: uppercase; font-size: 11px;"
                            name="estado"
                            placeholder="ENVIADO / RECHAZADO_DIAN..."
                            th:value="${estado}"
