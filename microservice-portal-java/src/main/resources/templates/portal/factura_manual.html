@@ -31,14 +31,15 @@
                     </button>
                 </h2>
                 <div id="general" class="accordion-panel">
-                    <div class="accordion-body row g-3">
+                    <div class="accordion-body row g-3" style="position:relative; min-height: 200px;">
                         <div class="col-12" th:if="${#lists.isEmpty(sociedades) or #lists.isEmpty(puntosVenta)}">
                             <div class="alert alert-warning mb-0">
                                 No hay sociedades autorizadas o puntos de venta activos. Configure una sociedad y un punto de venta antes de emitir.
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="row g-3">
+                        <div class="col-md-5">
                             <label class="form-label" for="tipoOperacion">Tipo de documento</label>
                             <select class="form-select" id="tipoOperacion" name="tipoOperacion" required>
                                 <option value="01" th:selected="${selectedTipoOperacion == '01'}">01 - Factura estándar</option>
@@ -47,7 +48,8 @@
                                 <option value="05" th:selected="${selectedTipoOperacion == '05'}">05 - Factura de contingencia</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-7"></div>
+                        <div class="col-md-9">
                             <label class="form-label" for="sociedadId">Sociedad</label>
                             <select class="form-select" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()" required>
                                 <option value="">Seleccione...</option>
@@ -59,7 +61,8 @@
                                 </option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3"></div>
+                        <div class="col-md-6">
                             <label class="form-label" for="emissionPointId">Punto de venta</label>
                             <select class="form-select" id="emissionPointId" name="emissionPointId" required>
                                 <option value="">Seleccione...</option>
@@ -77,49 +80,46 @@
                                     PV
                                 </option>
                             </select>
-                            <div class="form-text" id="emissionPointHint">El Core asigna prefijo y consecutivo del rango activo del punto seleccionado.</div>
-                        </div>
+                                <div class="form-text mt-1 text-muted " id="emissionPointHint" style="font-size: 0.75rem; min-width: 320px;">Próximo consecutivo NC: <strong>NC1</strong> (misma resolución DIAN del punto). </div>                      
+                            </div>
 
                         <div class="col-md-3">
-                            <label class="form-label" for="formaPago">Forma de pago</label>
-                            <select class="form-select" id="formaPago" name="formaPago">
+                            <label class="form-label text-center d-block " for="formaPago" style="font-size: 0.75rem; color: #495057;">Forma de pago</label>
+                            <select class="form-select select-ovalado-zk text-center" id="formaPago" name="formaPago">
                                 <option value="Contado">Contado</option>
                                 <option value="Crédito">Crédito</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label" for="metodoPago">Método de pago</label>
-                            <select class="form-select" id="metodoPago" name="metodoPago">
+                            <label class="form-label text-center d-block " for="metodoPago" style="font-size: 0.75rem; color: #495057;">Método de pago</label>
+                            <select class="form-select select-ovalado-zk text-center" id="metodoPago" name="metodoPago">
                                 <option value="Efectivo">Efectivo</option>
                                 <option value="Tarjeta">Tarjeta</option>
                                 <option value="Transferencia">Transferencia</option>
                             </select>
                         </div>
-
-                        <div class="col-12 border rounded p-3 bg-white"
+                    </div>
+                        <div class="col-12 border rounded p-4 bg-white mt-4 shadow-sm"
                              id="creditNoteFields"
-                             th:classappend="${selectedTipoOperacion != '91' and selectedTipoOperacion != '92'} ? ' d-none' : ''">
-                            <h3 class="h6" id="referenceNoteTitle">Referencia de nota crédito/débito</h3>
+                             th:classappend="${selectedTipoOperacion != '91' and selectedTipoOperacion != '92'} ? ' d-none' : ''" style="border-radius:16px !important; border-color: #dee2e6 !important; " >
+                            <h3 class="h6 mb-3 fw-bold text-dark" id="referenceNoteTitle" style="font-size: 0.95rem; color: #1e293b">Referencia de nota crédito/débito</h3>
                             <div class="row g-3">
-                                <div class="col-md-5">
-                                    <label class="form-label" for="cufeReferencia">CUFE/CUDE referencia</label>
-                                    <input class="form-control" id="cufeReferencia" name="cufeReferencia" maxlength="96"
-                                           th:value="${prefillCufeReferencia}">
-                                    <div class="form-text">Obligatorio para NC/ND. Debe tener 96 caracteres.</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label" for="numeroDocumentoReferencia">Factura referenciada</label>
-                                    <input class="form-control" id="numeroDocumentoReferencia" name="numeroDocumentoReferencia" placeholder="FE123"
-                                           th:value="${prefillNumeroDocumentoReferencia}">
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1 " for="cufeReferencia" style="font-size:0.85rem; font-weight: 600;padding-left:8px;" >CUFE/CUDE referencia</label>
+                                    <input type="text" class="form-control input-ovalado-zk text-center " id="cufeReferencia" name="cufeReferencia" maxlength="96" th:value="${prefillCufeReferencia}" placeholder="Ingrese el hash de 96 caracteres" style="border: 1px solid #ced4da; border-radius: 30px; padding: 10px 18px; font-size: 0.9rem; height: 42px;">
+                                    <div class="form-text mt-1 text-muted px-2" style="font-size:0.72rem;">Obligatorio para NC/ND. Debe tener 96 caracteres.</div>
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label" for="fechaEmisionReferencia">Fecha factura</label>
-                                    <input class="form-control" id="fechaEmisionReferencia" name="fechaEmisionReferencia" type="date"
-                                           th:value="${prefillFechaEmisionReferencia}">
+                                    <label class="form-label mb-1 text-center d-block" for="numeroDocumentoReferencia" style="font-size: 0.85rem; font-weight: 600; white-space: nowrap;">Factura referenciada</label>
+                                    <input type="text" class="form-control input-ovalado-zk text-center" id="numeroDocumentoReferencia" name="numeroDocumentoReferencia" placeholder="FE123" th:value="${prefillNumeroDocumentoReferencia}" style="border: 1px solid #ced4da ; border-radius:30px; padding:10px 18px; font-size:0.9rem; height: 42px;">
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label" for="conceptoCredito">Concepto</label>
-                                    <select class="form-select" id="conceptoCredito" name="conceptoCredito">
+                                <div class="col-md-2 d-flex flex-column justify-content-end">
+                                    <label class="form-label mb-1 text-center d-block" for="fechaEmisionReferencia" style="font-size: 0.85rem; font-weight: 600; white-space: nowrap !important;">Fecha factura</label>
+                                    <input type="date" class="form-control input-ovalado-zk text-center" id="fechaEmisionReferencia" name="fechaEmisionReferencia" th:value="${prefillFechaEmisionReferencia}" style="height: 42px !important; border: 1px solid #ced4da; border-radius: 30px; font-size: 0.9rem; padding-top: 0; padding-bottom: 0;">
+                                </div>                                <div class="col-md-2">
+                                    <label class="form-label mb-1" for="conceptoCredito" style="font-size: 0.85rem; font-weight:f 600;padding-left:8px;">Concepto</label>
+                                    <select class="form-select input-ovalado-zk" id="conceptoCredito" name="conceptoCredito" style=" border:  1px solid #ced4da; border-radius: 30px; padding: 10px 18px; font-size: 0.9rem; height: 42px;
+                                    ">
                                         <option value="1">1 - Devolución / Intereses</option>
                                         <option value="2">2 - Anulación / Mayor valor</option>
                                         <option value="3">3 - Rebaja / Otros</option>
@@ -220,15 +220,37 @@
                     </button>
                 </h2>
                 <div id="totals" class="accordion-panel d-none">
-                    <div class="accordion-body row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label" for="propinaValor">Propina</label>
-                            <input class="form-control text-end" id="propinaValor" name="propinaValor" type="number" min="0" step="0.01" value="0">
-                            <div class="form-text">Se suma al total a pagar como cargo global; no afecta base gravable de IVA/INC.</div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="card bg-white">
-                                <div class="card-body">
+                    <div class="accordion-body row g-3 position-relative" style="min-height: 255px;">
+                       <div class="p-4 rounded-3 border-0 bg-light" style="border-radius: 16px !important; background-color: #e6dcc6; max-width: 500px; max-height: 167px; margin-left:90px; margin-top:40px">
+
+    
+    <!-- Título en Mayúsculas -->
+    <label class="form-label fw-bold text-secondary mb-3" for="propinaValor" style="font-size: 0.8rem; letter-spacing: 0.5px; color: #475569;">
+        PROPINA VOLUNTARIA
+    </label>
+    
+    <!-- Input estilo Píldora con el símbolo $ adentro -->
+    <div class="input-group mb-3" style="max-width: 320px;  border: 1px solid #ced4da; border-radius: 30px; background-color: #ffffff; overflow: hidden;">
+        <span class="input-group-text bg-transparent border-0 text-muted fw-medium" style="padding-left: 18px; padding-right: 4px; font-size: 0.95rem;">$</span>
+        <input class="form-control border-start-0 ps-1 fw-bold" 
+               id="propinaValor" 
+               name="propinaValor" 
+               type="number" 
+               min="0" 
+               step="0.01" 
+               value="0" 
+               style="border-radius: 0 30px 30px 0; padding-right: 16px;">
+    </div>
+    
+    <!-- Texto con icono de información abajo -->
+    <div class="form-text text-muted d-flex align-items-start gap-2 lh-base" style="font-size: 0.8rem; color: #64748b;">
+        <i class="bi bi-info-circle mt-0.5" style="font-size: 0.9rem;"></i>
+        <span>Se suma al total a pagar como cargo global. No afecta la base gravable de IVA ni impuesto al consumo (INC).</span>
+    </div>
+
+</div>
+                            <div class="card bg-white" style="  position: absolute !important; right: 20px !important; top: 35px !important; width: 320px !important; margin-right: 40px !important;">
+                                <div class="card-body w-30">
                                     <div class="d-flex justify-content-between"><span>Subtotal gravable</span><strong id="subtotalValue">$ 0,00</strong></div>
                                     <div class="d-flex justify-content-between"><span>IVA</span><strong id="ivaValue">$ 0,00</strong></div>
                                     <div class="d-flex justify-content-between"><span>Retenciones</span><strong id="retentionsValue">$ 0,00</strong></div>
@@ -237,7 +259,6 @@
                                     <div class="d-flex justify-content-between h5"><span>Total a emitir</span><strong id="totalValue">$ 0,00</strong></div>
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
             </section>

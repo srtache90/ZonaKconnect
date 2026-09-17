@@ -1987,13 +1987,14 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 		if subtotal < 0 {
 			subtotal = 0
 		}
-		taxes := normalizeDianTaxes(item.Impuestos, subtotal, quantity, "94")
+		unitCode := defaultString(item.UnidadMedida, "94")
+		taxes := normalizeDianTaxes(item.Impuestos, subtotal, quantity, unitCode )
 		items = append(items, dianInvoiceItem{
 			NumeroLinea:    i + 1,
 			Codigo:         defaultString(item.Codigo, fmt.Sprintf("ND-ITEM-%03d", i+1)),
 			Descripcion:    defaultString(item.Descripcion, "Ajuste de nota debito"),
 			Cantidad:       quantity,
-			UnidadMedida:   "94",
+			UnidadMedida:   unitCode,
 			PrecioUnitario: item.PrecioUnitario,
 			Descuento:      item.Descuento,
 			Subtotal:       subtotal,
@@ -2020,7 +2021,7 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 			concepts[i].Codigo = "1"
 		}
 		if concepts[i].Descripcion == "" {
-			concepts[i].Descripcion = "Intereses"
+			concepts[i].Descripcion = "InteresesS"
 		}
 	}
 
