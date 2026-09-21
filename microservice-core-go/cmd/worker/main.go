@@ -44,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go runSweepLoop(ctx, db, processor, sweepPublisher)
+	go runSweepLoop(ctx, processor, sweepPublisher)
 
 	log.Printf("core-worker started queue=%s sweep_interval=%s", queueURL, sweepInterval())
 	if err := consumer.Run(ctx); err != nil && ctx.Err() == nil {
@@ -52,22 +52,22 @@ func main() {
 	}
 }
 
-func runSweepLoop(ctx context.Context, db *pgxpool.Pool, processor *emission.RadianSyncService, publisher queue.Publisher) {
+func runSweepLoop(ctx context.Context, processor *emission.RadianSyncService, publisher queue.Publisher) {
 	ticker := time.NewTicker(sweepInterval())
 	defer ticker.Stop()
 
-	runSweep(ctx, db, processor, publisher)
+	runSweep(ctx, processor, publisher)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			runSweep(ctx, db, processor, publisher)
+			runSweep(ctx, processor, publisher)
 		}
 	}
 }
 
-func runSweep(ctx context.Context, db *pgxpool.Pool, processor *emission.RadianSyncService, publisher queue.Publisher) {
+func runSweep(ctx context.Context, processor *emission.RadianSyncService, publisher queue.Publisher) {
 	tenantIDs, err := processor.ListActiveTenantIDs(ctx)
 	if err != nil {
 		log.Printf("radian_sweep list tenants error: %v", err)

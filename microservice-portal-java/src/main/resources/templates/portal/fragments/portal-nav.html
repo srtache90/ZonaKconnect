@@ -1,8 +1,68 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+<style>
+    #sidebar-drawer nav > a {
+        min-height: 56px;
+        width: 100%;
+    }
+
+    #sidebar-drawer nav > a > span:first-child {
+        flex-shrink: 0;
+    }
+
+    #sidebar-drawer nav > a > span:last-child {
+        white-space: nowrap !important;
+    }
+
+    #sidebar-drawer {
+        width: 320px !important;
+        background: #ffffff !important;
+        border-right: 1px solid #e5e7eb !important;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    #sidebar-drawer nav > a {
+        color: #475569 !important;
+        border: 1px solid transparent;
+        border-radius: 10px !important;
+        transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    #sidebar-drawer nav > a:hover {
+        background: #f8fafc !important;
+        border-color: #eef0f2;
+        color: #0f172a !important;
+    }
+
+    #sidebar-drawer nav > a[class*="bg-primary/5"] {
+        background: #f3f5f6 !important;
+        border-color: #e6e9eb !important;
+        color: #0f172a !important;
+        box-shadow: inset 3px 0 0 #967117 !important;
+    }
+
+    #sidebar-drawer nav > a[class*="bg-primary/5"] > span:first-child {
+        color: #806521 !important;
+    }
+
+    #sidebar-drawer > div > div:first-child {
+        background: #ffffff;
+        border-bottom-color: #eef0f2 !important;
+    }
+
+    #sidebar-drawer > div > div:last-child {
+        border-top-color: #eef0f2 !important;
+    }
+
+    #sidebar-drawer > div > div:last-child > div {
+        background: #f8fafb !important;
+        border: 1px solid #eef0f2;
+        border-radius: 12px !important;
+    }
+</style>
 <body>
 <th:block th:fragment="sidebar(module, activeMenu)">
-    <aside class="fixed inset-y-0 left-0 w-72 bg-surface border-r border-surface-container-highest z-[60] -translate-x-full transition-transform duration-300 ease-in-out shadow-xl" id="sidebar-drawer">
+    <aside class="fixed inset-y-0 left-0 w-80 bg-surface border-r border-surface-container-highest z-[60] -translate-x-full transition-transform duration-300 ease-in-out shadow-xl" id="sidebar-drawer">
         <div class="flex flex-col h-full">
             <div class="h-16 flex items-center px-6 border-b border-surface-container-highest">
                 <div class="flex items-center gap-3">
@@ -13,33 +73,33 @@
                 </div>
             </div>
 
-            <nav class="flex-1 py-6 px-4 flex flex-col gap-2">
-                <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md"
+            <nav class="flex-1 py-6 px-4 flex flex-col gap-3">
+                <a class="flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md"
                    th:href="@{/portal}">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    <span>Panel de módulos</span>
+                    <span class="material-symbols-outlined shrink-0">dashboard</span>
+                    <span class="whitespace-nowrap">Panel de módulos</span>
                 </a>
 
                 <th:block th:if="${module == 'emision'}">
                     <a th:href="@{/portal/invoices}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'emision' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
-                        <span class="material-symbols-outlined">description</span>
-                        <span>Emisión de facturas</span>
+                       th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'emision' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">description</span>
+                        <span class="whitespace-nowrap">Emisión de facturas</span>
                     </a>
                     <a th:href="@{/portal/emision/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
-                        <span class="material-symbols-outlined">analytics</span>
-                        <span>Reportes</span>
+                       th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">analytics</span>
+                        <span class="whitespace-nowrap">Reportes</span>
                     </a>
                     <a th:href="@{/portal/facturacion/manual}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
-                        <span class="material-symbols-outlined">add_circle</span>
-                        <span>Emitir factura</span>
+                       th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">add_circle</span>
+                        <span class="whitespace-nowrap">Emitir factura</span>
                     </a>
                     <a th:href="@{/portal/facturacion/nota-credito}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
-                        <span class="material-symbols-outlined">receipt_long</span>
-                        <span>Nota crédito</span>
+                       th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">receipt_long</span>
+                        <span class="whitespace-nowrap">Nota crédito</span>
                     </a>
                 </th:block>
 
@@ -177,6 +237,13 @@
 <th:block th:fragment="header">
     <header class="zk-module-header fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop border-b">
         <div class="flex items-center gap-3">
+            <button class="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    type="button"
+                    aria-label="Volver a la página anterior"
+                    title="Volver a la página anterior"
+                    onclick="history.back()">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
             <button class="zk-module-header-menu p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors" id="sidebar-open" type="button">
                 <span class="material-symbols-outlined">menu</span>
             </button>

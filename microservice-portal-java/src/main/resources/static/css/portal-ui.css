@@ -221,23 +221,6 @@ small.text-muted {
     color: #ffffff !important;
 }
 
-.zk-invoices-header,
-.zk-invoices-menu,
-.zk-invoices-brand,
-.zk-invoices-logo {
-    /* alias legacy templates */
-}
-
-.zk-invoices-header {
-    background: var(--dc-header-bg) !important;
-    border-bottom-color: var(--dc-header-border) !important;
-}
-
-.zk-invoices-brand {
-    color: #ffffff !important;
-    letter-spacing: .01em;
-}
-
 .zk-invoices-brand span {
     color: var(--dc-brand-subtitle) !important;
     font-size: 10px;

@@ -959,28 +959,13 @@ data-theme="light">
                     Cuota mensual (Docs)
                 </span>
 
-                <strong>
-                    No disponible
-                </strong>
+                <strong>Sin límite configurado</strong>
 
             </div>
 
 
-            <div style="
-                width:100%;
-                height:7px;
-                background:#e8e6e2;
-                border-radius:10px;
-                overflow:hidden;
-            ">
-
-                <div style="
-                    width:0%;
-                    height:100%;
-                    background:#d0ceca;
-                    border-radius:10px;
-                "></div>
-
+            <div style="font-size:10px;color:#64748b;">
+                <span th:text="${kpiEmittedMonth + ' documentos emitidos este mes'}">0 documentos emitidos este mes</span>
             </div>
 
         </section>
