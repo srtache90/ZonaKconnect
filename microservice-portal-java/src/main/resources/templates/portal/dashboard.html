@@ -436,6 +436,7 @@ data-theme="light">
     <!-- El contenido interno (divs, p, etc.) se queda exactamente igual -->
     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
         <div style="display:flex; align-items:center; gap:10px;">
+            <div class="fs-3 mb-2">🧾</div>
             <strong style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:1.25; color:#181818;">
                 Emisión de Facturación
             </strong>
@@ -479,7 +480,7 @@ data-theme="light">
                             align-items:center;
                             gap:10px;
                         ">
-
+                        <div class="fs-3 mb-2">📊</div>
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -550,7 +551,7 @@ data-theme="light">
                             gap:10px;
                         ">
 
-
+                        <div class="fs-3 mb-2">📥</div>
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -624,7 +625,7 @@ data-theme="light">
                             gap:10px;
                         ">
 
-
+                            <div class="fs-3 mb-2">📄</div>
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -698,7 +699,7 @@ data-theme="light">
                         ">
 
                             
-
+                        <div class="fs-3 mb-2">👥</div>
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -771,7 +772,7 @@ data-theme="light">
                         ">
 
                           
-
+                            <div class="fs-3 mb-2">⚙️</div>
                             <strong style="
                                 font-family:Arial, Helvetica, sans-serif;
                                 font-size:14px;
@@ -951,22 +952,32 @@ data-theme="light">
                 justify-content:space-between;
                 align-items:center;
                 margin-bottom:7px;
-                font-size:10px;
-                color:#444444;
+                font-size:11px;
+                color: #4a443c;
             ">
 
                 <span>
                     Cuota mensual (Docs)
                 </span>
 
-                <strong>Sin límite configurado</strong>
+                <strong style="color: #6B5E4C;">Sin límite configurado</strong>
 
             </div>
 
 
-            <div style="font-size:10px;color:#64748b;">
+
+            <div style="font-size:11px;color:#8A8172; margin-bottom:15px; display:flex; justify-content:space-beetwen; align-items:center;">
                 <span th:text="${kpiEmittedMonth + ' documentos emitidos este mes'}">0 documentos emitidos este mes</span>
             </div>
+            <div style="display: flex; gap: 4px;">
+                <button onclick="exportarReporte('PDF')" style="background-color: #8A8172; color: #FFFFFF; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">PDF</button>
+                <button onclick="exportarReporte('Excel')" style="background-color: #A39785; color: #FFFFFF; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">EXCEL</button>
+            </div>
+        </div>
+        <div style="position: relative; width: 100%; height: 120px;">
+            <canvas id="graficoConsumoMensual"></canvas>
+        </div>
+    </div>
 
         </section>
 
@@ -1244,6 +1255,51 @@ data-theme="light">
 }
 
 </style>
+
+<!-- Importar Chart.js correctamente desde el CDN -->
+<script src="https://jsdelivr.net" onload="inicializarGrafico()"></script>
+
+<script>
+    function inicializarGrafico() {
+        const elCanvas = document.getElementById('graficoConsumoMensual');
+        
+        if (elCanvas) {
+            const ctx = elCanvas.getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar'],
+                    datasets: [{
+                        data: [10,11,11,1,2,3], // Tus datos de prueba
+                        backgroundColor: '#C2B49A',
+                        hoverBackgroundColor: '#8A8172',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#6B5E4C', font: { size: 9 } }
+                        },
+                        y: {
+                            grid: { color: '#E6DEC9' },
+                            ticks: { color: '#6B5E4C', font: { size: 9 } }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("No se encontró el lienzo 'graficoConsumoMensual' en el DOM.");
+        }
+    }
+</script>
 
 
 </body>

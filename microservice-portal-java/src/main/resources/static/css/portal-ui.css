@@ -365,7 +365,7 @@ button.btn {
     background: var(--dc-primary) !important;
     border-color: var(--dc-primary) !important;
     color: var(--dc-on-primary) !important;
-    width:120px;
+    width:190px;
     justify-content:center;
 }
 
