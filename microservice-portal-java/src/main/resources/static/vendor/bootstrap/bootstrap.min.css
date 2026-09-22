@@ -1233,7 +1233,8 @@ progress {
 
     .col-md-2 {
         flex: 0 0 auto;
-        width: 16.66666667%
+        width: 16.66666667%;
+        padding: 0px 10px 20px 10px 
     }
 
     .col-md-3 {
@@ -2679,6 +2680,12 @@ textarea.form-control-lg {
 .form-check-inline {
     display: inline-block;
     margin-right: 1rem
+}
+.btn-01.btn.btn-zk{
+    border: 1px solid #f1f1f1f1;
+    border-radius: 20px;
+    max-width: 90px;
+    background-color: rgba((89, 223, 89, 0.658)9, 223, 89);
 }
 
 .btn-check {
