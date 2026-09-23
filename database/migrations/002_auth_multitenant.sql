@@ -64,7 +64,8 @@ BEGIN
           AND table_name = 'sociedades'
           AND column_name = 'dian_regimen_fiscal'
     ) THEN
-        ALTER TABLE sociedades ALTER COLUMN dian_regimen_fiscal SET DEFAULT 'ZZ';
+        -- schema.sql CHECK no admite ZZ; O-23 es válido ahí y en 021/022 (lista DIAN).
+        ALTER TABLE sociedades ALTER COLUMN dian_regimen_fiscal SET DEFAULT 'O-23';
         INSERT INTO sociedades (
             id,
             razon_social,
@@ -89,7 +90,7 @@ BEGIN
             587,
             'smtp-local',
             'LOCAL_ENCRYPTED_PLACEHOLDER',
-            'ZZ'
+            'O-23'
         )
         ON CONFLICT (id) DO UPDATE SET
             razon_social = EXCLUDED.razon_social,
@@ -100,7 +101,8 @@ BEGIN
             host_smtp = EXCLUDED.host_smtp,
             puerto_smtp = EXCLUDED.puerto_smtp,
             usuario_smtp = EXCLUDED.usuario_smtp,
-            password_smtp_enc = EXCLUDED.password_smtp_enc;
+            password_smtp_enc = EXCLUDED.password_smtp_enc,
+            dian_regimen_fiscal = EXCLUDED.dian_regimen_fiscal;
     ELSE
         INSERT INTO sociedades (
             id,
