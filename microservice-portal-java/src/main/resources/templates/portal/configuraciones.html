@@ -2,6 +2,60 @@
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Configuraciones | Zona K e-Docs')}"></th:block>
+    <style>
+        .settings-module-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px 20px !important;
+        }
+
+        .settings-module-grid > [class*="col-"] {
+            width: auto !important;
+            max-width: none !important;
+            padding: 0 !important;
+        }
+
+        .settings-module-card {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 150px;
+            height: 150px !important;
+            left: auto !important;
+            padding: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 14px !important;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .settings-module-card:hover {
+            border-color: #bae6fd !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .settings-module-card .card-body {
+            padding: 20px;
+        }
+
+        .settings-dian-card {
+            width: 100% !important;
+            min-width: 0 !important;
+            left: auto !important;
+            padding: 0 !important;
+        }
+
+        @media (max-width: 991.98px) {
+            .settings-module-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .settings-module-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -16,7 +70,7 @@
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
 
-    <section class="card zk-card mb-4">
+    <section class="card zk-card settings-dian-card mb-4">
         <div class="card-body p-0">
             <div class="px-4 py-4 border-bottom">
                 <h2 class="h4 mb-1">Web Service DIAN por sociedad</h2>
@@ -69,9 +123,9 @@
         </div>
     </section>
 
-    <section class="row g-4">
+    <section class="row g-4 settings-module-grid">
         <div class="col-md-6 col-xl-4">
-            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/sociedades}">
+            <a class="card zk-card settings-module-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/sociedades}">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Sociedades</h3>
                     <p class="text-muted small mb-0">Crear y editar sociedades, NIT, correos y credenciales SMTP/IMAP.</p>
@@ -79,7 +133,7 @@
             </a>
         </div>
         <div class="col-md-6 col-xl-4">
-            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/puntos-venta}">
+            <a class="card zk-card settings-module-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/puntos-venta}">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Puntos de venta</h3>
                     <p class="text-muted small mb-0">Prefijo, resolución DIAN, clave técnica y rangos FE/NC/ND.</p>
@@ -87,7 +141,7 @@
             </a>
         </div>
         <div class="col-md-6 col-xl-4">
-            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/certificados}">
+            <a class="card zk-card settings-module-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/certificados}">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Certificados digitales</h3>
                     <p class="text-muted small mb-0">Cargar certificados .pfx/.p12 y controlar vigencia por sociedad.</p>
@@ -95,7 +149,7 @@
             </a>
         </div>
         <div class="col-md-6 col-xl-4">
-            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/usuarios}">
+            <a class="card zk-card settings-module-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/usuarios}">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Usuarios y roles</h3>
                     <p class="text-muted small mb-0">ADMIN, EMISOR, RECEPTOR, CONSULTA; sociedades y alcance por punto de venta.</p>
@@ -103,7 +157,7 @@
             </a>
         </div>
         <div class="col-md-6 col-xl-4">
-            <a class="card zk-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/proveedores-punto}">
+            <a class="card zk-card settings-module-card h-100 text-decoration-none text-reset" th:href="@{/portal/admin/proveedores-punto}">
                 <div class="card-body">
                     <h3 class="h5 mb-2">Proveedor → Punto</h3>
                     <p class="text-muted small mb-0">Enruta facturas recibidas al PV según NIT del proveedor.</p>

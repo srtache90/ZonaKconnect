@@ -356,7 +356,7 @@
                                     Recibo
                                 </button>
                                 <button type="button"
-                                        class="btn btn-zk"
+                                        class="btn-01 btn btn-zk"
                                         th:disabled="${invoice.estadoDian.name() != 'RECIBIDA_086' or !invoice.cufeValid}"
                                         th:attr="data-url=@{/api/v1/recepcion/{id}/aceptacion-087(id=${invoice.id})}"
                                         onclick="postEvent(this)">

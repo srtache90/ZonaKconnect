@@ -105,6 +105,7 @@ type invoiceItem struct {
 	Codigo         string    `json:"codigo"`
 	Descripcion    string    `json:"descripcion"`
 	Cantidad       float64   `json:"cantidad"`
+	UnidadMedida   string    `json:"unidad_medida,omitempty"`
 	PrecioUnitario float64   `json:"precio_unitario"`
 	Descuento      float64   `json:"descuento"`
 	Impuestos      []dianTax `json:"impuestos,omitempty"`
@@ -1392,13 +1393,13 @@ func (a *app) handleDashboardKpis(w http.ResponseWriter, r *http.Request) {
 	`, tenantID).Scan(&pendingReception)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"emitted_today":       emittedToday,
-		"emitted_month":       emittedMonth,
-		"accepted_dian":       accepted,
-		"rejected_dian":       rejected,
-		"pending_reception":   pendingReception,
-		"support_documents":   supportCount,
-		"payroll_documents":   payrollCount,
+		"emitted_today":     emittedToday,
+		"emitted_month":     emittedMonth,
+		"accepted_dian":     accepted,
+		"rejected_dian":     rejected,
+		"pending_reception": pendingReception,
+		"support_documents": supportCount,
+		"payroll_documents": payrollCount,
 	})
 }
 
@@ -1934,10 +1935,10 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 		Moneda:           "COP",
 		Emisor:           buildDianEmisor(emissionCtx),
 		Cliente:          buildDianCustomer(req.Cliente),
-		Items:         items,
-		Totales:       totals,
-		Observaciones: "Factura generada desde Core Go y emitida por DIAN_NET",
-		Notas:         []string{},
+		Items:            items,
+		Totales:          totals,
+		Observaciones:    "Factura generada desde Core Go y emitida por DIAN_NET",
+		Notas:            []string{},
 		ConfiguracionDian: dianConfigDTO{
 			NumeroResolucion: emissionCtx.ResolucionDIAN,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
@@ -1999,15 +2000,15 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 	}
 
 	return dianCreditNote{
-		TipoDocumento:      "NC",
-		CustomizationID:    defaultString(req.CustomizationID, "20"),
-		CreditNoteTypeCode: defaultString(req.CreditNoteTypeCode, "91"),
-		NumeroDocumento:    fmt.Sprintf("%s%d", prefijo, numero),
-		FechaEmision:       now,
-		Moneda:             "COP",
-		FacturaReferencia:  reference,
-		Emisor:             buildDianEmisor(emissionCtx),
-		Cliente:            buildDianCustomer(req.Cliente),
+		TipoDocumento:       "NC",
+		CustomizationID:     defaultString(req.CustomizationID, "20"),
+		CreditNoteTypeCode:  defaultString(req.CreditNoteTypeCode, "91"),
+		NumeroDocumento:     fmt.Sprintf("%s%d", prefijo, numero),
+		FechaEmision:        now,
+		Moneda:              "COP",
+		FacturaReferencia:   reference,
+		Emisor:              buildDianEmisor(emissionCtx),
+		Cliente:             buildDianCustomer(req.Cliente),
 		ConceptosCorreccion: concepts,
 		Items:               items,
 		Totales:             totals,
@@ -2038,13 +2039,14 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 		if subtotal < 0 {
 			subtotal = 0
 		}
-		taxes := normalizeDianTaxes(item.Impuestos, subtotal, quantity, "94")
+		unitCode := defaultString(item.UnidadMedida, "94")
+		taxes := normalizeDianTaxes(item.Impuestos, subtotal, quantity, unitCode)
 		items = append(items, dianInvoiceItem{
 			NumeroLinea:    i + 1,
 			Codigo:         defaultString(item.Codigo, fmt.Sprintf("ND-ITEM-%03d", i+1)),
 			Descripcion:    defaultString(item.Descripcion, "Ajuste de nota debito"),
 			Cantidad:       quantity,
-			UnidadMedida:   "94",
+			UnidadMedida:   unitCode,
 			PrecioUnitario: item.PrecioUnitario,
 			Descuento:      item.Descuento,
 			Subtotal:       subtotal,
@@ -2071,20 +2073,20 @@ func buildDianDebitNote(req createDebitNoteRequest, emissionCtx companyEmissionC
 			concepts[i].Codigo = "1"
 		}
 		if concepts[i].Descripcion == "" {
-			concepts[i].Descripcion = "Intereses"
+			concepts[i].Descripcion = "InteresesS"
 		}
 	}
 
 	return dianDebitNote{
-		TipoDocumento:     "ND",
-		CustomizationID:   defaultString(req.CustomizationID, "30"),
-		DebitNoteTypeCode: defaultString(req.DebitNoteTypeCode, "92"),
-		NumeroDocumento:   fmt.Sprintf("%s%d", prefijo, numero),
-		FechaEmision:      now,
-		Moneda:            "COP",
-		FacturaReferencia: reference,
-		Emisor:            buildDianEmisor(emissionCtx),
-		Cliente:           buildDianCustomer(req.Cliente),
+		TipoDocumento:       "ND",
+		CustomizationID:     defaultString(req.CustomizationID, "30"),
+		DebitNoteTypeCode:   defaultString(req.DebitNoteTypeCode, "92"),
+		NumeroDocumento:     fmt.Sprintf("%s%d", prefijo, numero),
+		FechaEmision:        now,
+		Moneda:              "COP",
+		FacturaReferencia:   reference,
+		Emisor:              buildDianEmisor(emissionCtx),
+		Cliente:             buildDianCustomer(req.Cliente),
 		ConceptosCorreccion: concepts,
 		Items:               items,
 		Totales:             totals,

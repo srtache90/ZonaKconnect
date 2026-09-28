@@ -46,7 +46,8 @@ public class PortalDashboardController {
         String emissionPointId = session.getAttribute("emissionPointId") != null
                 ? session.getAttribute("emissionPointId").toString()
                 : "";
-        Map<String, Object> kpis = resolveDashboardKpis(tenantId, emissionPointId);
+        DashboardData dashboardData = resolveDashboardKpis(tenantId, emissionPointId);
+        Map<String, Object> kpis = dashboardData.kpis();
         List<PortalAnalyticsRepository.RecentActivity> actividadReciente;
         try {
             actividadReciente = portalAnalyticsRepository.recentActivities(UUID.fromString(tenantId));
@@ -54,13 +55,19 @@ public class PortalDashboardController {
             actividadReciente = List.of();
         }
         model.addAttribute("actividadReciente", actividadReciente);
-        model.addAttribute("emissionServiceStatus", kpis.isEmpty() ? "Sin datos" : "Operativo");
-        model.addAttribute("receptionServiceStatus", actividadReciente.isEmpty() ? "Sin actividad" : "Operativo");
         long accepted = asLong(kpis.get("accepted_dian"));
         long rejected = asLong(kpis.get("rejected_dian"));
-        model.addAttribute("validationStatus", accepted + rejected > 0 ? "Con resultados" : "Sin actividad");
+        long pendingReception = asLong(kpis.get("pending_reception"));
+        long emittedMonth = asLong(kpis.get("emitted_month"));
+        model.addAttribute("emissionServiceStatus", dashboardData.remoteAvailable() ? "Operativo" : "Sin conexión");
+        model.addAttribute("receptionServiceStatus", dashboardData.remoteAvailable()
+            ? (pendingReception > 0 ? "Con pendientes" : "Operativo")
+            : "Sin conexión");
+        model.addAttribute("validationStatus", accepted + rejected > 0
+            ? "Con resultados"
+            : (emittedMonth > 0 ? "En proceso" : "Sin actividad"));
         model.addAttribute("kpiEmittedToday", asLong(kpis.get("emitted_today")));
-        model.addAttribute("kpiEmittedMonth", asLong(kpis.get("emitted_month")));
+        model.addAttribute("kpiEmittedMonth", emittedMonth);
         model.addAttribute("kpiAccepted", asLong(kpis.get("accepted_dian")));
         model.addAttribute("kpiRejected", asLong(kpis.get("rejected_dian")));
         model.addAttribute("kpiPendingReception", asLong(kpis.get("pending_reception")));
@@ -90,22 +97,28 @@ public class PortalDashboardController {
         return "redirect:/portal/configuraciones";
     }
 
-    private Map<String, Object> resolveDashboardKpis(String tenantId, String emissionPointId) {
+    private DashboardData resolveDashboardKpis(String tenantId, String emissionPointId) {
         try {
             Map<String, Object> remote = invoiceClientService
                     .dashboardKpis(tenantId, emissionPointId)
                     .block(Duration.ofSeconds(4));
             if (remote != null && !remote.isEmpty()) {
-                return remote;
+                return new DashboardData(remote, true);
             }
         } catch (Exception ignored) {
             // fallback local
         }
         try {
-            return portalAnalyticsRepository.dashboardKpis(UUID.fromString(tenantId));
+            return new DashboardData(
+                    portalAnalyticsRepository.dashboardKpis(UUID.fromString(tenantId)),
+                    false
+            );
         } catch (Exception ignored) {
-            return PortalAnalyticsRepository.emptyKpis();
+            return new DashboardData(PortalAnalyticsRepository.emptyKpis(), false);
         }
+    }
+
+    private record DashboardData(Map<String, Object> kpis, boolean remoteAvailable) {
     }
 
     private static long asLong(Object value) {

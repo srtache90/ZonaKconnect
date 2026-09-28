@@ -468,7 +468,8 @@ select:disabled {
 }
 
 [type=button],[type=reset],[type=submit],button {
-    -webkit-appearance: button
+    -webkit-appearance: button;
+    appearance: button
 }
 
 [type=button]:not(:disabled),[type=reset]:not(:disabled),[type=submit]:not(:disabled),button:not(:disabled) {
@@ -520,11 +521,13 @@ legend+* {
 
 [type=search] {
     -webkit-appearance: textfield;
+    appearance: textfield;
     outline-offset: -2px
 }
 
 ::-webkit-search-decoration {
-    -webkit-appearance: none
+    -webkit-appearance: none;
+    appearance: none
 }
 
 ::-webkit-color-swatch-wrapper {
@@ -533,12 +536,14 @@ legend+* {
 
 ::-webkit-file-upload-button {
     font: inherit;
-    -webkit-appearance: button
+    -webkit-appearance: button;
+    appearance: button
 }
 
 ::file-selector-button {
     font: inherit;
-    -webkit-appearance: button
+    -webkit-appearance: button;
+    appearance: button
 }
 
 output {
@@ -1228,7 +1233,8 @@ progress {
 
     .col-md-2 {
         flex: 0 0 auto;
-        width: 16.66666667%
+        width: 16.66666667%;
+        padding: 0px 10px 20px 10px 
     }
 
     .col-md-3 {
@@ -1239,10 +1245,12 @@ progress {
 
     .col-md-4 {
         flex: 0 0 auto;
-        width: 33.33333333%;
+        width: 60%;
         display: flex;
         justify-content: center;
         padding: 0px 40px 20px 30px;
+        flex-wrap: wrap;
+        flex-direction: column;
 
     }
 
@@ -2579,7 +2587,6 @@ textarea.form-control-lg {
     background-size: contain;
     border: var(--bs-border-width) solid var(--bs-border-color);
     -webkit-print-color-adjust: exact;
-    color-adjust: exact;
     print-color-adjust: exact
 }
 
@@ -2673,6 +2680,12 @@ textarea.form-control-lg {
 .form-check-inline {
     display: inline-block;
     margin-right: 1rem
+}
+.btn-01.btn.btn-zk{
+    border: 1px solid #f1f1f1f1;
+    border-radius: 20px;
+    max-width: 90px;
+    background-color: rgba((89, 223, 89, 0.658)9, 223, 89);
 }
 
 .btn-check {

@@ -540,37 +540,49 @@
             </form>
         </div>
     </div>
+<section class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-none px-0 mx-0 items-stretch">
+    
+    <!-- 2. TOTAL REGISTROS (Ancho completo y limpio) -->
+    <div class="card zk-card p-5 flex flex-col gap-2 !bg-white shadow-sm rounded-2xl" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
+        <span class="font-label-sm text-on-surface-variant uppercase tracking-wider text-xs">Total Registros</span>
+        <div class="flex flex-col mt-auto">
+            <span class="text-4xl font-bold text-primary leading-none" th:text="${totalRecords}">0</span>
+            <span class="text-xs text-on-surface-variant mt-1 font-medium">facturas</span>
+        </div> 
+    </div>
 
-    <section class="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="card zk-card p-4 flex flex-col gap-2">
-            <span class="font-label-sm text-on-surface-variant uppercase">Total Registros</span>
-            <div class="flex items-end gap-2">
-                <span class="font-display-lg text-primary" th:text="${totalRecords}">0</span>
-                <span class="font-label-sm text-on-surface-variant mb-2">facturas</span>
-            </div>
+    <!-- 3. PÁGINA ACTUAL (Ancho completo y limpio) -->
+    <div class="card zk-card p-5 flex flex-col gap-2 !bg-white shadow-sm rounded-2xl" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
+        <span class="font-label-sm text-on-surface-variant uppercase tracking-wider text-xs">Página Actual</span>
+        <div class="flex flex-col mt-auto">
+            <span class="text-4xl font-bold text-primary leading-none" th:text="${page}">1</span>
+            <span class="text-xs text-on-surface-variant mt-1 font-medium" th:text="'de ' + ${totalPages}">de 1</span>
         </div>
-        <div class="card zk-card p-4 flex flex-col gap-2">
-            <span class="font-label-sm text-on-surface-variant uppercase">Página Actual</span>
-            <div class="flex items-end gap-2">
-                <span class="font-display-lg text-primary" th:text="${page}">1</span>
-                <span class="font-label-sm text-on-surface-variant mb-2" th:text="'de ' + ${totalPages}">de 1</span>
-            </div>
-        </div>
-        <div class="bg-primary p-6 rounded-2xl flex flex-col gap-2 text-on-primary md:col-span-2 relative overflow-hidden group">
-            <div class="relative z-10">
-                <span class="font-label-sm opacity-70 uppercase">Flujo DIAN</span>
+    </div>  
+
+    <!-- 4. FLUJO DIAN EMISIÓN (Mismo tamaño exacto que las blancas y texto fluido) -->
+    <div class="bg-primary p-6 rounded-2xl flex flex-col text-on-primary relative overflow-hidden group" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
+        <div class="relative z-10 flex flex-col h-full justify-between">
+            <div>
+                <span class="font-label-sm opacity-70 uppercase text-xs tracking-wider">Flujo DIAN</span>
                 <div class="flex items-end gap-2 mt-1">
-                    <span class="text-[40px] font-semibold leading-none tracking-tight">Emisión</span>
+                    <span class="text-3xl md:text-4xl font-bold leading-none tracking-tight">Emisión</span>
                 </div>
-                <p class="mt-4 font-body-md opacity-80 max-w-[320px]">
-                    Control operativo de comprobantes electrónicos, validación y documentos disponibles.
-                </p>
             </div>
-            <div class="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                <span class="material-symbols-outlined text-[160px]">insights</span>
-            </div>
+            <!-- Eliminamos cualquier max-w en píxeles para que la caja no empuje de más el Grid -->
+            <p class="mt-4 text-xs md:text-sm opacity-80 w-full whitespace-normal break-words leading-relaxed">
+                Control operativo de comprobantes, validación y documentos.
+            </p>
         </div>
-    </section>
+        <div class="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
+            <span class="material-symbols-outlined text-[130px]">insights</span>
+        </div>
+    </div>
+</section>
+
+
+
+
 </main>
 
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav('emision', 'emision')}"></div>

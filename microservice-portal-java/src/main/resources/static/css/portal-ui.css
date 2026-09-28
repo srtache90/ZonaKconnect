@@ -221,23 +221,6 @@ small.text-muted {
     color: #ffffff !important;
 }
 
-.zk-invoices-header,
-.zk-invoices-menu,
-.zk-invoices-brand,
-.zk-invoices-logo {
-    /* alias legacy templates */
-}
-
-.zk-invoices-header {
-    background: var(--dc-header-bg) !important;
-    border-bottom-color: var(--dc-header-border) !important;
-}
-
-.zk-invoices-brand {
-    color: #ffffff !important;
-    letter-spacing: .01em;
-}
-
 .zk-invoices-brand span {
     color: var(--dc-brand-subtitle) !important;
     font-size: 10px;
@@ -382,7 +365,7 @@ button.btn {
     background: var(--dc-primary) !important;
     border-color: var(--dc-primary) !important;
     color: var(--dc-on-primary) !important;
-    width:120px;
+    width:190px;
     justify-content:center;
 }
 
@@ -491,6 +474,7 @@ textarea.form-control {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--dc-on-surface);
+    width: 50%;
 }
 
 .form-text {
