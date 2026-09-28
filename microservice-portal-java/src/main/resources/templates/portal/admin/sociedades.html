@@ -1,7 +1,15 @@
 ﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | Zona K e-Docs')}"></th:block>
+     <link rel="icon"
+          type="image/png"
+          th:href="@{/imagen/zonak.png}"
+          href="/imagen/zonak.png">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -28,19 +36,19 @@
                     <label class="form-label" for="razonSocial">Razón social</label>
                     <input class="form-control" id="razonSocial" name="razonSocial" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3-3">
                     <label class="form-label" for="nit">NIT</label>
                     <input class="form-control" id="nit" name="nit" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3-2" style="width: 37.5%; margin-top: 4px;">
                     <label class="form-label" for="apiKey">API Key ingesta</label>
                     <input class="form-control" id="apiKey" name="apiKey" autocomplete="off" placeholder="Dejar vacío conserva la actual">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3-1">
                     <label class="form-label" for="correoEmision">Correo emisión</label>
                     <input class="form-control" id="correoEmision" name="correoEmision" type="email">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3-1">
                     <label class="form-label" for="correoRecepcion">Correo recepción</label>
                     <input class="form-control" id="correoRecepcion" name="correoRecepcion" type="email">
                 </div>
@@ -93,7 +101,7 @@
                         <option value="Produccion">Producción</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4-1">
                     <label class="form-label" for="dianRegimenFiscal">Responsabilidad fiscal (TaxLevelCode)</label>
                     <input class="form-control" id="dianRegimenFiscal" name="dianRegimenFiscal" required
                            list="regimenFiscalList" autocomplete="off" placeholder="O-23 o O-23;O-33">
@@ -148,17 +156,17 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                 <tr>
-                    <th>Razón social</th>
-                    <th>NIT</th>
-                    <th>Correo emisión</th>
-                    <th>Correo recepción</th>
-                    <th>API Key</th>
-                    <th>Correo saliente</th>
-                    <th>Correo entrante</th>
-                    <th>DIAN</th>
-                    <th>TaxLevelCode</th>
-                    <th>Software</th>
-                    <th>SAP</th>
+                    <th class="caj">Razón social</th>
+                    <th class="caj">NIT</th>
+                    <th class="caj">Correo emisión</th>
+                    <th class="caj">Correo recepción</th>
+                    <th class="caj">API Key</th>
+                    <th class="caj">Correo saliente</th>
+                    <th class="caj">Correo entrante</th>
+                    <th class="caj">DIAN</th>
+                    <th class="caj">TaxLevelCode</th>
+                    <th class="caj">Software</th>
+                    <th class="caj">SAP</th>
                     <th class="text-end">Acción</th>
                 </tr>
                 </thead>

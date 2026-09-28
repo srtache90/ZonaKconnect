@@ -2,6 +2,7 @@
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead(${pageTitle != null ? pageTitle + ' | Zona K e-Docs' : 'Facturación Manual | Zona K e-Docs'})}"></th:block>
+    <link rel="icon"type="image/png"th:href="@{/imagen/zonak.png}"href="/imagen/zonak.png">
     <link rel="stylesheet" th:href="@{/vendor/bootstrap-icons/bootstrap-icons.css}">
     <style>
         .manual-reference-card {
