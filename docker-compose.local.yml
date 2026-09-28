@@ -238,6 +238,7 @@ services:
       JWT_SECRET: local-dev-secret-change-before-production-32-bytes-minimum
       JWT_TTL_SECONDS: "28800"
       JWT_COOKIE_SECURE: "false"
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       AWS_LOCAL_MODE: "true"
       AWS_REGION: us-east-1
       AWS_S3_ENDPOINT_OVERRIDE: http://localstack:4566

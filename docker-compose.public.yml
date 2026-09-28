@@ -1,0 +1,22 @@
+# Overlay sobre docker-compose.local.yml: publica SOLO el portal en :80.
+# No abre Postgres, core-go ni DIAN_NET a Internet.
+#
+#   docker compose -f docker-compose.local.yml -f docker-compose.public.yml up -d
+#
+# En el router/VPS con IP pública (ej. 181.48.67.98): reenviar TCP 80 → este host.
+# HTTPS con dominio: deploy/hostinger/.
+
+services:
+  caddy-public:
+    image: caddy:2.8-alpine
+    container_name: zona-k-caddy-public
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/public/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      portal-java:
+        condition: service_started
+    networks:
+      - local_infra
