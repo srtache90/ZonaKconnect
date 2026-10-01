@@ -18,7 +18,7 @@
           rel="stylesheet">
 
     <link th:href="@{/css/zonak-portal.css(v=20260820-2)}" rel="stylesheet">
-    <link th:href="@{/css/portal-ui.css(v=20260828-edocs)}" rel="stylesheet">
+    <link th:href="@{/css/portal-ui.css(v=20261001-tt-commons)}" rel="stylesheet">
 </head>
 
 <body class="zk-dashboard-shell zk-edocs-dashboard" style="
@@ -321,7 +321,7 @@ data-theme="light">
                 flex-shrink:0;
             ">
 
-                <button class="exportar" type="button"
+                <a class="exportar" th:href="@{/portal/dashboard/export}"
                         style="
                             height:36px;
                             padding:0 14px;
@@ -333,6 +333,7 @@ data-theme="light">
                             display:flex;
                             align-items:center;
                             gap:7px;
+                            text-decoration:none;
                             cursor:pointer;
                             width: 100px;
                             right: auto;
@@ -343,7 +344,7 @@ data-theme="light">
 
                     Exportar
 
-                </button>
+                </a>
 
 
                 <a class="nueva-operacion" th:href="@{/portal/facturacion/manual}"

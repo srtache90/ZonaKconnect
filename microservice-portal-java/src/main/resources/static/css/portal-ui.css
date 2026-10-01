@@ -33,7 +33,7 @@
     --dc-radius-lg: 1rem;
     --dc-radius-card: 1rem;
     --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-   --dc-font: "Plus Jakarta Sans", sans-serif;
+    --dc-font: "TT Commons", Arial, sans-serif;
     --dc-header-h: 4rem;
 
     /* Bootstrap: sin azul — acento negro + bronce recepción */
@@ -65,6 +65,11 @@ body.zk-edocs-theme {
     font-family: var(--dc-font) !important;
     -webkit-font-smoothing: antialiased;
     padding: 0 clamp(1.25rem, 4vw, 5rem);
+}
+
+body,
+body :not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp):not(.material-icons):not(.bi):not(.font-mono):not(.font-monospace):not(code):not(pre):not(kbd):not(samp) {
+    font-family: var(--dc-font) !important;
 }
 
 html.dark body {
@@ -160,6 +165,9 @@ main.pt-24 {
 .card-body {
     padding: 1.25rem 1.5rem;
 }
+.material-symbols-outlined{
+    color: rgba(92, 86, 86, 0.742) !important;
+}
 
 /* ---- Typography overrides (kill serif/gold themes) ---- */
 .zk-title,
@@ -170,10 +178,13 @@ h1, h2, h3, h4, h5 {
     letter-spacing: -0.01em;
 }
 
-.zk-data,
-.font-monospace {
+.zk-data {
     font-variant-numeric: tabular-nums;
     font-family: var(--dc-font) !important;
+}
+
+.font-monospace {
+    font-family: monospace !important;
 }
 
 .text-muted,

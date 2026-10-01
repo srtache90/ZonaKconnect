@@ -798,10 +798,10 @@
         const documentKind = button.dataset.documentKind || '';
         const estadoUpper = estadoDian.toUpperCase();
         const estadoLower = estadoDian.toLowerCase();
-        const isValidated = hasText(uuidCude) && (
-            estadoUpper === 'ENVIADO' ||
-            ((estadoLower.includes('validado') || estadoLower.includes('exitosamente')) && !estadoLower.includes('rechaz'))
-        );
+        const isValidated = estadoUpper === 'ENVIADO'
+            || (estadoLower.includes('validado') || estadoLower.includes('exitosamente') || estadoLower.includes('aprob') || estadoLower.includes('autoriz') || estadoLower.includes('aceptad'))
+            && !estadoLower.includes('rechaz')
+            && !estadoLower.includes('fallid');
         const isRejected = estadoUpper === 'RECHAZADO_DIAN'
             || estadoUpper === 'ERROR_DIAN_NET'
             || estadoUpper === 'RECHAZADO'

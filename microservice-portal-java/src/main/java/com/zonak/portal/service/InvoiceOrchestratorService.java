@@ -232,8 +232,19 @@ public class InvoiceOrchestratorService {
         return Mono.fromCallable(() -> invoiceReportRepository.findPdfS3Url(tenantId, invoiceId))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(existingUrl -> existingUrl
-                        .map(this::downloadPdf)
+                        .map(url -> downloadPdf(url).onErrorResume(
+                                InvoiceStorageException.class,
+                                exception -> isMissingStoredPdf(exception)
+                                        ? generateAndStorePdf(tenantId, invoiceId)
+                                        : Mono.error(exception)
+                        ))
                         .orElseGet(() -> generateAndStorePdf(tenantId, invoiceId)));
+    }
+
+    private boolean isMissingStoredPdf(InvoiceStorageException exception) {
+        Throwable cause = exception.getCause();
+        return cause instanceof software.amazon.awssdk.services.s3.model.S3Exception s3Exception
+                && s3Exception.statusCode() == 404;
     }
 
     private Mono<byte[]> generateAndStorePdf(UUID tenantId, UUID invoiceId) {

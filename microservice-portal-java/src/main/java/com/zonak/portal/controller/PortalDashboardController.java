@@ -6,9 +6,15 @@ import com.zonak.portal.service.InvoiceClientService;
 import com.zonak.portal.service.PortalSessionService;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
-import java.util.Map;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,6 +25,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class PortalDashboardController {
+    private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
     private final AdminPortalRepository adminPortalRepository;
     private final InvoiceClientService invoiceClientService;
     private final PortalAnalyticsRepository portalAnalyticsRepository;
@@ -77,6 +85,48 @@ public class PortalDashboardController {
         return "portal/dashboard";
     }
 
+    @GetMapping("/portal/dashboard/export")
+    public ResponseEntity<byte[]> exportDashboard(HttpSession session) {
+        String tenantId = portalSessionService.resolveTenantId(session);
+        String emissionPointId = session.getAttribute("emissionPointId") != null
+                ? session.getAttribute("emissionPointId").toString()
+                : "";
+        Map<String, Object> kpis = resolveDashboardKpis(tenantId, emissionPointId).kpis();
+        UUID tenantUuid = UUID.fromString(tenantId);
+        List<PortalAnalyticsRepository.RecentActivity> activities;
+        try {
+            activities = portalAnalyticsRepository.recentActivities(tenantUuid);
+        } catch (Exception ignored) {
+            activities = List.of();
+        }
+
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        appendCsvRow(csv, "Sección", "Indicador", "Valor");
+        appendCsvRow(csv, "KPI", "Documentos emitidos hoy", Long.toString(asLong(kpis.get("emitted_today"))));
+        appendCsvRow(csv, "KPI", "Documentos emitidos este mes", Long.toString(asLong(kpis.get("emitted_month"))));
+        appendCsvRow(csv, "KPI", "Aceptados por DIAN", Long.toString(asLong(kpis.get("accepted_dian"))));
+        appendCsvRow(csv, "KPI", "Rechazados por DIAN", Long.toString(asLong(kpis.get("rejected_dian"))));
+        appendCsvRow(csv, "KPI", "Pendientes de recepción", Long.toString(asLong(kpis.get("pending_reception"))));
+        appendCsvRow(csv, "KPI", "Documentos soporte", Long.toString(asLong(kpis.get("support_documents"))));
+        appendCsvRow(csv, "KPI", "Documentos de nómina", Long.toString(asLong(kpis.get("payroll_documents"))));
+        appendCsvRow(csv, "", "", "");
+        appendCsvRow(csv, "Factura", "Estado DIAN", "Fecha de creación", "Última actualización");
+        for (PortalAnalyticsRepository.RecentActivity activity : activities) {
+            appendCsvRow(
+                    csv,
+                    activity.documentNumber(),
+                    activity.estadoDian(),
+                    formatExportDate(activity.createdAt()),
+                    formatExportDate(activity.updatedAt())
+            );
+        }
+
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=dashboard-zona-k.csv")
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
     @GetMapping("/portal/configuraciones")
     public String configuraciones(Model model) {
         model.addAttribute("sociedades", adminPortalRepository.findSociedades());
@@ -133,5 +183,20 @@ public class PortalDashboardController {
         } catch (NumberFormatException ex) {
             return 0L;
         }
+    }
+
+    private static String formatExportDate(OffsetDateTime value) {
+        return value == null ? "" : value.format(EXPORT_DATE_FORMAT);
+    }
+
+    private static void appendCsvRow(StringBuilder csv, String... values) {
+        for (int index = 0; index < values.length; index++) {
+            if (index > 0) {
+                csv.append(';');
+            }
+            String value = values[index] == null ? "" : values[index];
+            csv.append('"').append(value.replace("\"", "\"\"")).append('"');
+        }
+        csv.append('\n');
     }
 }

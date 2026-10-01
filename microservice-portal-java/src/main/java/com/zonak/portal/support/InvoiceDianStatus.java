@@ -1,14 +1,12 @@
 package com.zonak.portal.support;
 
+import java.util.Locale;
+
 public final class InvoiceDianStatus {
     private InvoiceDianStatus() {
     }
 
     public static boolean isValidated(String estadoDian, String uuidCude) {
-        if (uuidCude == null || uuidCude.isBlank()) {
-            return false;
-        }
-
         if (estadoDian == null || estadoDian.isBlank()) {
             return false;
         }
@@ -18,9 +16,18 @@ public final class InvoiceDianStatus {
             return true;
         }
 
-        String lower = normalized.toLowerCase();
-        return (lower.contains("validado") || lower.contains("exitosamente"))
-                && !lower.contains("rechaz");
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (lower.contains("rechaz") || lower.contains("fallid") || lower.contains("error_dian")) {
+            return false;
+        }
+
+        return lower.contains("validado")
+                || lower.contains("exitosamente")
+                || lower.contains("aprob")
+                || lower.contains("autoriz")
+                || lower.contains("aceptad")
+                || lower.contains("aprobado")
+                || lower.contains("aceptado");
     }
 
     public static boolean isRejected(String estadoDian) {
