@@ -11,6 +11,11 @@ import org.springframework.util.StringUtils;
 
 @Repository
 public class PortalAnalyticsRepository {
+    private static final List<String> MONTH_LABELS = List.of(
+            "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+            "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+    );
+
     private final JdbcTemplate jdbcTemplate;
 
     public PortalAnalyticsRepository(JdbcTemplate jdbcTemplate) {
@@ -48,6 +53,31 @@ public class PortalAnalyticsRepository {
                 tenantId
         );
     }
+
+        public List<MonthlyEmission> monthlyEmissions(UUID tenantId) {
+        return jdbcTemplate.query(
+            """
+                WITH months AS (
+                  SELECT generate_series(1, 12) AS month
+                )
+                SELECT months.month, COUNT(i.id) AS total
+                FROM months
+                LEFT JOIN invoices i
+                  ON i.company_id = ?
+                 AND i.emission_point_id IS NOT NULL
+                 AND i.created_at >= date_trunc('year', CURRENT_DATE)
+                 AND i.created_at < date_trunc('year', CURRENT_DATE) + INTERVAL '1 year'
+                 AND EXTRACT(MONTH FROM i.created_at) = months.month
+                GROUP BY months.month
+                ORDER BY months.month
+                """,
+            (rs, rowNum) -> new MonthlyEmission(
+                MONTH_LABELS.get(rs.getInt("month") - 1),
+                rs.getLong("total")
+            ),
+            tenantId
+        );
+        }
 
         public List<RecentActivity> recentActivities(UUID tenantId) {
         return jdbcTemplate.query(
@@ -142,5 +172,8 @@ public class PortalAnalyticsRepository {
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt
     ) {
+    }
+
+    public record MonthlyEmission(String month, long total) {
     }
 }

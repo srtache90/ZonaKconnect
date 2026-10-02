@@ -75,7 +75,7 @@
 
             <nav class="flex-1 py-6 px-4 flex flex-col gap-3">
                 <a class="flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md"
-                   th:href="@{/portal}">
+                   th:href="@{/portal}" style="width: 100%;">
                     <span class="material-symbols-outlined shrink-0">dashboard</span>
                     <span class="whitespace-nowrap">Panel de módulos</span>
                 </a>
@@ -146,37 +146,37 @@
 
                 <th:block th:if="${module == 'configuracion'}">
                     <a th:href="@{/portal/configuraciones}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'general' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'general' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">tune</span>
                         <span>Parámetros generales</span>
                     </a>
-                    <a th:href="@{/portal/admin/sociedades}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'sociedades' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                    <a th:href="@{/portal/admin/sociedades} "
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'sociedades' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">corporate_fare</span>
                         <span>Sociedades</span>
                     </a>
                     <a th:href="@{/portal/admin/puntos-venta}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'puntos' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'puntos' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">store</span>
                         <span>Puntos de venta</span>
                     </a>
                     <a th:href="@{/portal/admin/certificados}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'certificados' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'certificados' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">verified_user</span>
                         <span>Certificados digitales</span>
                     </a>
                     <a th:href="@{/portal/admin/usuarios}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'usuarios' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'usuarios' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">group</span>
                         <span>Usuarios y roles</span>
                     </a>
                     <a th:href="@{/portal/admin/proveedores-punto}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'proveedores-punto' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'proveedores-punto' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">route</span>
                         <span>Proveedor → Punto</span>
                     </a>
                     <a th:href="@{/portal/configuraciones/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>
@@ -184,17 +184,17 @@
 
                 <th:block th:if="${module == 'soporte'}">
                     <a th:href="@{/portal/documento-soporte}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">assignment</span>
                         <span>Listado</span>
                     </a>
                     <a th:href="@{/portal/documento-soporte/nuevo}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">add_circle</span>
                         <span>Nuevo documento</span>
                     </a>
                     <a th:href="@{/portal/documento-soporte/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>
@@ -202,17 +202,17 @@
 
                 <th:block th:if="${module == 'nomina'}">
                     <a th:href="@{/portal/nomina-electronica}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">payments</span>
                         <span>Listado</span>
                     </a>
                     <a th:href="@{/portal/nomina-electronica/nuevo}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">add_circle</span>
                         <span>Nueva nómina</span>
                     </a>
                     <a th:href="@{/portal/nomina-electronica/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>

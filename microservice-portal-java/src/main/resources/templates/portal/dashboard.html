@@ -261,7 +261,7 @@ data-theme="light">
 
 <main class="zk-dashboard-main" style="
     width:100%;
-    max-width: 115px;
+    max-width: 1180px;
     margin:0 auto;
     min-height:calc(100vh - 55px);
     padding:24px 0 30px;
@@ -314,7 +314,7 @@ data-theme="light">
 
 
 
-            <div class="zk-dashboard-module-grid" style="
+            <div class="zk-dashboard-actions" style="
                 display:flex;
                 align-items:center;
                 gap:8px;
@@ -961,7 +961,7 @@ data-theme="light">
                     Cuota mensual (Docs)
                 </span>
 
-                <strong style="color: #6B5E4C;">Sin límite configurado</strong>
+                <strong style="color: #6B5E4C;">Conteo automático</strong>
 
             </div>
 
@@ -970,9 +970,19 @@ data-theme="light">
             <div style="font-size:11px;color:#8A8172; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
                 <span th:text="${kpiEmittedMonth + ' documentos emitidos este mes'}">0 documentos emitidos este mes</span>
             </div>
-            <div style="display: flex; gap: 4px;">
-                <button onclick="exportarReporte('PDF')" style="background-color: #8A8172; color: #FFFFFF; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">PDF</button>
-                <button onclick="exportarReporte('Excel')" style="background-color: #A39785; color: #FFFFFF; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">EXCEL</button>
+            <div style="display: flex; gap: 7px;">
+                <a th:href="@{/portal/dashboard/export/pdf}"
+                   class="zk-export-icon zk-export-icon-pdf"
+                   aria-label="Descargar reporte PDF"
+                   title="Descargar PDF">
+                    <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
+                </a>
+                <a th:href="@{/portal/dashboard/export/excel}"
+                   class="zk-export-icon zk-export-icon-excel"
+                   aria-label="Descargar reporte Excel"
+                   title="Descargar Excel">
+                    <i class="bi bi-filetype-xlsx" aria-hidden="true"></i>
+                </a>
             </div>
         </div>
 
@@ -987,53 +997,19 @@ data-theme="light">
             padding: 10px;
             box-sizing: border-box;
             ">
-                <!-- JavaScript inyectará las barras aquí adentro automáticamente -->
+                 <div th:each="emision : ${monthlyChartBars}"
+                     th:title="|${emision.month}: ${emision.total} documentos|"
+                     th:style="|width:6%;height:${emision.heightPercent}%;background-color:rgba(74,164,60,0.8);border-radius:4px 4px 0 0;min-height:${emision.minimumHeight};|">
+                </div>
             </div>
-            <!-- 2. EL PROCESADOR DE DATOS (JavaScript Nativo) -->
-            <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    
-                    // AQUÍ COLOCAS TUS DATOS REALES Y EXACTOS
-                    // Puedes cambiar estos números por los tuyos (ejemplo: kWh consumidos, dinero, etc.)
-                    const datosExactos = [120,200, 300,50,130,200,10,230,500, 200, 400, 150];
-                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-                    // Paso A: Encontrar el contenedor en la pantalla usando su ID
-                    const contenedor = document.getElementById('contenedorBarrasExactas');
-                    
-                    // Paso B: Obtener la altura física del contenedor (120 píxeles) y restar el padding
-                    const alturaMaximaPx = contenedor.clientHeight - 20; 
-
-                    // Paso C: Calcular matemáticamente cuál es el número más grande de tus datos
-                    // En nuestro array de ejemplo, el número máximo detectado será 600
-                    const valorMaximo = Math.max(...datosExactos);
-
-                    // Paso D: Generar cada barra mediante un ciclo que recorre los 12 meses
-                    datosExactos.forEach((dato, indice) => {
-                        
-                        // OPERACIÓN MATEMÁTICA: Regla de tres para obtener la altura exacta en píxeles
-                        // (Dato actual / Valor Máximo) * Altura disponible en la pantalla
-                        const alturaCalculada = (dato / valorMaximo) * alturaMaximaPx;
-
-                        // Paso E: Crear una caja de HTML nueva en la memoria del navegador
-                        const barra = document.createElement('div');
-
-                        // Paso F: Asignar los estilos visuales obligatorios a la barra creada
-                        barra.style.width = '6%';
-                        barra.style.height = alturaCalculada + 'px'; // Asigna la altura exacta en píxeles (ej: 84.5px)
-                        barra.style.backgroundColor = 'rgba(74, 164, 60, 0.8)';
-                        barra.style.borderRadius = '4px 4px 0 0';
-                        barra.style.transition = 'height 0.5s ease'; // Hace que la barra suba con una animación suave
-
-                        // Paso G: Agregar el texto flotante para que al poner el mouse encima se lea el dato exacto
-                        barra.title = meses[indice] + ': ' + dato;
-
-                        // Paso H: Meter la barra terminada dentro del contenedor principal
-                        contenedor.appendChild(barra);
-                    });
-                });
-
-            </script>
+            <div th:if="${!monthlyEmissionsAvailable}"
+                 style="font-size:11px;color:#a33b32;margin-top:8px;">
+                No se pudieron cargar los datos de la gráfica. Intenta actualizar la página.
+            </div>
+            <div th:if="${monthlyEmissionsAvailable and maxMonthlyEmissions == 0}"
+                 style="font-size:11px;color:#8A8172;margin-top:8px;">
+                Sin documentos emitidos en <span th:text="${chartYear}">2026</span>. Esto no es un error si aún no hay facturas este año.
+            </div>
                 </div>
 
         </section>
@@ -1236,6 +1212,90 @@ data-theme="light">
     transition:background .15s ease, color .15s ease;
 }
 
+.zk-export-icon {
+    width:36px;
+    height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid;
+    border-radius:7px;
+    background:#ffffff;
+    font-size:17px;
+    line-height:1;
+    text-decoration:none;
+    box-shadow:0 1px 2px rgba(31,35,32,.06);
+    transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.zk-export-icon-pdf {
+    color:#a34f4e;
+    border-color:#e3d1cf;
+}
+
+.zk-export-icon-pdf:hover {
+    color:#8e3d3c;
+    background:#fff7f6;
+    border-color:#cfaeab;
+}
+
+.zk-export-icon-excel {
+    color:#477a59;
+    border-color:#d0ddd2;
+}
+
+.zk-export-icon-excel:hover {
+    color:#356547;
+    background:#f5faf5;
+    border-color:#aec5b2;
+}
+
+.zk-export-icon:hover {
+    transform:translateY(-1px);
+    box-shadow:0 3px 8px rgba(31,35,32,.12);
+}
+
+.zk-export-icon:focus-visible {
+    outline:2px solid #6c8571;
+    outline-offset:2px;
+}
+
+.zk-dashboard-actions {
+    min-width:0;
+    flex-wrap:wrap;
+}
+
+
+@media (max-width:900px) {
+
+    body.zk-dashboard-shell main.zk-dashboard-main {
+        width:100% !important;
+        grid-template-columns:1fr !important;
+        gap:16px !important;
+    }
+
+    .zk-dashboard-main > section > div:first-child {
+        flex-direction:column !important;
+        align-items:stretch !important;
+        gap:14px !important;
+    }
+
+    .zk-dashboard-actions {
+        width:100%;
+        flex-shrink:1 !important;
+    }
+
+    .zk-dashboard-actions a {
+        width:auto !important;
+        min-width:0 !important;
+        margin-left:0 !important;
+        flex:1 1 145px;
+        max-width:240px;
+        justify-content:center;
+        box-sizing:border-box;
+    }
+}
+
 
 @media (max-width:1100px) {
 
@@ -1289,15 +1349,25 @@ data-theme="light">
 
     .zk-dashboard-header {
         height:55px !important;
+        padding:0 12px !important;
+        gap:8px !important;
     }
 
     .zk-dashboard-brand {
         min-width:auto !important;
+        width:100px !important;
+        min-width:0 !important;
+        flex:0 0 100px;
     }
 
     .zk-dashboard-brand img {
         width:75px !important;
         height:75px !important;
+    }
+
+    .zk-dashboard-header > div:nth-of-type(2),
+    .zk-dashboard-header > div:last-child small {
+        display:none !important;
     }
 
     .zk-dashboard-main {
@@ -1312,53 +1382,6 @@ data-theme="light">
 }
 
 </style>
-
-<!-- Importar Chart.js correctamente desde el CDN -->
-<script src="https://jsdelivr.net" onload="inicializarGrafico()"></script>
-
-<script>
-    function inicializarGrafico() {
-        const elCanvas = document.getElementById('graficoConsumoMensual');
-        
-        if (elCanvas) {
-            const ctx = elCanvas.getContext('2d');
-            
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar'],
-                    datasets: [{
-                        data: [10,11,11,1,2,3], // Tus datos de prueba
-                        backgroundColor: 'rgba(46,117,89,0.2)',
-                        hoverBackgroundColor: 'rgba(46,117,89,1)',
-                        borderwidth: 2,     
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#6B5E4C', font: { size: 9 } }
-                        },
-                        y: {
-                            grid: { color: '#E6DEC9' },
-                            ticks: { color: '#6B5E4C', font: { size: 9 } }
-                        }
-                    }
-                }
-            });
-        } else {
-            console.error("No se encontró el lienzo 'graficoConsumoMensual' en el DOM.");
-        }
-    }
-</script>
-
 
 </body>
 </html>

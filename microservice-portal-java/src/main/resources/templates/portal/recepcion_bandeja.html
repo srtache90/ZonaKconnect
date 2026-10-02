@@ -96,7 +96,7 @@
 
     <section class="zk-filter-card p-4 mb-4">
         <form class="row g-3 align-items-end" method="get" th:action="@{/portal/recepcion/bandeja}">
-            <div class="col-md-4">
+            <div class="col-q" style="max-width: 300px; transform: translateY(-18px);">
                 <label class="form-label text-muted small" for="sociedadId">Empresa receptora</label>
                 <select class="form-select rounded-3" id="sociedadId" name="sociedadId" required>
                     <option th:each="sociedad : ${sociedades}"
@@ -140,11 +140,11 @@
             <div class="col-md-22">
                 <button class="btn-1 btn-zk rounded-pill w-100" type="submit">Filtrar</button>
             </div>
-            <div class="col-md-3">
+            <div class="col" style="max-width: 20%;">
                 <label class="form-label text-muted small" for="fromDate">Desde</label>
                 <input class="form-control rounded-3" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
             </div>
-            <div class="col-md-3">
+            <div class="col" style="max-width: 20%; transform: translateX(20px);">
                 <label class="form-label text-muted small" for="toDate">Hasta</label>
                 <input class="form-control rounded-3" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
