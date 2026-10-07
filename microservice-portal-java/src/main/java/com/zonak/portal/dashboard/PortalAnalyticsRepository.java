@@ -105,29 +105,62 @@ public class PortalAnalyticsRepository {
         String like = "%" + q.trim() + "%";
         return jdbcTemplate.query(
                 """
-                        SELECT id,
-                               CASE WHEN emission_point_id IS NULL THEN 'RECIBIDA' ELSE 'EMITIDA' END AS tipo,
-                               prefijo,
-                               numero,
-                               COALESCE(uuid_cude, '') AS uuid_cude,
-                               estado_dian,
-                               COALESCE(NULLIF(document_kind, ''), 'INVOICE') AS document_kind,
-                               COALESCE(
-                                   raw_dian_payload_jsonb->'cliente'->>'razon_social',
-                                   raw_dian_payload_jsonb->'proveedor'->>'razon_social',
-                                   ''
-                               ) AS nombre
-                        FROM invoices
-                        WHERE company_id = ?
-                          AND (
-                            prefijo ILIKE ?
-                            OR CAST(numero AS TEXT) ILIKE ?
-                            OR (prefijo || CAST(numero AS TEXT)) ILIKE ?
-                            OR COALESCE(uuid_cude, '') ILIKE ?
-                            OR COALESCE(raw_dian_payload_jsonb->'cliente'->>'razon_social', '') ILIKE ?
-                            OR COALESCE(raw_dian_payload_jsonb->'cliente'->>'numero_identificacion', '') ILIKE ?
-                            OR COALESCE(raw_dian_payload_jsonb->'proveedor'->>'nit', '') ILIKE ?
-                          )
+                        SELECT id, tipo, prefijo, numero, uuid_cude, estado_dian, document_kind, nombre
+                        FROM (
+                            SELECT i.id,
+                                   CASE WHEN i.emission_point_id IS NULL THEN 'RECIBIDA' ELSE 'EMITIDA' END AS tipo,
+                                   i.prefijo,
+                                   i.numero::text AS numero,
+                                   COALESCE(i.uuid_cude, '') AS uuid_cude,
+                                   i.estado_dian,
+                                   COALESCE(NULLIF(i.document_kind, ''), 'INVOICE') AS document_kind,
+                                   COALESCE(
+                                       i.raw_dian_payload_jsonb->'cliente'->>'razon_social',
+                                       i.raw_dian_payload_jsonb->'proveedor'->>'razon_social',
+                                       ''
+                                   ) AS nombre,
+                                   i.created_at
+                            FROM invoices i
+                            WHERE i.company_id = ?
+                              AND (
+                                i.prefijo ILIKE ?
+                                OR i.numero::text ILIKE ?
+                                OR (i.prefijo || i.numero::text) ILIKE ?
+                                OR COALESCE(i.uuid_cude, '') ILIKE ?
+                                OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'razon_social', '') ILIKE ?
+                                OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'numero_identificacion', '') ILIKE ?
+                                OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'nit', '') ILIKE ?
+                                OR COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') ILIKE ?
+                                OR COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'numero_identificacion', '') ILIKE ?
+                                OR EXISTS (
+                                    SELECT 1 FROM companies c
+                                    WHERE c.id = i.company_id AND c.nit ILIKE ?
+                                )
+                              )
+                            UNION ALL
+                            SELECT r.id,
+                                   'RECIBIDA' AS tipo,
+                                   '' AS prefijo,
+                                   r.invoice_number AS numero,
+                                   COALESCE(r.cufe, '') AS uuid_cude,
+                                   r.estado_dian,
+                                   'INVOICE' AS document_kind,
+                                   r.supplier_name AS nombre,
+                                   r.created_at
+                            FROM received_invoices r
+                            WHERE r.company_id = ?
+                              AND (
+                                r.invoice_number ILIKE ?
+                                OR COALESCE(r.cufe, '') ILIKE ?
+                                OR r.supplier_name ILIKE ?
+                                OR r.supplier_nit ILIKE ?
+                                OR r.raw_payload_jsonb::text ILIKE ?
+                                OR EXISTS (
+                                    SELECT 1 FROM companies c
+                                    WHERE c.id = r.company_id AND c.nit ILIKE ?
+                                )
+                              )
+                        ) AS documents
                         ORDER BY created_at DESC
                         LIMIT 30
                         """,
@@ -136,7 +169,7 @@ public class PortalAnalyticsRepository {
                     row.put("id", rs.getObject("id", UUID.class));
                     row.put("tipo", rs.getString("tipo"));
                     row.put("prefijo", rs.getString("prefijo"));
-                    row.put("numero", rs.getLong("numero"));
+                    row.put("numero", rs.getString("numero"));
                     row.put("uuid_cude", rs.getString("uuid_cude"));
                     row.put("estado_dian", rs.getString("estado_dian"));
                     row.put("document_kind", rs.getString("document_kind"));
@@ -145,6 +178,16 @@ public class PortalAnalyticsRepository {
                 },
                 tenantId,
                 like,
+                like,
+                like,
+                like,
+                like,
+                like,
+                like,
+                like,
+                like,
+                like,
+                tenantId,
                 like,
                 like,
                 like,

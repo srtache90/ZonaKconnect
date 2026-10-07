@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <style>
     #sidebar-drawer nav > a {
         min-height: 56px;
@@ -62,6 +63,7 @@
 </style>
 <body>
 <th:block th:fragment="sidebar(module, activeMenu)">
+    <th:block th:replace="~{portal/fragments/portal-nav :: permissionDialog}"></th:block>
     <aside class="fixed inset-y-0 left-0 w-80 bg-surface border-r border-surface-container-highest z-[60] -translate-x-full transition-transform duration-300 ease-in-out shadow-xl" id="sidebar-drawer">
         <div class="flex flex-col h-full">
             <div class="h-16 flex items-center px-6 border-b border-surface-container-highest">
@@ -91,16 +93,32 @@
                         <span class="material-symbols-outlined shrink-0">analytics</span>
                         <span class="whitespace-nowrap">Reportes</span>
                     </a>
-                    <a th:href="@{/portal/facturacion/manual}"
+                    <a sec:authorize="hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                       th:href="@{/portal/facturacion/manual}"
                        th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined shrink-0">add_circle</span>
                         <span class="whitespace-nowrap">Emitir factura</span>
                     </a>
-                    <a th:href="@{/portal/facturacion/nota-credito}"
+                    <button sec:authorize="!hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                            type="button"
+                            data-permission-denied="No tienes permiso para generar una nueva factura. Solicita el rol EMISOR a un administrador."
+                            th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors text-left border-0 bg-transparent cursor-pointer ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">add_circle</span>
+                        <span class="whitespace-nowrap">Emitir factura</span>
+                    </button>
+                    <a sec:authorize="hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                       th:href="@{/portal/facturacion/nota-credito}"
                        th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined shrink-0">receipt_long</span>
                         <span class="whitespace-nowrap">Nota crédito</span>
                     </a>
+                    <button sec:authorize="!hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                            type="button"
+                            data-permission-denied="No tienes permiso para generar una nota crédito. Solicita el rol EMISOR a un administrador."
+                            th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors text-left border-0 bg-transparent cursor-pointer ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">receipt_long</span>
+                        <span class="whitespace-nowrap">Nota crédito</span>
+                    </button>
                 </th:block>
 
                 <th:block th:if="${module == 'reportes'}">
@@ -402,6 +420,115 @@
             </a>
         </th:block>
     </nav>
+</th:block>
+
+<th:block th:fragment="permissionDialog">
+    <style>
+        .zk-permission-dialog {
+            width: min(92vw, 440px);
+            max-width: none;
+            padding: 0;
+            border: 0;
+            border-radius: 24px;
+            color: #1c1c1a;
+            background: #fff;
+            box-shadow: 0 24px 80px rgba(20, 20, 20, .24);
+            font-family: 'TT Commons', Arial, sans-serif;
+        }
+        .zk-permission-dialog::backdrop {
+            background: rgba(20, 20, 20, .48);
+            backdrop-filter: blur(3px);
+        }
+        .zk-permission-dialog__content {
+            padding: 32px;
+            text-align: center;
+        }
+        .zk-permission-dialog__icon {
+            display: grid;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 18px;
+            place-items: center;
+            border-radius: 20px;
+            color: #806521;
+            background: #f8f1df;
+        }
+        .zk-permission-dialog__icon .material-symbols-outlined {
+            font-size: 30px;
+        }
+        .zk-permission-dialog h2 {
+            margin: 0 0 9px;
+            font-size: 23px;
+            font-weight: 600;
+            letter-spacing: -.02em;
+        }
+        .zk-permission-dialog p {
+            margin: 0 auto 24px;
+            max-width: 340px;
+            color: #66645f;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .zk-permission-dialog__close {
+            min-width: 140px;
+            padding: 11px 24px;
+            border: 0;
+            border-radius: 999px;
+            color: white;
+            background: #171717;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .18s ease, transform .18s ease;
+        }
+        .zk-permission-dialog__close:hover {
+            background: #806521;
+            transform: translateY(-1px);
+        }
+        .zk-permission-dialog__close:focus-visible {
+            outline: 3px solid #c7a85a;
+            outline-offset: 3px;
+        }
+        @media (max-width: 480px) {
+            .zk-permission-dialog__content { padding: 28px 22px; }
+        }
+    </style>
+    <dialog class="zk-permission-dialog" id="zk-permission-dialog" aria-labelledby="zk-permission-title">
+        <div class="zk-permission-dialog__content">
+            <div class="zk-permission-dialog__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none"
+                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3 4.5 6v5.2c0 4.6 3.1 8.1 7.5 9.8 4.4-1.7 7.5-5.2 7.5-9.8V6L12 3Z"></path>
+                    <rect x="9" y="10.5" width="6" height="4.5" rx="1"></rect>
+                    <path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"></path>
+                </svg>
+            </div>
+            <h2 id="zk-permission-title">Acceso no disponible</h2>
+            <p id="zk-permission-message">No tienes permiso para realizar esta acción. Solicita el rol EMISOR a un administrador.</p>
+            <button class="zk-permission-dialog__close" type="button" data-permission-close>Cerrar</button>
+        </div>
+    </dialog>
+    <script>
+        (() => {
+            const dialog = document.getElementById('zk-permission-dialog');
+            const message = document.getElementById('zk-permission-message');
+            if (!dialog || !message) return;
+
+            document.addEventListener('click', event => {
+                const trigger = event.target.closest('[data-permission-denied]');
+                if (trigger) {
+                    event.preventDefault();
+                    message.textContent = trigger.dataset.permissionDenied;
+                    dialog.showModal();
+                } else if (event.target.closest('[data-permission-close]')) {
+                    dialog.close();
+                } else if (event.target === dialog) {
+                    dialog.close();
+                }
+            });
+        })();
+    </script>
 </th:block>
 
 <th:block th:fragment="shellScripts">

@@ -107,7 +107,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/logout", "/error", "/webjars/**", "/css/**", "/js/**", "/images/**", "/fonts/**").permitAll()
                         .requestMatchers("/portal/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/portal/facturacion/manual").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
+                        .requestMatchers(HttpMethod.GET, "/portal/facturacion/manual", "/portal/facturacion/nota-credito").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .requestMatchers(HttpMethod.POST, "/portal/facturacion/manual/**").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .requestMatchers(HttpMethod.POST, "/portal/invoices/emit", "/portal/invoices/*/reemit").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .requestMatchers(HttpMethod.POST, "/portal/recepcion/**").hasAnyRole("ADMIN", "RECEPTOR")
@@ -146,7 +146,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .pathMatchers("/api/v1/ingest/**").hasRole("API_INGEST")
                         .pathMatchers("/portal/admin/**").hasRole("ADMIN")
-                        .pathMatchers("/portal/facturacion/manual").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
+                        .pathMatchers("/portal/facturacion/manual", "/portal/facturacion/nota-credito").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .pathMatchers("/portal/facturacion/manual/**").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .pathMatchers("/portal/invoices/emit").hasAnyRole("ADMIN", "EMISOR", "OPERADOR")
                         .pathMatchers("/portal/**").authenticated()

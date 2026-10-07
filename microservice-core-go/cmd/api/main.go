@@ -387,13 +387,13 @@ func main() {
 		pr.Get("/api/v1/invoices/{id}/documents/{kind}", a.handleDownloadInvoiceDocument)
 		pr.Post("/api/v1/invoices/{id}/reemit", a.handleReemitInvoice)
 		pr.Patch("/api/v1/invoices/{id}/urls", a.handleUpdateInvoiceUrls)
-		pr.Get("/api/v1/search", a.handleSearchDocuments)
 		pr.Get("/api/v1/dashboard/kpis", a.handleDashboardKpis)
 	})
 
 	// Recepción / ingestión: solo tenant (sin emission_point)
 	r.Group(func(rr chi.Router) {
 		rr.Use(tenantOnlyMiddleware)
+		rr.Get("/api/v1/search", a.handleSearchDocuments)
 		rr.Post("/api/v1/reception/sync-imap", receptionHandlers.SyncIMAP)
 		rr.Post("/api/v1/reception/test-imap", receptionHandlers.TestIMAP)
 		rr.Post("/api/v1/reception/import-xml", receptionHandlers.ImportXML)
@@ -1277,23 +1277,53 @@ func (a *app) handleSearchDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 	like := "%" + q + "%"
 	rows, err := a.db.Query(r.Context(), `
-		SELECT id,
-		       CASE WHEN emission_point_id IS NULL THEN 'RECIBIDA' ELSE 'EMITIDA' END,
-		       prefijo, numero, COALESCE(uuid_cude, ''), estado_dian,
-		       COALESCE(NULLIF(document_kind, ''), 'INVOICE'),
-		       COALESCE(raw_dian_payload_jsonb->'cliente'->>'razon_social',
-		                raw_dian_payload_jsonb->'proveedor'->>'razon_social', '')
-		FROM invoices
-		WHERE company_id = $1
-		  AND (
-		    prefijo ILIKE $2
-		    OR CAST(numero AS TEXT) ILIKE $2
-		    OR (prefijo || CAST(numero AS TEXT)) ILIKE $2
-		    OR COALESCE(uuid_cude, '') ILIKE $2
-		    OR COALESCE(raw_dian_payload_jsonb->'cliente'->>'razon_social', '') ILIKE $2
-		    OR COALESCE(raw_dian_payload_jsonb->'cliente'->>'numero_identificacion', '') ILIKE $2
-		    OR COALESCE(raw_dian_payload_jsonb->'proveedor'->>'nit', '') ILIKE $2
-		  )
+		SELECT id, tipo, prefijo, numero, uuid_cude, estado_dian, document_kind, nombre
+		FROM (
+			SELECT i.id,
+			       CASE WHEN i.emission_point_id IS NULL THEN 'RECIBIDA' ELSE 'EMITIDA' END AS tipo,
+			       i.prefijo,
+			       i.numero::text AS numero,
+			       COALESCE(i.uuid_cude, '') AS uuid_cude,
+			       i.estado_dian,
+			       COALESCE(NULLIF(i.document_kind, ''), 'INVOICE') AS document_kind,
+			       COALESCE(raw_dian_payload_jsonb->'cliente'->>'razon_social',
+			                raw_dian_payload_jsonb->'proveedor'->>'razon_social', '') AS nombre,
+			       i.created_at
+			FROM invoices i
+			WHERE i.company_id = $1
+			  AND (
+			    i.prefijo ILIKE $2
+			    OR i.numero::text ILIKE $2
+			    OR (i.prefijo || i.numero::text) ILIKE $2
+			    OR COALESCE(i.uuid_cude, '') ILIKE $2
+			    OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'razon_social', '') ILIKE $2
+			    OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'numero_identificacion', '') ILIKE $2
+			    OR COALESCE(i.raw_dian_payload_jsonb->'cliente'->>'nit', '') ILIKE $2
+			    OR COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'nit', '') ILIKE $2
+			    OR COALESCE(i.raw_dian_payload_jsonb->'proveedor'->>'numero_identificacion', '') ILIKE $2
+			    OR EXISTS (SELECT 1 FROM companies c WHERE c.id = i.company_id AND c.nit ILIKE $2)
+			  )
+			UNION ALL
+			SELECT r.id,
+			       'RECIBIDA' AS tipo,
+			       '' AS prefijo,
+			       r.invoice_number AS numero,
+			       COALESCE(r.cufe, '') AS uuid_cude,
+			       r.estado_dian,
+			       'INVOICE' AS document_kind,
+			       r.supplier_name AS nombre,
+			       r.created_at
+			FROM received_invoices r
+			WHERE r.company_id = $1
+			  AND (
+			    r.invoice_number ILIKE $2
+			    OR COALESCE(r.cufe, '') ILIKE $2
+			    OR r.supplier_name ILIKE $2
+			    OR r.supplier_nit ILIKE $2
+			    OR r.raw_payload_jsonb::text ILIKE $2
+			    OR EXISTS (SELECT 1 FROM companies c WHERE c.id = r.company_id AND c.nit ILIKE $2)
+			  )
+		) AS documents
 		ORDER BY created_at DESC
 		LIMIT 30
 	`, tenantID, like)
@@ -1306,7 +1336,7 @@ func (a *app) handleSearchDocuments(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var id uuid.UUID
 		var tipo, prefijo, cufe, estado, kind, name string
-		var numero int64
+		var numero string
 		if err := rows.Scan(&id, &tipo, &prefijo, &numero, &cufe, &estado, &kind, &name); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
