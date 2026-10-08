@@ -31,15 +31,15 @@ function Resolve-MavenWrapperCommand {
     $MvnwJdk21Ps1 = Join-Path $WorkingDirectory "mvnw-jdk21.ps1"
 
     if (Test-Path -LiteralPath $MvnwJdk21Ps1 -PathType Leaf) {
-        return ".\mvnw-jdk21.ps1 spring-boot:run -Dspring-boot.run.profiles=local"
+        return '$env:SPRING_PROFILES_ACTIVE = "local"; $env:SERVER_PORT = "8080"; & .\mvnw-jdk21.ps1 spring-boot:run'
     }
 
     if (Test-Path -LiteralPath $MvnwCmd -PathType Leaf) {
-        return ".\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local"
+        return '$env:SPRING_PROFILES_ACTIVE = "local"; $env:SERVER_PORT = "8080"; & .\mvnw.cmd spring-boot:run'
     }
 
     if (Test-Path -LiteralPath $MvnwUnix -PathType Leaf) {
-        return "./mvnw spring-boot:run -Dspring-boot.run.profiles=local"
+        return '$env:SPRING_PROFILES_ACTIVE = "local"; $env:SERVER_PORT = "8080"; & ./mvnw spring-boot:run'
     }
 
     throw "No se encontró Maven Wrapper en $WorkingDirectory. Agregue mvnw/mvnw.cmd antes de levantar el portal Java."

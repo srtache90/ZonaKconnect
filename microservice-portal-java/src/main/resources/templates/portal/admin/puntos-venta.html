@@ -51,26 +51,28 @@
                     <label class="form-label" for="prefijo">Prefijo factura</label>
                     <input class="form-control" id="prefijo" name="prefijo" placeholder="FE" maxlength="12" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" style="width: 220px; transform: translateX(-30px);">
                     <label class="form-label" for="resolucionDian">Resolución de facturación</label>
                     <div class="input-group">
-                        <input class="form-control" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
-                        <button class="btn btn-outline-primary" id="btnConsultarDianFe" type="button" data-doc-kind="fe">
+                        <input class="form-control" style="width: 60px;" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
+                        <button class="btn btn-outline-primary" style="transform: translate(170px, -35px);" id="btnConsultarDianFe" type="button" data-doc-kind="fe">
                             Consultar DIAN
                         </button>
                     </div>
-                    <div class="form-text">Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.</div>
+                    <div class="form-text" style="width: 300px; transform: translateY(-30px);">
+                        Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.
+                    </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" style="width: 190px; transform: translate(80px,  10px);">
                     <label class="form-label" for="claveTecnica">Clave técnica</label>
                     <input class="form-control font-monospace" id="claveTecnica" name="claveTecnica" autocomplete="off" readonly>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-2" style="transform: translateX(80px);">
                     <label class="form-label" for="rangoDesde">Rango desde</label>
                     <input class="form-control" id="rangoDesde" name="rangoDesde" type="number" min="1" value="1" required>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-2" style="transform: translateX(80px);">
                     <label class="form-label" for="rangoHasta">Rango hasta</label>
                     <input class="form-control" id="rangoHasta" name="rangoHasta" type="number" min="1" required>
                 </div>
@@ -109,7 +111,7 @@
                     <input class="form-control" id="numeroActualNc" name="numeroActualNc" type="number" min="0" value="0" required>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" id="btnConsultarDianNc" type="button" data-doc-kind="nc">
+                    <button class="btn btn-outline-secondary w-100" style="transform: translateY(-15px);" id="btnConsultarDianNc" type="button" data-doc-kind="nc">
                         Consultar prefijo NC en DIAN
                     </button>
                 </div>
@@ -129,7 +131,7 @@
                     <input class="form-control" id="numeroActualNd" name="numeroActualNd" type="number" min="0" value="0" required>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" id="btnConsultarDianNd" type="button" data-doc-kind="nd">
+                    <button class="btn btn-outline-secondary w-100" style="transform: translateY(-15px);" id="btnConsultarDianNd" type="button" data-doc-kind="nd">
                         Consultar prefijo ND en DIAN
                     </button>
                 </div>

@@ -48,3 +48,7 @@ dian:
     software-manufacturer-nit: ${DIAN_SOFTWARE_MANUFACTURER_NIT:901000000}
     software-name: ${DIAN_SOFTWARE_NAME:Zona K Facturación Electrónica}
     technology-provider-name: ${DIAN_TECHNOLOGY_PROVIDER_NAME:Zona K S.A.S.}
+
+aws:
+  s3:
+    invoice-documents-bucket: ${AWS_S3_INVOICE_DOCUMENTS_BUCKET:invoice-documents-bucket}
