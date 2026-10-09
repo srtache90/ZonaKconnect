@@ -10,6 +10,127 @@
         .report-table { font-size: 0.82rem; }
         .report-table th { white-space: nowrap; }
         .cufe-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sales-report-filters {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+            align-items: end;
+            gap: 12px;
+            width: 100%;
+            max-width: 1480px;
+            margin-inline: auto;
+        }
+        .sales-report-filter-heading {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .sales-report-filter-copy {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            column-gap: 10px;
+            row-gap: 2px;
+        }
+        .sales-report-filter-title {
+            margin: 0;
+            color: #25231f;
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        .sales-report-filter-description {
+            margin: 0;
+            color: #6b6861;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .sales-report-filter-field {
+            min-width: 0;
+        }
+        .sales-report-filter-field label {
+            display: block;
+            margin-bottom: 6px;
+            color: #5f5d58;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .sales-report-filter-control {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            padding: 8px 12px;
+            border: 1px solid #e2ded7;
+            border-radius: 10px;
+            background-color: #fcf9f5;
+            color: #25231f;
+            font: inherit;
+            font-size: 14px;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+        .sales-report-filter-control:hover {
+            border-color: #cfc8bb;
+        }
+        .sales-report-filter-control:focus {
+            border-color: #967117;
+            outline: 0;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(150, 113, 23, 0.12);
+        }
+        .sales-report-filter-actions {
+            display: flex;
+            align-items: end;
+            gap: 10px;
+            min-height: 44px;
+        }
+        .sales-report-filter-actions > * {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+        }
+        .sales-report-filter-actions > *:hover {
+            transform: translateY(-1px);
+        }
+        .sales-report-export {
+            min-width: 68px;
+            border-radius: 10px;
+            border-color: #e2ded7;
+            background: #fff;
+            color: #25231f;
+        }
+        .sales-report-export:hover {
+            border-color: #cfc8bb;
+            background: #f8f5ef;
+            color: #25231f;
+        }
+        @media (max-width: 1100px) {
+            .sales-report-filters {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .sales-report-filter-actions {
+                grid-column: 1 / -1;
+                justify-content: flex-end;
+            }
+        }
+        @media (max-width: 560px) {
+            .sales-report-filters {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 14px;
+            }
+            .sales-report-filter-actions {
+                grid-column: auto;
+            }
+            .sales-report-filter-actions > * {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body class="text-on-surface">
@@ -24,20 +145,28 @@
     </div>
 
     <section class="zk-filter-card p-4 mb-4">
-        <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
-        <form method="get" th:action="@{/portal/emision/reportes/ventas-detallado}" class="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div>
+        <div class="sales-report-filter-heading">
+            <span class="material-symbols-outlined flex items-center justify-center rounded-xl border"
+                  style="width: 36px; height: 36px; color: #806521; background: #f5f1e8; border-color: #ece5d8; font-size: 20px;"
+                  aria-hidden="true">filter_alt</span>
+            <div class="sales-report-filter-copy">
+                <h3 class="sales-report-filter-title">Filtros</h3>
+                <p class="sales-report-filter-description">Ajusta los criterios para consultar las ventas.</p>
+            </div>
+        </div>
+        <form method="get" th:action="@{/portal/emision/reportes/ventas-detallado}" class="sales-report-filters">
+            <div class="sales-report-filter-field">
                 <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
+                <select class="sales-report-filter-control" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
                     <option th:each="sociedad : ${sociedades}"
                             th:value="${sociedad.id}"
                             th:selected="${sociedad.id.toString() == selectedSociedadId}"
                             th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
                 </select>
             </div>
-            <div>
+            <div class="sales-report-filter-field">
                 <label class="block font-label-md mb-1" for="emissionPointId">Punto de venta</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="emissionPointId" name="emissionPointId">
+                <select class="sales-report-filter-control" id="emissionPointId" name="emissionPointId">
                     <option value="">Todos</option>
                     <option th:each="puntoVenta : ${puntosVenta}"
                             th:value="${puntoVenta.id}"
@@ -46,21 +175,21 @@
                             th:text="${puntoVenta.codigo + ' - ' + puntoVenta.nombre}">PV01</option>
                 </select>
             </div>
-            <div>
+            <div class="sales-report-filter-field">
                 <label class="block font-label-md mb-1" for="fromDate">Desde</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+                <input class="sales-report-filter-control" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
             </div>
-            <div>
+            <div class="sales-report-filter-field">
                 <label class="block font-label-md mb-1" for="toDate">Hasta</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="toDate" name="toDate" th:value="${toDate}">
+                <input class="sales-report-filter-control" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
-            <div>
+            <div class="sales-report-filter-field">
                 <label class="block font-label-md mb-1" for="estadoDian">Estado DIAN</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="text" id="estadoDian" name="estadoDian" placeholder="Ej: Validado" th:value="${estadoDian}">
+                <input class="sales-report-filter-control" type="text" id="estadoDian" name="estadoDian" placeholder="Ej: Validado" th:value="${estadoDian}">
             </div>
-            <div class="flex items-end gap-2">
+            <div class="sales-report-filter-actions">
                 <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit">Consultar</button>
-                <a class="px-4 py-2 rounded-xl border border-surface-container-highest font-label-md text-decoration-none"
+                <a class="px-4 py-2 border font-label-md text-decoration-none sales-report-export"
                    th:href="@{/portal/emision/reportes/ventas-detallado/export(
                        sociedadId=${selectedSociedadId},
                        emissionPointId=${selectedEmissionPointId},

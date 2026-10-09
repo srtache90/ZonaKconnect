@@ -7,6 +7,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zona K e-Docs</title>
     <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
+    <style>
+        .magnetic-format-cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .magnetic-format-cards > .zk-card {
+            box-sizing: border-box;
+            width: auto;
+            min-width: 0;
+            height: auto;
+            left: auto;
+            padding: 1.5rem;
+        }
+        @media (max-width: 767px) {
+            .magnetic-format-cards {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar('reportes', 'medios')}"></div>
@@ -75,7 +96,7 @@
         </form>
     </section>
 
-    <section class="grid md:grid-cols-2 gap-4 mb-6">
+    <section class="magnetic-format-cards">
         <article class="card zk-card" th:each="format : ${formats}">
             <h4 class="font-headline-md text-headline-md text-primary mb-2" th:text="${format.code() + ' - ' + format.title()}">1007</h4>
             <p class="font-body-md text-on-surface-variant mb-0" th:text="${format.description()}">Descripción</p>
