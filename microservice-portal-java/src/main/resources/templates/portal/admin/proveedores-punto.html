@@ -32,7 +32,7 @@
                             th:text="${s.razonSocial}">Sociedad</option>
                 </select>
             </div>
-            <div class="col-md-4 text-md-end">
+            <div class="col-md-4 text-md-end" style="transform: translateY(20px);">
                 <a class="btn btn-outline-primary rounded-pill px-4"
                    th:href="@{/portal/admin/usuarios}">Usuarios y roles</a>
             </div>
@@ -42,8 +42,7 @@
     <section class="card zk-card mb-4">
         <div class="card-body">
             <div class="d-flex align-items-center gap-3 mb-4">
-                <span class="material-symbols-outlined d-flex align-items-center justify-content-center rounded-3 bg-light border text-warning flex-shrink-0"
-                      style="width: 44px; height: 44px;" aria-hidden="true">rule</span>
+                <span class="material-symbols-outlined d-flex align-items-center justify-content-center rounded-3 bg-light border text-warning flex-shrink-0" style=" transform: translate(-20px, -10px); width: 44px; height: 44px;" aria-hidden="true">rule</span>
                 <div>
                     <h2 class="h5 mb-1">Nueva / actualizar regla</h2>
                     <p class="small text-muted mb-0">Si el NIT ya existe, se actualiza el punto asignado.</p>
@@ -68,7 +67,7 @@
                     <label class="form-label" for="notes">Notas</label>
                     <input class="form-control rounded-3" id="notes" name="notes">
                 </div>
-                <div class="col-12 text-end">
+                <div class="col-12 text-end" style="transform: translateY(-70px);">
                     <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar regla</button>
                 </div>
             </form>
