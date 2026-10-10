@@ -11,6 +11,109 @@
         .report-table th { white-space: nowrap; }
         .cufe-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .events-cell { min-width: 260px; max-width: 420px; white-space: normal; }
+
+        .radian-filter-card {
+            width: auto !important;
+            min-width: 0 !important;
+            height: auto !important;
+            left: auto !important;
+            padding: 1.25rem !important;
+        }
+
+        .radian-filter-card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
+            line-height: 1.35;
+        }
+
+        .radian-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .radian-filter-grid > div {
+            min-width: 0;
+        }
+
+        .radian-filter-grid label {
+            display: block;
+            margin-bottom: .4rem;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+
+        .radian-filter-grid select,
+        .radian-filter-grid input {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 2.65rem;
+            padding: .55rem .7rem;
+            border: 1px solid #d9dce2;
+            border-radius: .7rem;
+            background-color: #fff;
+            color: #202124;
+            font: inherit;
+            font-size: .9rem;
+        }
+
+        .radian-filter-grid select:focus,
+        .radian-filter-grid input:focus {
+            border-color: #b48a36;
+            outline: 2px solid rgb(180 138 54 / 18%);
+            outline-offset: 1px;
+        }
+
+        .radian-filter-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: .65rem;
+            flex-wrap: wrap;
+            padding-top: .15rem;
+        }
+
+        .radian-filter-actions button,
+        .radian-filter-actions a {
+            display: inline-flex;
+            min-height: 2.5rem;
+            align-items: center;
+            justify-content: center;
+            padding: .55rem 1rem;
+            border-radius: .7rem;
+            font-size: .9rem;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 1100px) {
+            .radian-filter-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .radian-filter-card {
+                padding: 1rem !important;
+            }
+
+            .radian-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: .8rem;
+            }
+
+            .radian-filter-actions {
+                justify-content: stretch;
+            }
+
+            .radian-filter-actions button,
+            .radian-filter-actions a {
+                flex: 1 1 100%;
+            }
+        }
     </style>
 </head>
 <body class="text-on-surface">
@@ -34,9 +137,9 @@
         <li th:each="error : ${syncErrors}" th:text="${error}">Error</li>
     </ul>
 
-    <section class="zk-filter-card p-4 mb-4">
-        <h3 class="font-headline-md text-headline-md text-primary mb-4">Filtros</h3>
-        <form method="get" th:action="@{/portal/emision/reportes/documentos-radian}" class="grid md:grid-cols-3 lg:grid-cols-7 gap-4">
+    <section class="zk-filter-card p-4 mb-4 radian-filter-card">
+        <h3 class="font-headline-md text-headline-md text-primary">Filtros</h3>
+        <form method="get" th:action="@{/portal/emision/reportes/documentos-radian}" class="radian-filter-grid">
             <div>
                 <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
                 <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
@@ -78,7 +181,7 @@
                 <label class="block font-label-md mb-1" for="estadoDian">Estado DIAN</label>
                 <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="text" id="estadoDian" name="estadoDian" placeholder="Ej: ENVIADO" th:value="${estadoDian}">
             </div>
-            <div class="flex items-end gap-2 flex-wrap">
+            <div class="radian-filter-actions">
                 <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md" type="submit">Consultar</button>
                 <button class="px-4 py-2 rounded-xl border border-primary text-primary font-label-md"
                         formaction="/portal/emision/reportes/documentos-radian/sync"
