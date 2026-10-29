@@ -1236,22 +1236,34 @@ progress {
         width: 16.66666667%;
         padding: 0px 10px 20px 10px 
     }
-
+    .col-md-3-1{
+        max-width: 50%;
+    }
     .col-md-3 {
         flex: 0 0 auto;
-        width: 125px;
+        width: 270px;
         margin: 5px 4px;
+        margin-top:15px;
+    }
+    
+    .col-md-3-3{
+        width: 27%;
+        margin-top: 4px;
     }
 
     .col-md-4 {
         flex: 0 0 auto;
-        width: 60%;
+        width: 24%;
         display: flex;
         justify-content: center;
         padding: 0px 40px 20px 30px;
         flex-wrap: wrap;
         flex-direction: column;
 
+    }
+    .col-md-4-1{
+        width: 25.8%;
+        margin-top: 30px;
     }
 
     .col-md-5 {
@@ -1261,7 +1273,8 @@ progress {
 
     .col-md-6 {
         flex: 0 0 auto;
-        width: 50%
+        width: 35%;
+        margin-top:6px
     }
 
     .col-md-7 {
@@ -1292,6 +1305,9 @@ progress {
     .col-md-12 {
         flex: 0 0 auto;
         width: 100%
+    }
+    .caj{
+        min-width: 130px;
     }
 
     .offset-md-0 {

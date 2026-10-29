@@ -33,7 +33,7 @@
     --dc-radius-lg: 1rem;
     --dc-radius-card: 1rem;
     --dc-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-    --dc-font: "TT Commons", Arial, sans-serif;
+   --dc-font: "Plus Jakarta Sans", sans-serif;
     --dc-header-h: 4rem;
 
     /* Bootstrap: sin azul — acento negro + bronce recepción */
@@ -470,11 +470,17 @@ textarea.form-control {
     box-shadow: 0 0 0 3px var(--dc-focus-gold) !important;
 }
 
+.form-label-2 {
+    flex: 0 0 auto;
+    width: 125px;
+    margin: 5px 4px;
+}
+
 .form-label {
-    font-size: 0.875rem;
+    font-size: 0.90rem;
     font-weight: 500;
     color: var(--dc-on-surface);
-    width: 50%;
+
 }
 
 .form-text {
@@ -559,6 +565,9 @@ textarea.form-control {
     background: var(--dc-surface-low) !important;
     color: var(--dc-on-variant) !important;
     border-color: var(--dc-surface-high) !important;
+    min-width: 70px !important;
+    max-width: 120px !important;
+    justify-content: center !important;
 }
 
 .badge-085 { background: #eceae6 !important; color: #1c1c1a !important; }
