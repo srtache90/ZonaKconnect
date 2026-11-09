@@ -26,6 +26,10 @@
         </div>
     </form>
 
+    <div class="alert alert-danger rounded-4" th:if="${searchError != null}" th:text="${searchError}">
+        No fue posible completar la búsqueda. Intente de nuevo.
+    </div>
+
     <div class="alert alert-warning rounded-4" th:if="${q != null and !#strings.isEmpty(q) and #strings.length(q) &lt; 2}">
         Ingrese al menos 2 caracteres.
     </div>

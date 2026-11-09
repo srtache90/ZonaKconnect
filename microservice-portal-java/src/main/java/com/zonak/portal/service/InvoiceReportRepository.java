@@ -8,6 +8,7 @@ import com.zonak.portal.dto.InvoicePdfData;
 import com.zonak.portal.exception.InvoiceStorageException;
 import com.zonak.portal.integration.sap.SapConsultaDocumento;
 import com.zonak.portal.integration.sap.SapDianStatus;
+import com.zonak.portal.support.InvoiceDianStatus;
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.math.BigDecimal;
@@ -56,7 +57,8 @@ public class InvoiceReportRepository {
     }
 
     public Optional<InvoicePdfData> findApprovedInvoice(UUID tenantId, UUID invoiceId) {
-        return findInvoice(tenantId, invoiceId, true);
+        return findInvoice(tenantId, invoiceId, false)
+                .filter(invoice -> InvoiceDianStatus.isValidated(invoice.status(), invoice.fiscalContext().uniqueCode()));
     }
 
     public Optional<InvoicePdfData> findInvoice(UUID tenantId, UUID invoiceId) {

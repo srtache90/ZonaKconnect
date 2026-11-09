@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.408 AS build
 WORKDIR /src
 
 COPY DIAN_NET/DIAN_NET/ .

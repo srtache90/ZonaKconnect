@@ -1,13 +1,25 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <style>
     #sidebar-drawer nav > a {
+        display: flex !important;
+        align-items: center;
+        box-sizing: border-box;
         min-height: 56px;
         width: 100%;
+        flex: 0 0 auto;
+        gap: 16px;
+        padding: 12px 16px !important;
+        font-size: 15px;
+        line-height: 1.35;
+        text-decoration: none;
     }
 
     #sidebar-drawer nav > a > span:first-child {
         flex-shrink: 0;
+        width: 24px;
+        text-align: center;
     }
 
     #sidebar-drawer nav > a > span:last-child {
@@ -15,29 +27,30 @@
     }
 
     #sidebar-drawer {
-        width: 320px !important;
-        background: #ffffff !important;
-        border-right: 1px solid #e5e7eb !important;
-        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08) !important;
+        width: min(320px, calc(100vw - 24px)) !important;
+        background: #fcf9f5 !important;
+        border-right: 1px solid #e8e3db !important;
+        box-shadow: 0 18px 48px rgba(38, 31, 20, 0.16) !important;
     }
 
     #sidebar-drawer nav > a {
-        color: #475569 !important;
+        color: #5f5d58 !important;
         border: 1px solid transparent;
-        border-radius: 10px !important;
-        transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        border-radius: 14px !important;
+        transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     #sidebar-drawer nav > a:hover {
-        background: #f8fafc !important;
-        border-color: #eef0f2;
-        color: #0f172a !important;
+        background: #f4f1eb !important;
+        border-color: #ece5d8;
+        color: #211f1a !important;
+        transform: translateX(2px);
     }
 
     #sidebar-drawer nav > a[class*="bg-primary/5"] {
-        background: #f3f5f6 !important;
-        border-color: #e6e9eb !important;
-        color: #0f172a !important;
+        background: #f1eadb !important;
+        border-color: #e7dcc3 !important;
+        color: #362b14 !important;
         box-shadow: inset 3px 0 0 #967117 !important;
     }
 
@@ -46,22 +59,32 @@
     }
 
     #sidebar-drawer > div > div:first-child {
-        background: #ffffff;
-        border-bottom-color: #eef0f2 !important;
+        background: #fcf9f5;
+        border-bottom-color: #e8e3db !important;
     }
 
     #sidebar-drawer > div > div:last-child {
-        border-top-color: #eef0f2 !important;
+        border-top-color: #e8e3db !important;
     }
 
     #sidebar-drawer > div > div:last-child > div {
-        background: #f8fafb !important;
-        border: 1px solid #eef0f2;
-        border-radius: 12px !important;
+        background: #f4f1eb !important;
+        border: 1px solid #ece5d8;
+        border-radius: 16px !important;
+    }
+
+    #sidebar-drawer nav {
+        gap: 6px !important;
+    }
+
+    #sidebar-drawer nav > a:focus-visible {
+        outline: 3px solid rgba(150, 113, 23, 0.35);
+        outline-offset: 2px;
     }
 </style>
 <body>
 <th:block th:fragment="sidebar(module, activeMenu)">
+    <th:block th:replace="~{portal/fragments/portal-nav :: permissionDialog}"></th:block>
     <aside class="fixed inset-y-0 left-0 w-80 bg-surface border-r border-surface-container-highest z-[60] -translate-x-full transition-transform duration-300 ease-in-out shadow-xl" id="sidebar-drawer">
         <div class="flex flex-col h-full">
             <div class="h-16 flex items-center px-6 border-b border-surface-container-highest">
@@ -75,7 +98,7 @@
 
             <nav class="flex-1 py-6 px-4 flex flex-col gap-3">
                 <a class="flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors font-label-md"
-                   th:href="@{/portal}">
+                   th:href="@{/portal}" style="width: 100%;">
                     <span class="material-symbols-outlined shrink-0">dashboard</span>
                     <span class="whitespace-nowrap">Panel de módulos</span>
                 </a>
@@ -91,16 +114,32 @@
                         <span class="material-symbols-outlined shrink-0">analytics</span>
                         <span class="whitespace-nowrap">Reportes</span>
                     </a>
-                    <a th:href="@{/portal/facturacion/manual}"
+                    <a sec:authorize="hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                       th:href="@{/portal/facturacion/manual}"
                        th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined shrink-0">add_circle</span>
                         <span class="whitespace-nowrap">Emitir factura</span>
                     </a>
-                    <a th:href="@{/portal/facturacion/nota-credito}"
+                    <button sec:authorize="!hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                            type="button"
+                            data-permission-denied="No tienes permiso para generar una nueva factura. Solicita el rol EMISOR a un administrador."
+                            th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors text-left border-0 bg-transparent cursor-pointer ' + (${activeMenu} == 'manual' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">add_circle</span>
+                        <span class="whitespace-nowrap">Emitir factura</span>
+                    </button>
+                    <a sec:authorize="hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                       th:href="@{/portal/facturacion/nota-credito}"
                        th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
                         <span class="material-symbols-outlined shrink-0">receipt_long</span>
                         <span class="whitespace-nowrap">Nota crédito</span>
                     </a>
+                    <button sec:authorize="!hasAnyRole('ADMIN', 'EMISOR', 'OPERADOR')"
+                            type="button"
+                            data-permission-denied="No tienes permiso para generar una nota crédito. Solicita el rol EMISOR a un administrador."
+                            th:class="'flex items-center gap-4 px-4 py-3 min-h-14 rounded-xl font-label-md transition-colors text-left border-0 bg-transparent cursor-pointer ' + (${activeMenu} == 'nota-credito' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                        <span class="material-symbols-outlined shrink-0">receipt_long</span>
+                        <span class="whitespace-nowrap">Nota crédito</span>
+                    </button>
                 </th:block>
 
                 <th:block th:if="${module == 'reportes'}">
@@ -146,37 +185,37 @@
 
                 <th:block th:if="${module == 'configuracion'}">
                     <a th:href="@{/portal/configuraciones}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'general' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'general' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">tune</span>
                         <span>Parámetros generales</span>
                     </a>
-                    <a th:href="@{/portal/admin/sociedades}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'sociedades' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                    <a th:href="@{/portal/admin/sociedades} "
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'sociedades' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">corporate_fare</span>
                         <span>Sociedades</span>
                     </a>
                     <a th:href="@{/portal/admin/puntos-venta}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'puntos' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'puntos' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">store</span>
                         <span>Puntos de venta</span>
                     </a>
                     <a th:href="@{/portal/admin/certificados}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'certificados' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'certificados' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">verified_user</span>
                         <span>Certificados digitales</span>
                     </a>
                     <a th:href="@{/portal/admin/usuarios}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'usuarios' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'usuarios' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">group</span>
                         <span>Usuarios y roles</span>
                     </a>
                     <a th:href="@{/portal/admin/proveedores-punto}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'proveedores-punto' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'proveedores-punto' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">route</span>
                         <span>Proveedor → Punto</span>
                     </a>
                     <a th:href="@{/portal/configuraciones/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>
@@ -184,17 +223,17 @@
 
                 <th:block th:if="${module == 'soporte'}">
                     <a th:href="@{/portal/documento-soporte}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">assignment</span>
                         <span>Listado</span>
                     </a>
                     <a th:href="@{/portal/documento-soporte/nuevo}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">add_circle</span>
                         <span>Nuevo documento</span>
                     </a>
                     <a th:href="@{/portal/documento-soporte/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>
@@ -202,17 +241,17 @@
 
                 <th:block th:if="${module == 'nomina'}">
                     <a th:href="@{/portal/nomina-electronica}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'inicio' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">payments</span>
                         <span>Listado</span>
                     </a>
                     <a th:href="@{/portal/nomina-electronica/nuevo}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'nuevo' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">add_circle</span>
                         <span>Nueva nómina</span>
                     </a>
                     <a th:href="@{/portal/nomina-electronica/reportes}"
-                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')">
+                       th:class="'flex items-center gap-4 px-4 py-3 rounded-xl font-label-md transition-colors ' + (${activeMenu} == 'reportes' ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low')" style="width: 100%;">
                         <span class="material-symbols-outlined">summarize</span>
                         <span>Reportes</span>
                     </a>
@@ -404,6 +443,115 @@
     </nav>
 </th:block>
 
+<th:block th:fragment="permissionDialog">
+    <style>
+        .zk-permission-dialog {
+            width: min(92vw, 440px);
+            max-width: none;
+            padding: 0;
+            border: 0;
+            border-radius: 24px;
+            color: #1c1c1a;
+            background: #fff;
+            box-shadow: 0 24px 80px rgba(20, 20, 20, .24);
+            font-family: 'TT Commons', Arial, sans-serif;
+        }
+        .zk-permission-dialog::backdrop {
+            background: rgba(20, 20, 20, .48);
+            backdrop-filter: blur(3px);
+        }
+        .zk-permission-dialog__content {
+            padding: 32px;
+            text-align: center;
+        }
+        .zk-permission-dialog__icon {
+            display: grid;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 18px;
+            place-items: center;
+            border-radius: 20px;
+            color: #806521;
+            background: #f8f1df;
+        }
+        .zk-permission-dialog__icon .material-symbols-outlined {
+            font-size: 30px;
+        }
+        .zk-permission-dialog h2 {
+            margin: 0 0 9px;
+            font-size: 23px;
+            font-weight: 600;
+            letter-spacing: -.02em;
+        }
+        .zk-permission-dialog p {
+            margin: 0 auto 24px;
+            max-width: 340px;
+            color: #66645f;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .zk-permission-dialog__close {
+            min-width: 140px;
+            padding: 11px 24px;
+            border: 0;
+            border-radius: 999px;
+            color: white;
+            background: #171717;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .18s ease, transform .18s ease;
+        }
+        .zk-permission-dialog__close:hover {
+            background: #806521;
+            transform: translateY(-1px);
+        }
+        .zk-permission-dialog__close:focus-visible {
+            outline: 3px solid #c7a85a;
+            outline-offset: 3px;
+        }
+        @media (max-width: 480px) {
+            .zk-permission-dialog__content { padding: 28px 22px; }
+        }
+    </style>
+    <dialog class="zk-permission-dialog" id="zk-permission-dialog" aria-labelledby="zk-permission-title">
+        <div class="zk-permission-dialog__content">
+            <div class="zk-permission-dialog__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none"
+                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3 4.5 6v5.2c0 4.6 3.1 8.1 7.5 9.8 4.4-1.7 7.5-5.2 7.5-9.8V6L12 3Z"></path>
+                    <rect x="9" y="10.5" width="6" height="4.5" rx="1"></rect>
+                    <path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"></path>
+                </svg>
+            </div>
+            <h2 id="zk-permission-title">Acceso no disponible</h2>
+            <p id="zk-permission-message">No tienes permiso para realizar esta acción. Solicita el rol EMISOR a un administrador.</p>
+            <button class="zk-permission-dialog__close" type="button" data-permission-close>Cerrar</button>
+        </div>
+    </dialog>
+    <script>
+        (() => {
+            const dialog = document.getElementById('zk-permission-dialog');
+            const message = document.getElementById('zk-permission-message');
+            if (!dialog || !message) return;
+
+            document.addEventListener('click', event => {
+                const trigger = event.target.closest('[data-permission-denied]');
+                if (trigger) {
+                    event.preventDefault();
+                    message.textContent = trigger.dataset.permissionDenied;
+                    dialog.showModal();
+                } else if (event.target.closest('[data-permission-close]')) {
+                    dialog.close();
+                } else if (event.target === dialog) {
+                    dialog.close();
+                }
+            });
+        })();
+    </script>
+</th:block>
+
 <th:block th:fragment="shellScripts">
     <script th:src="@{/vendor/bootstrap/bootstrap.bundle.min.js}"></script>
     <script>
@@ -446,7 +594,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
     <link th:href="@{/vendor/bootstrap/bootstrap.min.css}" rel="stylesheet">
     <link th:href="@{/css/zonak-portal.css}" rel="stylesheet">
-    <link th:href="@{/css/portal-ui.css(v=20260828-edocs)}" rel="stylesheet">
+    <link th:href="@{/css/portal-ui.css(v=20261001-tt-commons)}" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: "class",

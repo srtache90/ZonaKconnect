@@ -33,7 +33,7 @@
     {
       "label": "Portal Java :8080",
       "type": "shell",
-      "command": "if (Test-Path .\\mvnw-jdk21.ps1) { .\\mvnw-jdk21.ps1 spring-boot:run -Dspring-boot.run.profiles=local } elseif (Test-Path .\\mvnw.cmd) { .\\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local } elseif (Test-Path .\\mvnw) { ./mvnw spring-boot:run -Dspring-boot.run.profiles=local } else { throw 'No se encontró Maven Wrapper: agregue mvnw/mvnw.cmd en microservice-portal-java.' }",
+      "command": "$env:SPRING_PROFILES_ACTIVE = 'local'; $env:SERVER_PORT = '8080'; if (Test-Path .\\mvnw-jdk21.ps1) { & .\\mvnw-jdk21.ps1 spring-boot:run } elseif (Test-Path .\\mvnw.cmd) { & .\\mvnw.cmd spring-boot:run } elseif (Test-Path .\\mvnw) { & ./mvnw spring-boot:run } else { throw 'No se encontró Maven Wrapper: agregue mvnw/mvnw.cmd en microservice-portal-java.' }",
       "options": {
         "cwd": "${workspaceFolder}/microservice-portal-java"
       },
