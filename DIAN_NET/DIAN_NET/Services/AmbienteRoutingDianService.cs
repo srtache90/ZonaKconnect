@@ -35,10 +35,10 @@ namespace DIAN_NET.Services
         public ConsultarEmpresaDIANResponse ConsultarEmpresaDIAN(string nit) =>
             ExecuteReal("Habilitacion", manager => manager.ConsultarEmpresaDIAN(nit));
 
-        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente) =>
+        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente, string? testSetId = null) =>
             IsMock(ambiente)
-                ? _mock.EnviarFactura(zipData, nombreArchivo, ambiente)
-                : ExecuteReal(ambiente, manager => manager.EnviarFactura(zipData, nombreArchivo, ambiente));
+                ? _mock.EnviarFactura(zipData, nombreArchivo, ambiente, testSetId)
+                : ExecuteReal(ambiente, manager => manager.EnviarFactura(zipData, nombreArchivo, ambiente, testSetId));
 
         public DianResponse EnviarNomina(byte[] zipData, string ambiente) =>
             IsMock(ambiente)

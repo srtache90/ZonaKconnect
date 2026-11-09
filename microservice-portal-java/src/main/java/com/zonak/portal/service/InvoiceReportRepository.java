@@ -80,6 +80,62 @@ public class InvoiceReportRepository {
         return ids.stream().filter(Objects::nonNull).findFirst();
     }
 
+    public Optional<SimphonyJsonDownload> findSimphonyJson(UUID tenantId, UUID invoiceId) {
+        List<SimphonyJsonDownload> rows = jdbcTemplate.query(
+                """
+                        SELECT prefijo,
+                               numero,
+                               raw_dian_payload_jsonb::text AS raw_payload,
+                               totals_jsonb::text AS totals
+                        FROM invoices
+                        WHERE company_id = ?
+                          AND id = ?
+                        """,
+                (rs, rowNum) -> mapSimphonyJson(rs),
+                tenantId,
+                invoiceId
+        );
+        return rows.stream().findFirst();
+    }
+
+    private SimphonyJsonDownload mapSimphonyJson(ResultSet rs) throws SQLException {
+        JsonNode raw = readTree(rs.getString("raw_payload"));
+        JsonNode totals = readTree(rs.getString("totals"));
+        JsonNode source = simphonyNode(totals);
+        if (source == null) {
+            source = simphonyNode(raw.path("totals_jsonb"));
+        }
+        JsonNode body = source != null ? source : raw;
+        try {
+            byte[] content = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(body);
+            return new SimphonyJsonDownload(simphonyFileName(rs.getString("prefijo"), rs.getLong("numero")), content);
+        } catch (Exception ex) {
+            throw new InvoiceStorageException("No fue posible serializar el JSON Simphony", ex);
+        }
+    }
+
+    private static JsonNode simphonyNode(JsonNode container) {
+        if (container == null || container.isMissingNode() || container.isNull()) {
+            return null;
+        }
+        JsonNode source = container.get("simphony_json");
+        if (source == null || source.isNull() || source.isMissingNode()) {
+            return null;
+        }
+        return source;
+    }
+
+    private static String simphonyFileName(String prefijo, long numero) {
+        String prefix = prefijo == null ? "" : prefijo.replaceAll("[^A-Za-z0-9_-]", "");
+        if (prefix.isBlank()) {
+            prefix = "factura";
+        }
+        return prefix + "-" + numero + "-simphony.json";
+    }
+
+    public record SimphonyJsonDownload(String fileName, byte[] content) {
+    }
+
     private Optional<InvoicePdfData> findInvoice(UUID tenantId, UUID invoiceId, boolean requireCufe) {
         String cufeFilter = requireCufe ? " AND i.uuid_cude IS NOT NULL" : "";
         List<InvoicePdfData> invoices = jdbcTemplate.query(
@@ -198,6 +254,66 @@ public class InvoiceReportRepository {
         if (rows.size() > 1) {
             throw new IllegalArgumentException(
                     "Hay varios documentos con consecutivo " + numero + ". Envíe prefijo."
+            );
+        }
+        return rows.stream().findFirst();
+    }
+
+    public Optional<SapDianStatus> findPosEstadoByReferencia(
+            UUID tenantId,
+            String checkId,
+            String numeroTicket,
+            String numeroFactura
+    ) {
+        String check = checkId == null ? "" : checkId.trim();
+        String ticket = numeroTicket == null ? "" : numeroTicket.trim();
+        String factura = numeroFactura == null ? "" : numeroFactura.trim();
+        if (check.isEmpty() && ticket.isEmpty() && factura.isEmpty()) {
+            return Optional.empty();
+        }
+        List<SapDianStatus> rows = jdbcTemplate.query(
+                """
+                        SELECT i.id,
+                               i.prefijo,
+                               i.numero,
+                               i.estado_dian,
+                               i.uuid_cude,
+                               COALESCE(
+                                   NULLIF(i.dian_response_jsonb->>'statusMessage', ''),
+                                   NULLIF(i.dian_response_jsonb->>'statusDescription', ''),
+                                   NULLIF(i.dian_response_jsonb->>'dian_error_description', ''),
+                                   NULLIF(i.dian_response_jsonb->>'mensaje', ''),
+                                   NULLIF(i.dian_response_jsonb->>'status', ''),
+                                   i.estado_dian
+                               ) AS mensaje_dian
+                        FROM invoices i
+                        WHERE i.company_id = ?
+                          AND (? = '' OR i.totals_jsonb->>'check_id' = ?
+                               OR i.raw_dian_payload_jsonb #>> '{totals_jsonb,check_id}' = ?)
+                          AND (? = '' OR i.totals_jsonb->>'numero_ticket' = ?
+                               OR i.raw_dian_payload_jsonb #>> '{totals_jsonb,numero_ticket}' = ?)
+                          AND (? = '' OR i.totals_jsonb->>'numero_factura' = ?
+                               OR i.raw_dian_payload_jsonb #>> '{totals_jsonb,numero_factura}' = ?
+                               OR (BTRIM(COALESCE(i.prefijo, '')) || i.numero::text) = ?)
+                        ORDER BY i.updated_at DESC
+                        LIMIT 2
+                        """,
+                (rs, rowNum) -> new SapDianStatus(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("prefijo"),
+                        rs.getLong("numero"),
+                        rs.getString("estado_dian"),
+                        rs.getString("uuid_cude"),
+                        rs.getString("mensaje_dian")
+                ),
+                tenantId,
+                check, check, check,
+                ticket, ticket, ticket,
+                factura, factura, factura, factura
+        );
+        if (rows.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Hay varios documentos para esa referencia. Envíe prefijo y numero."
             );
         }
         return rows.stream().findFirst();

@@ -11,7 +11,7 @@ namespace DIAN_NET.Services
         DianResponse ConsultarEstado(string trackId, string ambiente);
         NumberRangeResponseList ConsultarRangos(string nit, string idSoftware, string ambiente);
         ConsultarEmpresaDIANResponse ConsultarEmpresaDIAN(string nit);
-        DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente);
+        DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente, string? testSetId = null);
         DianResponse EnviarNomina(byte[] zipData, string ambiente);
         DianResponse EnviarEvento(byte[] zipData, string ambiente);
         DocumentInfoResponse ConsultarDocumentoInfo(string uuid, string ambiente);

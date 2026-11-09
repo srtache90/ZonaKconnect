@@ -113,6 +113,7 @@ type invoiceItem struct {
 
 type dianNetRequest struct {
 	Ambiente    string          `json:"ambiente"`
+	TestSetID   string          `json:"testSetId,omitempty"`
 	Factura     *dianInvoice    `json:"factura,omitempty"`
 	NotaCredito *dianCreditNote `json:"notaCredito,omitempty"`
 	NotaDebito  *dianDebitNote  `json:"notaDebito,omitempty"`
@@ -126,6 +127,7 @@ type DIANConfig struct {
 	RegimenFiscal             string `json:"regimen_fiscal"`
 	SoftwareID                string `json:"software_id"`
 	Pin                       string `json:"pin"`
+	TestSetID                 string `json:"test_set_id"`
 }
 
 type dianNetResponse struct {
@@ -1031,6 +1033,29 @@ func (a *app) handleCreateDebitNote(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func resolveReemitKind(documentKind string, rawPayload json.RawMessage) string {
+	switch strings.ToUpper(strings.TrimSpace(documentKind)) {
+	case "CREDIT_NOTE", "DEBIT_NOTE", "INVOICE", "SUPPORT", "PAYROLL":
+		return strings.ToUpper(strings.TrimSpace(documentKind))
+	}
+	// Solo claves de primer nivel. El POS guarda credit_note_type_code vacío dentro de totals_jsonb
+	// en facturas de venta; buscar el texto en todo el JSON las reenviaba como nota crédito.
+	var top struct {
+		CreditNoteTypeCode string `json:"credit_note_type_code"`
+		DebitNoteTypeCode  string `json:"debit_note_type_code"`
+	}
+	if err := json.Unmarshal(rawPayload, &top); err != nil {
+		return "INVOICE"
+	}
+	if strings.TrimSpace(top.DebitNoteTypeCode) != "" {
+		return "DEBIT_NOTE"
+	}
+	if strings.TrimSpace(top.CreditNoteTypeCode) != "" {
+		return "CREDIT_NOTE"
+	}
+	return "INVOICE"
+}
+
 func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID := mustTenantID(r.Context())
 	emissionPointID := mustEmissionPointID(r.Context())
@@ -1046,7 +1071,7 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 	var rawPayload json.RawMessage
 	var documentKind string
 	err = a.db.QueryRow(r.Context(), `
-		SELECT prefijo, numero, estado_dian, raw_dian_payload_jsonb, COALESCE(NULLIF(document_kind, ''), 'INVOICE')
+		SELECT prefijo, numero, estado_dian, raw_dian_payload_jsonb, COALESCE(document_kind, '')
 		FROM invoices
 		WHERE company_id = $1
 		  AND id = $2
@@ -1076,7 +1101,8 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 	) {
 		ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 		defer cancel()
-		if documentKind == "CREDIT_NOTE" || strings.Contains(string(rawPayload), "credit_note_type_code") {
+		switch resolveReemitKind(documentKind, rawPayload) {
+		case "CREDIT_NOTE":
 			var req createCreditNoteRequest
 			if err := json.Unmarshal(rawPayload, &req); err != nil {
 				log.Printf("reemit NC unmarshal invoice_id=%s error=%v", invoiceID, err)
@@ -1089,8 +1115,7 @@ func (a *app) handleReemitInvoice(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			return
-		}
-		if documentKind == "DEBIT_NOTE" || strings.Contains(string(rawPayload), "debit_note_type_code") {
+		case "DEBIT_NOTE":
 			var req createDebitNoteRequest
 			if err := json.Unmarshal(rawPayload, &req); err != nil {
 				log.Printf("reemit ND unmarshal invoice_id=%s error=%v", invoiceID, err)
@@ -1279,11 +1304,7 @@ func (a *app) emitGenericToDianNet(tenantID, emissionPointID, invoiceID uuid.UUI
 		log.Printf("emitGeneric load context invoice_id=%s error=%v", invoiceID, err)
 		return
 	}
-	requestAmbiente := ""
-	if raw, ok := payload["ambiente"]; ok {
-		requestAmbiente = fmt.Sprint(raw)
-	}
-	ambiente := resolveDianAmbiente(requestAmbiente, emissionCtx.DIANConfig.Ambiente)
+	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
 	payload["ambiente"] = ambiente
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.dianAPIURL+path, bytes.NewReader(body))
@@ -1472,12 +1493,17 @@ func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointI
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := resolveDianAmbiente(invoiceReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
+	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
+	testSetID := strings.TrimSpace(emissionCtx.DIANConfig.TestSetID)
+	if strings.EqualFold(ambiente, "Habilitacion") && testSetID == "" {
+		return nil, fmt.Errorf("ambiente Habilitacion requiere test_set_id en la sociedad tenant_id=%s", tenantID)
+	}
 
 	factura := buildDianInvoice(invoiceReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
-		Ambiente: ambiente,
-		Factura:  &factura,
+		Ambiente:  ambiente,
+		TestSetID: testSetID,
+		Factura:   &factura,
 	})
 	if err != nil {
 		return nil, err
@@ -1583,11 +1609,16 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := resolveDianAmbiente(creditNoteReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
+	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
+	testSetID := strings.TrimSpace(emissionCtx.DIANConfig.TestSetID)
+	if strings.EqualFold(ambiente, "Habilitacion") && testSetID == "" {
+		return nil, fmt.Errorf("ambiente Habilitacion requiere test_set_id en la sociedad tenant_id=%s", tenantID)
+	}
 
 	notaCredito := buildDianCreditNote(creditNoteReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
 		Ambiente:    ambiente,
+		TestSetID:   testSetID,
 		NotaCredito: &notaCredito,
 	})
 	if err != nil {
@@ -1659,11 +1690,16 @@ func (a *app) emitDebitNoteToDianNet(ctx context.Context, tenantID, emissionPoin
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := resolveDianAmbiente(debitNoteReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
+	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
+	testSetID := strings.TrimSpace(emissionCtx.DIANConfig.TestSetID)
+	if strings.EqualFold(ambiente, "Habilitacion") && testSetID == "" {
+		return nil, fmt.Errorf("ambiente Habilitacion requiere test_set_id en la sociedad tenant_id=%s", tenantID)
+	}
 
 	notaDebito := buildDianDebitNote(debitNoteReq, emissionCtx, prefijo, numero, ambiente)
 	body, err := json.Marshal(dianNetRequest{
 		Ambiente:   ambiente,
+		TestSetID:  testSetID,
 		NotaDebito: &notaDebito,
 	})
 	if err != nil {
@@ -2502,23 +2538,13 @@ func dianEnvironmentCode(ambiente string) string {
 	}
 }
 
-func resolveDianAmbiente(requestAmbiente, configAmbiente string) string {
-	// LOCAL/dev en payload histórico no debe pisar el ambiente DIAN de la sociedad (Produccion/Habilitacion).
-	if explicit := explicitDianAmbiente(requestAmbiente); explicit != "" {
-		return explicit
-	}
+func resolveDianAmbiente(configAmbiente string) string {
+	// El ambiente de envío sale de companies.dian_config.ambiente (portal).
+	// ambiente/tipo_ambiente del JSON de la estación no se usa.
 	if normalized := normalizeDianAmbiente(configAmbiente); normalized != "" {
 		return normalized
 	}
 	return "Habilitacion"
-}
-
-func explicitDianAmbiente(ambiente string) string {
-	switch strings.ToLower(strings.TrimSpace(ambiente)) {
-	case "", "local", "dev", "development":
-		return ""
-	}
-	return normalizeDianAmbiente(ambiente)
 }
 
 func normalizeDianAmbiente(ambiente string) string {

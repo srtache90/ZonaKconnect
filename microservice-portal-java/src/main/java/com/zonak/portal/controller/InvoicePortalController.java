@@ -443,6 +443,18 @@ public class InvoicePortalController {
         return new ResponseEntity<>(coreResponse.getBody(), headers, coreResponse.getStatusCode());
     }
 
+    @GetMapping(value = "/portal/invoices/{id}/simphony.json", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<byte[]> downloadSimphonyJson(@PathVariable UUID id, HttpSession session) {
+        String tenantId = resolveTenantId(session);
+        InvoiceReportRepository.SimphonyJsonDownload file = invoiceReportRepository
+                .findSimphonyJson(UUID.fromString(tenantId), id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "JSON Simphony no disponible"));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.fileName() + "\"")
+                .body(file.content());
+    }
+
     @PostMapping("/portal/invoices/{id}/reemit")
     public String reemitInvoice(
             @PathVariable UUID id,

@@ -250,9 +250,9 @@ func (s *RadianSyncService) ListActiveTenantIDs(ctx context.Context) ([]uuid.UUI
 }
 
 func resolveAmbiente(requestAmbiente, configAmbiente string) string {
-	candidate := strings.TrimSpace(requestAmbiente)
+	candidate := strings.TrimSpace(configAmbiente)
 	if candidate == "" {
-		candidate = strings.TrimSpace(configAmbiente)
+		candidate = strings.TrimSpace(requestAmbiente)
 	}
 	switch strings.ToLower(candidate) {
 	case "produccion", "producción":

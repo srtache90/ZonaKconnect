@@ -7,6 +7,8 @@ namespace DIAN_NET.Models
     public abstract class EmitRequestBase
     {
         public string Ambiente { get; set; } = "Habilitacion";
+        [JsonPropertyName("testSetId")]
+        public string? TestSetId { get; set; }
         [JsonPropertyName("certificate_pfx_base64")]
         public string? CertificatePfxBase64 { get; set; }
         [JsonPropertyName("certificate_password")]

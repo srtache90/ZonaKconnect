@@ -1,5 +1,6 @@
 package com.zonak.portal.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.zonak.portal.dto.CreateCreditNoteRequestDTO;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
 import com.zonak.portal.integration.pos.PosTicketRequest;
@@ -162,6 +163,44 @@ public class IngestInvoiceMapper {
         );
     }
 
+    public CreateInvoiceRequestDTO withSimphonyJson(CreateInvoiceRequestDTO dto, JsonNode source) {
+        if (dto == null || source == null || source.isNull()) {
+            return dto;
+        }
+        return new CreateInvoiceRequestDTO(
+                dto.ambiente(),
+                dto.customer(),
+                dto.items(),
+                dto.xmlBase(),
+                totalsWithSimphonyJson(dto.totals(), source)
+        );
+    }
+
+    public CreateCreditNoteRequestDTO withSimphonyJson(CreateCreditNoteRequestDTO dto, JsonNode source) {
+        if (dto == null || source == null || source.isNull()) {
+            return dto;
+        }
+        return new CreateCreditNoteRequestDTO(
+                dto.ambiente(),
+                dto.customizationId(),
+                dto.creditNoteTypeCode(),
+                dto.cliente(),
+                dto.facturaReferencia(),
+                dto.conceptosCorreccion(),
+                dto.items(),
+                totalsWithSimphonyJson(dto.totals(), source)
+        );
+    }
+
+    private Map<String, Object> totalsWithSimphonyJson(Object totals, JsonNode source) {
+        Map<String, Object> copy = new LinkedHashMap<>();
+        if (totals instanceof Map<?, ?> map) {
+            map.forEach((key, value) -> copy.put(String.valueOf(key), value));
+        }
+        copy.put("simphony_json", source);
+        return copy;
+    }
+
     private CreateInvoiceRequestDTO.ItemDTO mapSapItem(SapEnviarDocumento.Detalle detalle) {
         List<CreateInvoiceRequestDTO.TaxDTO> taxes = safeList(detalle.getListaImpuestos()).stream()
                 .map(this::mapSapTax)
@@ -277,7 +316,9 @@ public class IngestInvoiceMapper {
         totals.put("origen", "POS");
         totals.put("tipo_documento", valueOrDefault(ticket.tipoDocumento(), "FV"));
         totals.put("invoice_type_code", valueOrDefault(ticket.invoiceTypeCode(), ticket.codigoFiscal()));
-        totals.put("credit_note_type_code", valueOrDefault(ticket.creditNoteTypeCode(), ""));
+        if (StringUtils.hasText(ticket.creditNoteTypeCode())) {
+            totals.put("credit_note_type_code", ticket.creditNoteTypeCode().trim());
+        }
         totals.put("numero_ticket", valueOrDefault(ticket.numeroTicket(), ""));
         totals.put("check_id", valueOrDefault(ticket.checkId(), ""));
         totals.put("harmony_id", valueOrDefault(ticket.harmonyId(), ""));
@@ -320,7 +361,30 @@ public class IngestInvoiceMapper {
             unit = subtotal.divide(qty, 2, java.math.RoundingMode.HALF_UP);
         }
         BigDecimal discount = parseDecimal(item != null ? item.descuento() : null);
-        return new CreateInvoiceRequestDTO.ItemDTO(code, name, qty, unit, discount, null);
+        return new CreateInvoiceRequestDTO.ItemDTO(code, name, qty, unit, discount, mapPosTaxes(item));
+    }
+
+    private List<CreateInvoiceRequestDTO.TaxDTO> mapPosTaxes(PosTicketRequest.Item item) {
+        if (item == null) {
+            return null;
+        }
+        List<CreateInvoiceRequestDTO.TaxDTO> taxes = safeList(item.impuestos()).stream()
+                .map(this::mapPosTax)
+                .filter(tax -> tax.amount().compareTo(BigDecimal.ZERO) > 0
+                        || tax.percentage().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+        return taxes.isEmpty() ? null : taxes;
+    }
+
+    private CreateInvoiceRequestDTO.TaxDTO mapPosTax(PosTicketRequest.Impuesto impuesto) {
+        String code = valueOrDefault(impuesto != null ? impuesto.codigo() : null, "01");
+        return new CreateInvoiceRequestDTO.TaxDTO(
+                code,
+                valueOrDefault(impuesto != null ? impuesto.nombre() : null, taxName(code)),
+                parseDecimal(impuesto != null ? impuesto.porcentaje() : null),
+                parseDecimal(impuesto != null ? impuesto.base() : null),
+                parseDecimal(impuesto != null ? impuesto.valor() : null)
+        );
     }
 
     private String normalizeFechaEmision(String raw) {

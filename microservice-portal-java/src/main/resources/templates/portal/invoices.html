@@ -309,6 +309,11 @@
                         <span class="material-symbols-outlined text-[18px]">code</span>
                     </a>
                     <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
+                       title="Descargar JSON Simphony"
+                       th:href="@{/portal/invoices/{id}/simphony.json(id=${invoice.id})}">
+                        <span class="material-symbols-outlined text-[18px]">data_object</span>
+                    </a>
+                    <a class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-container-highest hover:bg-surface-container-low transition-colors text-primary text-decoration-none"
                        title="Descargar ZIP DIAN"
                        th:classappend="${!dianValidated} ? ' opacity-40 pointer-events-none'"
                        th:href="@{/portal/invoices/{id}/documents/attachment(id=${invoice.id})}">

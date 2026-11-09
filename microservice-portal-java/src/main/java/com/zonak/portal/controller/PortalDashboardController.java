@@ -1,6 +1,7 @@
 package com.zonak.portal.controller;
 
 import com.zonak.portal.admin.AdminPortalRepository;
+import com.zonak.portal.admin.DianTestSetId;
 import com.zonak.portal.dashboard.PortalAnalyticsRepository;
 import com.zonak.portal.dashboard.PortalDashboardExportService;
 import com.zonak.portal.service.PortalSessionService;
@@ -206,9 +207,19 @@ public class PortalDashboardController {
     public String updateDianAmbiente(
             @RequestParam UUID sociedadId,
             @RequestParam String dianAmbiente,
+            @RequestParam(required = false) String dianTestSetId,
             RedirectAttributes redirectAttributes
     ) {
-        adminPortalRepository.updateDianAmbiente(sociedadId, dianAmbiente);
+        String testSetError = DianTestSetId.validate(dianAmbiente, dianTestSetId);
+        if (testSetError != null) {
+            redirectAttributes.addFlashAttribute("error", testSetError);
+            return "redirect:/portal/configuraciones";
+        }
+        adminPortalRepository.updateDianAmbiente(
+                sociedadId,
+                dianAmbiente,
+                DianTestSetId.normalize(dianTestSetId)
+        );
         redirectAttributes.addFlashAttribute("success", "Ambiente DIAN actualizado correctamente");
         return "redirect:/portal/configuraciones";
     }

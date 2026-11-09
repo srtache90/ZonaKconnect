@@ -40,6 +40,10 @@ public class AdminPortalRepository {
                                    NULLIF(TRIM(s.dian_software_id), ''),
                                    NULLIF(TRIM(c.dian_config->>'software_id'), '')
                                ) AS dian_software_id,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_test_set_id), ''),
+                                   NULLIF(TRIM(c.dian_config->>'test_set_id'), '')
+                               ) AS dian_test_set_id,
                                (
                                    s.dian_software_pin_enc IS NOT NULL
                                    OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
@@ -67,6 +71,7 @@ public class AdminPortalRepository {
                         rs.getString("dian_ambiente"),
                         rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
+                        rs.getString("dian_test_set_id"),
                         rs.getBoolean("dian_software_pin_configured"),
                         rs.getObject("id_empresa", Integer.class),
                         rs.getString("sap_usuario"),
@@ -96,6 +101,10 @@ public class AdminPortalRepository {
                                    NULLIF(TRIM(s.dian_software_id), ''),
                                    NULLIF(TRIM(c.dian_config->>'software_id'), '')
                                ) AS dian_software_id,
+                               COALESCE(
+                                   NULLIF(TRIM(s.dian_test_set_id), ''),
+                                   NULLIF(TRIM(c.dian_config->>'test_set_id'), '')
+                               ) AS dian_test_set_id,
                                (
                                    s.dian_software_pin_enc IS NOT NULL
                                    OR NULLIF(TRIM(c.dian_config->>'pin'), '') IS NOT NULL
@@ -124,6 +133,7 @@ public class AdminPortalRepository {
                         rs.getString("dian_ambiente"),
                         rs.getString("dian_regimen_fiscal"),
                         rs.getString("dian_software_id"),
+                        rs.getString("dian_test_set_id"),
                         rs.getBoolean("dian_software_pin_configured"),
                         rs.getObject("id_empresa", Integer.class),
                         rs.getString("sap_usuario"),
@@ -160,6 +170,7 @@ public class AdminPortalRepository {
             String dianAmbiente,
             String dianRegimenFiscal,
             String dianSoftwareId,
+            String dianTestSetId,
             String dianSoftwarePinEnc,
             String dianSoftwarePinPlaintext,
             Integer idEmpresa,
@@ -172,10 +183,10 @@ public class AdminPortalRepository {
                             id, razon_social, nit, api_key, correo_emision, correo_recepcion,
                             host_smtp, puerto_smtp, usuario_smtp, password_smtp_enc,
                             host_imap, puerto_imap, usuario_imap, password_imap_enc,
-                            dian_ambiente, dian_regimen_fiscal, dian_software_id, dian_software_pin_enc,
+                            dian_ambiente, dian_regimen_fiscal, dian_software_id, dian_test_set_id, dian_software_pin_enc,
                             id_empresa, sap_usuario, sap_password_enc
                         )
-                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, NULLIF(?, ''), ?)
+                        VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, NULLIF(?, ''), ?)
                         ON CONFLICT (id) DO UPDATE SET
                             razon_social = EXCLUDED.razon_social,
                             nit = EXCLUDED.nit,
@@ -193,6 +204,7 @@ public class AdminPortalRepository {
                             dian_ambiente = EXCLUDED.dian_ambiente,
                             dian_regimen_fiscal = EXCLUDED.dian_regimen_fiscal,
                             dian_software_id = COALESCE(NULLIF(EXCLUDED.dian_software_id, ''), sociedades.dian_software_id),
+                            dian_test_set_id = EXCLUDED.dian_test_set_id,
                             dian_software_pin_enc = COALESCE(EXCLUDED.dian_software_pin_enc, sociedades.dian_software_pin_enc),
                             id_empresa = EXCLUDED.id_empresa,
                             sap_usuario = EXCLUDED.sap_usuario,
@@ -215,6 +227,7 @@ public class AdminPortalRepository {
                 normalizeDianAmbiente(dianAmbiente),
                 DianRegimenFiscal.normalize(dianRegimenFiscal),
                 dianSoftwareId,
+                dianTestSetId,
                 dianSoftwarePinEnc,
                 idEmpresa,
                 sapUsuario,
@@ -264,15 +277,17 @@ public class AdminPortalRepository {
         return Optional.empty();
     }
 
-    public void updateDianAmbiente(UUID sociedadId, String dianAmbiente) {
+    public void updateDianAmbiente(UUID sociedadId, String dianAmbiente, String dianTestSetId) {
         String normalized = normalizeDianAmbiente(dianAmbiente);
         jdbcTemplate.update(
                 """
                         UPDATE sociedades
-                        SET dian_ambiente = ?
+                        SET dian_ambiente = ?,
+                            dian_test_set_id = NULLIF(?, '')
                         WHERE id = ?
                         """,
                 normalized,
+                dianTestSetId,
                 sociedadId
         );
         syncCompanyDianConfig(sociedadId, null);
@@ -620,6 +635,11 @@ public class AdminPortalRepository {
                                    WHEN NULLIF(dian_software_id, '') IS NOT NULL
                                        THEN jsonb_build_object('software_id', dian_software_id)
                                    ELSE '{}'::jsonb
+                               END
+                               || CASE
+                                   WHEN NULLIF(dian_test_set_id, '') IS NOT NULL
+                                       THEN jsonb_build_object('test_set_id', dian_test_set_id)
+                                   ELSE '{}'::jsonb
                                END,
                                true
                         FROM sociedades
@@ -628,7 +648,7 @@ public class AdminPortalRepository {
                             nit = EXCLUDED.nit,
                             razon_social = EXCLUDED.razon_social,
                             email = EXCLUDED.email,
-                            dian_config = COALESCE(companies.dian_config, '{}'::jsonb)
+                            dian_config = (COALESCE(companies.dian_config, '{}'::jsonb) - 'test_set_id')
                                 || jsonb_build_object(
                                     'ambiente', EXCLUDED.dian_config -> 'ambiente',
                                     'regimen_fiscal', EXCLUDED.dian_config -> 'regimen_fiscal'
@@ -637,6 +657,13 @@ public class AdminPortalRepository {
                                     WHEN NULLIF(EXCLUDED.dian_config ->> 'software_id', '') IS NOT NULL
                                         THEN jsonb_build_object(
                                             'software_id', EXCLUDED.dian_config ->> 'software_id'
+                                        )
+                                    ELSE '{}'::jsonb
+                                END
+                                || CASE
+                                    WHEN NULLIF(EXCLUDED.dian_config ->> 'test_set_id', '') IS NOT NULL
+                                        THEN jsonb_build_object(
+                                            'test_set_id', EXCLUDED.dian_config ->> 'test_set_id'
                                         )
                                     ELSE '{}'::jsonb
                                 END,
@@ -651,12 +678,17 @@ public class AdminPortalRepository {
             jdbcTemplate.update(
                     """
                             UPDATE companies c
-                            SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
+                            SET dian_config = (COALESCE(c.dian_config, '{}'::jsonb) - 'test_set_id')
                                 || jsonb_build_object('ambiente', s.dian_ambiente)
                                 || jsonb_build_object('regimen_fiscal', s.dian_regimen_fiscal)
                                 || CASE
                                     WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
                                         THEN jsonb_build_object('software_id', s.dian_software_id)
+                                    ELSE '{}'::jsonb
+                                END
+                                || CASE
+                                    WHEN NULLIF(s.dian_test_set_id, '') IS NOT NULL
+                                        THEN jsonb_build_object('test_set_id', s.dian_test_set_id)
                                     ELSE '{}'::jsonb
                                 END
                                 || jsonb_build_object('pin', ?::text),
@@ -674,12 +706,17 @@ public class AdminPortalRepository {
         jdbcTemplate.update(
                 """
                         UPDATE companies c
-                        SET dian_config = COALESCE(c.dian_config, '{}'::jsonb)
+                        SET dian_config = (COALESCE(c.dian_config, '{}'::jsonb) - 'test_set_id')
                             || jsonb_build_object('ambiente', s.dian_ambiente)
                             || jsonb_build_object('regimen_fiscal', s.dian_regimen_fiscal)
                             || CASE
                                 WHEN NULLIF(s.dian_software_id, '') IS NOT NULL
                                     THEN jsonb_build_object('software_id', s.dian_software_id)
+                                ELSE '{}'::jsonb
+                            END
+                            || CASE
+                                WHEN NULLIF(s.dian_test_set_id, '') IS NOT NULL
+                                    THEN jsonb_build_object('test_set_id', s.dian_test_set_id)
                                 ELSE '{}'::jsonb
                             END,
                             updated_at = now()

@@ -74,6 +74,11 @@ public class AdminPortalController {
             );
             return "redirect:/portal/admin/sociedades";
         }
+        String testSetError = DianTestSetId.validate(form.getDianAmbiente(), form.getDianTestSetId());
+        if (testSetError != null) {
+            redirectAttributes.addFlashAttribute("error", testSetError);
+            return "redirect:/portal/admin/sociedades";
+        }
 
         UUID id = StringUtils.hasText(form.getId())
                 ? UUID.fromString(form.getId().trim())
@@ -114,6 +119,7 @@ public class AdminPortalController {
                     form.getDianAmbiente(),
                     DianRegimenFiscal.normalize(form.getDianRegimenFiscal()),
                     trimToNull(form.getDianSoftwareId()),
+                    DianTestSetId.normalize(form.getDianTestSetId()),
                     dianSoftwarePinEnc,
                     dianSoftwarePinPlaintext,
                     form.getIdEmpresa(),
@@ -364,6 +370,7 @@ public class AdminPortalController {
         private String dianAmbiente = "Habilitacion";
         private String dianRegimenFiscal = DianRegimenFiscal.DEFAULT;
         private String dianSoftwareId;
+        private String dianTestSetId;
         private String dianSoftwarePin;
         private Integer idEmpresa;
         private String sapUsuario;
@@ -503,6 +510,14 @@ public class AdminPortalController {
 
         public void setDianSoftwareId(String dianSoftwareId) {
             this.dianSoftwareId = dianSoftwareId;
+        }
+
+        public String getDianTestSetId() {
+            return dianTestSetId;
+        }
+
+        public void setDianTestSetId(String dianTestSetId) {
+            this.dianTestSetId = dianTestSetId;
         }
 
         public String getDianSoftwarePin() {

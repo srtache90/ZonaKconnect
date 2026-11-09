@@ -18,6 +18,7 @@ public record Sociedad(
         String dianAmbiente,
         String dianRegimenFiscal,
         String dianSoftwareId,
+        String dianTestSetId,
         boolean dianSoftwarePinConfigured,
         Integer idEmpresa,
         String sapUsuario,

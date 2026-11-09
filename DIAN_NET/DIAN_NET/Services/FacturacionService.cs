@@ -54,6 +54,7 @@ namespace DIAN_NET.Services
             try
             {
                 ValidarFacturaElectronica(request.Factura, request.Ambiente);
+                ExigirTestSetSiHabilitacion(request.Ambiente, request.TestSetId);
                 SincronizarTipoAmbienteFactura(request.Factura, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlFactura(request.Factura);
                 var cufe = _cufeQrService.CalcularCUFE(request.Factura, request.Ambiente);
@@ -76,7 +77,7 @@ namespace DIAN_NET.Services
                     request.Ambiente,
                     "Factura",
                     DianColombiaHelper.ToColombia(request.Factura.FechaEmision),
-                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
+                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente, request.TestSetId));
             }
             catch (Exception ex)
             {
@@ -131,6 +132,7 @@ namespace DIAN_NET.Services
             try
             {
                 SincronizarTipoAmbienteNotaCredito(request.NotaCredito, request.Ambiente);
+                ExigirTestSetSiHabilitacion(request.Ambiente, request.TestSetId);
                 ValidarNotaCredito(request.NotaCredito, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlNotaCredito(request.NotaCredito);
                 var cude = _cufeQrService.CalcularCUDE(request.NotaCredito, request.Ambiente);
@@ -152,7 +154,7 @@ namespace DIAN_NET.Services
                     request.Ambiente,
                     "NotaCredito",
                     DianColombiaHelper.ToColombia(request.NotaCredito.FechaEmision),
-                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
+                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente, request.TestSetId));
             }
             catch (Exception ex)
             {
@@ -165,6 +167,7 @@ namespace DIAN_NET.Services
             try
             {
                 SincronizarTipoAmbienteNotaDebito(request.NotaDebito, request.Ambiente);
+                ExigirTestSetSiHabilitacion(request.Ambiente, request.TestSetId);
                 ValidarNotaDebito(request.NotaDebito, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlNotaDebito(request.NotaDebito);
                 var cude = _cufeQrService.CalcularCUDE(request.NotaDebito, request.Ambiente);
@@ -186,7 +189,7 @@ namespace DIAN_NET.Services
                     request.Ambiente,
                     "NotaDebito",
                     DianColombiaHelper.ToColombia(request.NotaDebito.FechaEmision),
-                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente));
+                    (zipData, zipName, ambiente) => _dianService.EnviarFactura(zipData, zipName, ambiente, request.TestSetId));
             }
             catch (Exception ex)
             {
@@ -438,6 +441,19 @@ namespace DIAN_NET.Services
             if (string.IsNullOrWhiteSpace(factura.ConfiguracionDian.TipoAmbiente))
             {
                 SincronizarTipoAmbienteFactura(factura, ambiente);
+            }
+        }
+
+        private static void ExigirTestSetSiHabilitacion(string ambiente, string? testSetId)
+        {
+            if (string.Equals(ambiente?.Trim(), "Habilitacion", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ambiente?.Trim(), "Habilitación", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(testSetId))
+                {
+                    throw new ArgumentException(
+                        "Ambiente Habilitación requiere el TestSetId de la sociedad.");
+                }
             }
         }
 

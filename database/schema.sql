@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS sociedades (
         )),
     dian_software_id VARCHAR(64),
     dian_software_pin_enc TEXT,
+    dian_test_set_id VARCHAR(64),
     id_empresa INTEGER,
     sap_usuario VARCHAR(120),
     sap_password_enc TEXT,

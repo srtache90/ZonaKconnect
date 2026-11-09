@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -24,6 +26,9 @@ namespace DIAN_NET
         private readonly string _certificatePath;
         private readonly string _certificatePassword;
         private readonly X509Certificate2? _certificate;
+        private static readonly ConcurrentDictionary<string, byte> SetsDePruebaAceptados =
+            new(StringComparer.OrdinalIgnoreCase);
+
         private string? _currentAmbiente;
         private string? _defaultAmbiente;
         private WcfDianCustomerServicesClient? _client;
@@ -455,7 +460,170 @@ namespace DIAN_NET
             return sw.ToString();
         }
 
-        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente)
+        private static bool EsHabilitacion(string? ambiente)
+        {
+            var value = ambiente?.Trim();
+            return string.Equals(value, "Habilitacion", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "Habilitación", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static DianResponse EnviarSetPruebas(
+            WcfDianCustomerServicesClient client,
+            byte[] zipData,
+            string nombreArchivo,
+            string testSetId)
+        {
+            var upload = client.SendTestSetAsync(nombreArchivo, zipData, testSetId);
+            if (upload == null || string.IsNullOrWhiteSpace(upload.ZipKey))
+            {
+                var messages = upload?.ErrorMessageList?
+                    .Select(item => item?.ProcessedMessage)
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .Cast<string>()
+                    .ToArray() ?? Array.Empty<string>();
+                return new DianResponse
+                {
+                    IsValid = false,
+                    StatusCode = "ERROR",
+                    StatusDescription = messages.Length > 0
+                        ? string.Join("; ", messages)
+                        : "DIAN no entregó ZipKey para el set de pruebas.",
+                    StatusMessage = "SendTestSetAsync",
+                    ErrorMessage = messages
+                };
+            }
+
+            DianResponse? last = null;
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                if (attempt > 1)
+                {
+                    Thread.Sleep(TimeSpan.FromMilliseconds(1500));
+                }
+
+                DianResponse[]? batch = null;
+                try
+                {
+                    batch = client.GetStatusZip(upload.ZipKey);
+                }
+                catch (Exception ex) when (attempt < 5)
+                {
+                    Debug.WriteLine($"GetStatusZip intento {attempt} ZipKey={upload.ZipKey}: {ex.Message}");
+                    continue;
+                }
+
+                last = SelectDocumentResponse(batch);
+                if (last != null && !IsBatchPending(last))
+                {
+                    return last;
+                }
+            }
+
+            last ??= new DianResponse
+            {
+                IsValid = false,
+                StatusCode = "98",
+                StatusDescription = "El set de pruebas sigue en proceso."
+            };
+            if (string.IsNullOrWhiteSpace(last.XmlDocumentKey))
+            {
+                last.XmlDocumentKey = upload.ZipKey;
+            }
+            if (string.IsNullOrWhiteSpace(last.StatusMessage))
+            {
+                last.StatusMessage = "ZipKey=" + upload.ZipKey;
+            }
+            return last;
+        }
+
+        private static DianResponse? SelectDocumentResponse(DianResponse[]? batch)
+        {
+            if (batch == null || batch.Length == 0)
+            {
+                return null;
+            }
+
+            return batch.FirstOrDefault(item => item != null && !IsBatchPending(item)) ?? batch[0];
+        }
+
+        private static bool IsBatchPending(DianResponse response)
+        {
+            if (response.ErrorMessage != null && response.ErrorMessage.Length > 0)
+            {
+                return false;
+            }
+
+            if (response.IsValid)
+            {
+                return false;
+            }
+
+            var combined = (response.StatusDescription ?? string.Empty) + " " + (response.StatusMessage ?? string.Empty);
+            if (combined.Contains("proceso", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return string.Equals(response.StatusCode?.Trim(), "98", StringComparison.Ordinal);
+        }
+
+        private static bool SetDePruebaYaAceptado(DianResponse? response)
+        {
+            if (response == null)
+            {
+                return false;
+            }
+
+            var texto = (response.StatusDescription ?? string.Empty) + " " + (response.StatusMessage ?? string.Empty);
+            if (response.ErrorMessage != null && response.ErrorMessage.Length > 0)
+            {
+                texto += " " + string.Join(" ", response.ErrorMessage);
+            }
+
+            return texto.Contains("set de prueba", StringComparison.OrdinalIgnoreCase)
+                && texto.Contains("se encuentra aceptado", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static DianResponse EnviarSegunAmbiente(
+            WcfDianCustomerServicesClient client,
+            byte[] zipData,
+            string nombreArchivo,
+            string ambiente,
+            string? testSetId)
+        {
+            var setId = testSetId?.Trim();
+            if (!EsHabilitacion(ambiente) || string.IsNullOrWhiteSpace(setId))
+            {
+                return client.SendBillSync(nombreArchivo, zipData);
+            }
+
+            if (SetsDePruebaAceptados.ContainsKey(setId))
+            {
+                Debug.WriteLine($"TestSetId {setId} ya aceptado. Envío por SendBillSync en habilitación.");
+                return client.SendBillSync(nombreArchivo, zipData);
+            }
+
+            DianResponse respuesta;
+            try
+            {
+                respuesta = EnviarSetPruebas(client, zipData, nombreArchivo, setId);
+            }
+            catch (FaultException<DianResponse> ex) when (SetDePruebaYaAceptado(ex.Detail))
+            {
+                respuesta = ex.Detail;
+            }
+
+            if (!SetDePruebaYaAceptado(respuesta))
+            {
+                return respuesta;
+            }
+
+            SetsDePruebaAceptados.TryAdd(setId, 0);
+            Debug.WriteLine($"Set de pruebas {setId} aceptado. Reenvío del mismo ZIP por SendBillSync.");
+            return client.SendBillSync(nombreArchivo, zipData);
+        }
+
+        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente, string? testSetId = null)
         {
             if (zipData == null || zipData.Length == 0)
             {
@@ -482,10 +650,10 @@ namespace DIAN_NET
                 Debug.WriteLine($"Nombre archivo: '{nombreArchivo}'");
                 Debug.WriteLine($"Tamaño ZIP: {zipData.Length} bytes");
                 Debug.WriteLine($"Ambiente: {ambiente}");
+                Debug.WriteLine($"TestSetId: '{testSetId}'");
                 Debug.WriteLine("===============================");
-                
-                // Llamar al servicio SendBillSync
-                var respuesta = client.SendBillSync(nombreArchivo, zipData);
+
+                var respuesta = EnviarSegunAmbiente(client, zipData, nombreArchivo, ambiente, testSetId);
                 
                 // Extraer información importante de la respuesta
                 Debug.WriteLine("=== DEBUG: Respuesta DIAN ===");

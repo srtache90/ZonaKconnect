@@ -113,6 +113,75 @@ class IngestInvoiceMapperPosTest {
     }
 
     @Test
+    void fromPosCopiesIncOnEachLine() throws Exception {
+        String json = """
+                {
+                  "numero_factura": 990000022,
+                  "Prefijo": "SETP",
+                  "propina": 3296,
+                  "Total": 38896,
+                  "items": [
+                    {
+                      "codigo": "200001",
+                      "nombre": "AgPanna1000Pet",
+                      "precio": 18519,
+                      "cantidad": 1,
+                      "subtotal": 18519,
+                      "descuento": 0,
+                      "impuestos": [{
+                        "base": "18519.00",
+                        "valor": "1481.00",
+                        "codigo": "04",
+                        "nombre": "INC 8%",
+                        "porcentaje": "8.00"
+                      }]
+                    },
+                    {
+                      "codigo": "200003",
+                      "nombre": "AgPanna250",
+                      "precio": 5370,
+                      "cantidad": 1,
+                      "subtotal": 5370,
+                      "impuestos": [{
+                        "base": "5370.00",
+                        "valor": "430.00",
+                        "codigo": "04",
+                        "porcentaje": "8.00"
+                      }]
+                    },
+                    {
+                      "codigo": "202569",
+                      "nombre": "SpMandarFresa",
+                      "precio": 9074,
+                      "cantidad": 1,
+                      "subtotal": 9074,
+                      "impuestos": [{
+                        "base": "9074.00",
+                        "valor": "726.00",
+                        "codigo": "04",
+                        "porcentaje": "8.00"
+                      }]
+                    }
+                  ]
+                }
+                """;
+        PosTicketRequest ticket = objectMapper.readValue(json, PosTicketRequest.class);
+        CreateInvoiceRequestDTO dto = mapper.fromPos(ticket);
+
+        assertEquals(4, dto.items().size());
+        assertEquals(new BigDecimal("18519.00"), dto.items().get(0).taxes().get(0).taxableBase());
+        assertEquals(new BigDecimal("1481.00"), dto.items().get(0).taxes().get(0).amount());
+        assertEquals("04", dto.items().get(0).taxes().get(0).code());
+        assertEquals(new BigDecimal("8.00"), dto.items().get(0).taxes().get(0).percentage());
+        assertEquals(new BigDecimal("5370.00"), dto.items().get(1).taxes().get(0).taxableBase());
+        assertEquals(new BigDecimal("430.00"), dto.items().get(1).taxes().get(0).amount());
+        assertEquals(new BigDecimal("9074.00"), dto.items().get(2).taxes().get(0).taxableBase());
+        assertEquals(new BigDecimal("726.00"), dto.items().get(2).taxes().get(0).amount());
+        assertEquals("Propina", dto.items().get(3).description());
+        assertTrue(dto.items().get(3).taxes() == null || dto.items().get(3).taxes().isEmpty());
+    }
+
+    @Test
     void fromPosCreditNoteMapsReferenceAndConcept() throws Exception {
         String json = """
                 {

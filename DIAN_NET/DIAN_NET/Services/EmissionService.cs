@@ -27,6 +27,7 @@ namespace DIAN_NET.Services
                 : await _facturacionService.EnviarFacturaAsync(new EnviarFacturaRequest
                 {
                     Ambiente = request.Ambiente,
+                    TestSetId = request.TestSetId,
                     Factura = request.Factura!
                 });
 
@@ -39,6 +40,7 @@ namespace DIAN_NET.Services
             var response = await _facturacionService.EnviarNotaCreditoAsync(new EnviarNotaCreditoRequest
             {
                 Ambiente = request.Ambiente,
+                TestSetId = request.TestSetId,
                 NotaCredito = request.NotaCredito!
             });
 
@@ -51,6 +53,7 @@ namespace DIAN_NET.Services
             var response = await _facturacionService.EnviarNotaDebitoAsync(new EnviarNotaDebitoRequest
             {
                 Ambiente = request.Ambiente,
+                TestSetId = request.TestSetId,
                 NotaDebito = request.NotaDebito!
             });
 

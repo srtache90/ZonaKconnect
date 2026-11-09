@@ -1,5 +1,7 @@
 package com.zonak.portal.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zonak.portal.auth.ApiKeyAuthenticationFilter;
 import com.zonak.portal.auth.ApiTenant;
 import com.zonak.portal.dto.CreateInvoiceRequestDTO;
@@ -22,13 +24,16 @@ import reactor.core.publisher.Mono;
 public class SimphonyIntegrationController {
     private final IngestInvoiceMapper ingestInvoiceMapper;
     private final InvoiceOrchestratorService invoiceOrchestratorService;
+    private final ObjectMapper objectMapper;
 
     public SimphonyIntegrationController(
             IngestInvoiceMapper ingestInvoiceMapper,
-            InvoiceOrchestratorService invoiceOrchestratorService
+            InvoiceOrchestratorService invoiceOrchestratorService,
+            ObjectMapper objectMapper
     ) {
         this.ingestInvoiceMapper = ingestInvoiceMapper;
         this.invoiceOrchestratorService = invoiceOrchestratorService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping(
@@ -37,12 +42,27 @@ public class SimphonyIntegrationController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public Mono<ResponseEntity<Map<String, Object>>> ingestSimphony(
-            @RequestBody SimphonyTicketRequest ticket,
+            @RequestBody JsonNode body,
             HttpServletRequest request
     ) {
         ApiTenant apiTenant = requireTenant(request);
 
-        return Mono.fromCallable(() -> ingestInvoiceMapper.fromSimphony(ticket))
+        return Mono.fromCallable(() -> {
+                    if (body == null || body.isNull() || !body.isObject()) {
+                        throw new IllegalArgumentException("JSON Simphony vacío");
+                    }
+                    try {
+                        SimphonyTicketRequest ticket = objectMapper.treeToValue(body, SimphonyTicketRequest.class);
+                        return ingestInvoiceMapper.withSimphonyJson(
+                                ingestInvoiceMapper.fromSimphony(ticket),
+                                body
+                        );
+                    } catch (IllegalArgumentException ex) {
+                        throw ex;
+                    } catch (Exception ex) {
+                        throw new IllegalArgumentException("JSON Simphony inválido: " + ex.getMessage());
+                    }
+                })
                 .flatMap(dto -> emit(dto, apiTenant))
                 .map(invoiceId -> ResponseEntity.accepted().body(Map.<String, Object>of(
                         "status", "SIMPHONY_RECIBIDO_EN_PROCESAMIENTO",

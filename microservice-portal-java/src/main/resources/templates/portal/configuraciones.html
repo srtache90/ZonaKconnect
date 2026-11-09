@@ -70,6 +70,7 @@
     </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
     <section class="card zk-card settings-dian-card mb-4">
         <div class="card-body p-0">
@@ -77,6 +78,7 @@
                 <h2 class="h4 mb-1">Web Service DIAN por sociedad</h2>
                 <p class="text-muted small mb-0">
                     Seleccione por sociedad: Mock (sin DIAN real), Habilitación o Producción.
+                    En Habilitación indique el TestSetId del catálogo para enviarlo con el set de pruebas.
                 </p>
             </div>
             <div class="table-responsive">
@@ -96,11 +98,17 @@
                     <td>
                         <form th:id="'dianForm-' + ${sociedad.id}" th:action="@{/portal/configuraciones/dian-ambiente}" method="post">
                             <input type="hidden" name="sociedadId" th:value="${sociedad.id}">
-                            <select class="form-select rounded-3" name="dianAmbiente">
+                            <select class="form-select rounded-3" name="dianAmbiente" onchange="syncRowTestSet(this)">
                                 <option value="Mock" th:selected="${sociedad.dianAmbiente == 'Mock'}">Mock (local / sin DIAN)</option>
                                 <option value="Habilitacion" th:selected="${sociedad.dianAmbiente == 'Habilitacion'}">Pruebas / Habilitación</option>
                                 <option value="Produccion" th:selected="${sociedad.dianAmbiente == 'Produccion'}">Producción</option>
                             </select>
+                            <div class="mt-2 test-set-field" th:classappend="${sociedad.dianAmbiente != 'Habilitacion'} ? ' d-none'">
+                                <label class="form-label small mb-1">TestSetId</label>
+                                <input class="form-control form-control-sm" name="dianTestSetId"
+                                       th:value="${sociedad.dianTestSetId}"
+                                       placeholder="UUID del set de pruebas" autocomplete="off">
+                            </div>
                         </form>
                     </td>
                     <td class="text-end pe-4">
@@ -169,6 +177,14 @@
 </main>
 
 <script>
+    function syncRowTestSet(select) {
+        const field = select.parentElement.querySelector('.test-set-field');
+        if (!field) {
+            return;
+        }
+        field.classList.toggle('d-none', select.value !== 'Habilitacion');
+    }
+
     async function probarConexionImap(button) {
         const url = button.dataset.url;
         if (!url) {

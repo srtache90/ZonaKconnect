@@ -22,7 +22,7 @@ namespace DIAN_NET.Services
             return new ConsultarEmpresaDIANResponse();
         }
 
-        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente)
+        public DianResponse EnviarFactura(byte[] zipData, string nombreArchivo, string ambiente, string? testSetId = null)
         {
             return BuildSuccessfulResponse(nombreArchivo);
         }
