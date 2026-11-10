@@ -2,246 +2,941 @@
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Puntos de Venta | Zona K e-Docs')}"></th:block>
-     <link rel="icon"type="image/png"th:href="@{/imagen/zonak.png}"href="/imagen/zonak.png">
+    <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
+    <link rel="stylesheet" th:href="@{/css/pos-admin.css?v=20261110-pos2}" href="/css/pos-admin.css">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
-    <div class="mb-5">
-        <p class="dc-page-subtitle mb-1">Configuración / Puntos de venta</p>
-        <h1 class="dc-page-title">Puntos de Venta</h1>
-        <p class="dc-page-subtitle">Resoluciones, prefijos y numeración DIAN por sociedad.</p>
-    </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
-    <div class="alert alert-danger rounded-4 d-none" id="dianResolutionAlert"></div>
 
-    <section class="card zk-card mb-4">
-        <div class="card-body">
-            <h2 class="h4 mb-1">Crear o editar punto de venta</h2>
-            <p class="text-muted small mb-4">Resolución, prefijos y rangos de numeración por sociedad.</p>
-            <form th:action="@{/portal/admin/puntos-venta}" method="post" class="row g-3">
+    <!-- ============================================================
+         PANTALLA 1 · DIRECTORIO DE PUNTOS DE VENTA
+         ============================================================ -->
+    <section class="pos-view" id="vistaDirectorio">
+        <div class="pos-top">
+            <div>
+                <p class="pos-crumbs">Configuración / Puntos de Venta / Directorio</p>
+                <div class="pos-title-row">
+                    <h1 class="pos-title">Administración de Puntos de Venta</h1>
+                    <span class="pos-count">
+                        <span class="material-symbols-outlined" style="font-size:14px;" aria-hidden="true">point_of_sale</span>
+                        <span th:text="|${#lists.size(puntosVenta)} Registrados|">0 Registrados</span>
+                    </span>
+                </div>
+                <p class="pos-sub">Directorio multi-tenant para emisión POS, numeración fiscal y contingencia DIAN.</p>
+            </div>
+            <div class="pos-top-actions">
+                <button type="button" class="pos-btn pos-btn-ghost" onclick="window.location.reload()">
+                    <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+                    Sincronizar Estados
+                </button>
+                <button type="button" class="pos-btn pos-btn-primary" onclick="nuevoPuntoVenta()">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                    Nuevo Punto de Venta
+                </button>
+            </div>
+        </div>
+
+        <!-- Métricas -->
+        <div class="pos-metrics">
+            <div class="pos-metric">
+                <span class="pos-metric-icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">storefront</span>
+                </span>
+                <div>
+                    <span class="pos-metric-label">Total Puntos de Venta</span>
+                    <span class="pos-metric-value" id="metricTotal"
+                          th:text="|${#lists.size(puntosVenta)} Activos|">0 Activos</span>
+                </div>
+                <span class="pos-metric-badge" id="metricTotalBadge"
+                      th:text="${#lists.size(puntosVenta)} + ' Activos'">0 Activos</span>
+            </div>
+            <div class="pos-metric">
+                <span class="pos-metric-icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">hub</span>
+                </span>
+                <div>
+                    <span class="pos-metric-label">Conectividad DIAN / SAP</span>
+                    <span class="pos-metric-value" id="metricSap"
+                          th:text="|${#lists.size(puntosVenta)} Vinculados|">0 Vinculados</span>
+                </div>
+                <span class="pos-metric-badge" id="metricSapBadge">Online</span>
+            </div>
+        </div>
+
+        <!-- Buscador + filtros -->
+        <div class="pos-toolbar">
+            <div class="pos-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="search" id="posSearch" autocomplete="off"
+                       placeholder="Buscar por código POS, nombre, sociedad o prefijo..."
+                       oninput="aplicarFiltros()">
+            </div>
+            <div class="pos-filters" role="tablist" aria-label="Filtros de puntos de venta">
+                <button type="button" class="pos-filter is-active" data-filter="todos" onclick="setFiltro(this)">
+                    Todos los puntos de venta <span id="countTodos" th:text="${#lists.size(puntosVenta)}">0</span>
+                </button>
+                <button type="button" class="pos-filter" data-filter="activos" onclick="setFiltro(this)">
+                    Activos <span id="countActivos">0</span>
+                </button>
+                <button type="button" class="pos-filter" data-filter="pruebas" onclick="setFiltro(this)">
+                    En pruebas <span id="countPruebas">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de tarjetas -->
+        <div class="pos-cards" id="posCards" th:if="${!#lists.isEmpty(puntosVenta)}">
+            <button type="button"
+                    class="pos-card"
+                    th:each="punto : ${puntosVenta}"
+                    data-ambiente="Mock"
+                    th:attr="data-id=${punto.id},
+                             data-sociedad=${punto.sociedadId},
+                             data-sociedad-razon=${punto.sociedadRazonSocial},
+                             data-codigo=${punto.codigo},
+                             data-nombre=${punto.nombre},
+                             data-direccion=${punto.direccion},
+                             data-prefijo=${punto.prefijo},
+                             data-resolucion=${punto.resolucionDian},
+                             data-clave=${punto.claveTecnica},
+                             data-rango-desde=${punto.rangoDesde},
+                             data-rango-hasta=${punto.rangoHasta},
+                             data-numero-actual=${punto.numeroActual},
+                             data-prefijo-nc=${punto.prefijoNc},
+                             data-numero-actual-nc=${punto.numeroActualNc},
+                             data-prefijo-nd=${punto.prefijoNd},
+                             data-numero-actual-nd=${punto.numeroActualNd},
+                             data-vigencia-desde=${punto.vigenciaDesde},
+                             data-vigencia-hasta=${punto.vigenciaHasta},
+                             data-activo=${punto.activo},
+                             data-vinculado=${punto.resolucionDian != null and !#strings.isEmpty(punto.resolucionDian) and punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica)},
+                             data-mono=${punto.codigo != null and #strings.startsWith(punto.codigo, 'PV') ? 'PV' : (punto.prefijo != null and !#strings.isEmpty(punto.prefijo) and #strings.length(punto.prefijo) <= 3 ? #strings.toUpperCase(punto.prefijo) : (punto.codigo != null and #strings.length(punto.codigo) >= 2 ? #strings.toUpperCase(#strings.substring(punto.codigo, 0, 2)) : 'PV'))}"
+                    onclick="abrirDetalle(this)">
+
+                <span class="pos-card-head">
+                    <span class="pos-mono"
+                          th:text="${punto.codigo != null and #strings.startsWith(punto.codigo, 'PV') ? 'PV' : (punto.prefijo != null and !#strings.isEmpty(punto.prefijo) and #strings.length(punto.prefijo) <= 3 ? #strings.toUpperCase(punto.prefijo) : (punto.codigo != null and #strings.length(punto.codigo) >= 2 ? #strings.toUpperCase(#strings.substring(punto.codigo, 0, 2)) : 'PV'))}">PV</span>
+                    <span class="pos-card-id">
+                        <span class="pos-card-name" th:text="${punto.nombre}">Punto de venta</span>
+                        <span class="pos-card-nit" th:text="|Código: ${punto.codigo}|">Código: PV-001</span>
+                    </span>
+                    <span class="pos-env warn">
+                        <span class="pos-dot warn"></span>
+                        <span>DIAN Mock / Pruebas</span>
+                    </span>
+                </span>
+
+                <span class="pos-card-body">
+                    <span class="pos-row">
+                        <span class="pos-row-label">Sociedad</span>
+                        <span class="pos-row-value" th:text="${punto.sociedadRazonSocial}">Sociedad</span>
+                    </span>
+                    <span class="pos-row">
+                        <span class="pos-row-label">Prefijo FE</span>
+                        <span class="pos-row-value mono" th:text="${punto.prefijo}">FE</span>
+                    </span>
+                    <span class="pos-row">
+                        <span class="pos-row-label">Rango autorizado</span>
+                        <span class="pos-row-value mono"
+                              th:text="|${punto.rangoDesde} - ${punto.rangoHasta}|">1 - 99999999</span>
+                    </span>
+                    <span class="pos-row">
+                        <span class="pos-row-label">Número actual</span>
+                        <span class="pos-row-value"
+                              th:text="|${punto.numeroActual}${punto.activo ? ' (Vigente)' : ''}|">0 (Vigente)</span>
+                    </span>
+                    <span class="pos-row">
+                        <span class="pos-row-label">Notas electrónicas</span>
+                        <span class="pos-row-value"
+                              th:text="|NC (${punto.numeroActualNc}) / ND (${punto.numeroActualNd})|">NC (0) / ND (0)</span>
+                    </span>
+                    <span class="pos-row">
+                        <span class="pos-row-label">Conexión</span>
+                        <span class="pos-row-value pos-sap">
+                            <span class="pos-dot"
+                                  th:classappend="${punto.resolucionDian != null and !#strings.isEmpty(punto.resolucionDian) and punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica) ? 'ok' : (punto.resolucionDian != null and !#strings.isEmpty(punto.resolucionDian) ? 'warn' : '')}"></span>
+                            <span th:text="|Enlace POS: ${#strings.substring(punto.id.toString(), 0, 6).toUpperCase()}|">Enlace POS: 000000</span>
+                            <span style="color:#94a3b8;font-weight:500;"
+                                  th:text="${punto.resolucionDian != null and !#strings.isEmpty(punto.resolucionDian) and punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica) ? '(Sincronizado)' : (punto.resolucionDian != null and !#strings.isEmpty(punto.resolucionDian) ? '(Configurado)' : '(Pendiente)')}">(Pendiente)</span>
+                        </span>
+                    </span>
+                </span>
+
+                <span class="pos-card-foot">
+                    <span>Gestionar y Configurar</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                </span>
+            </button>
+        </div>
+
+        <div class="pos-empty" th:if="${#lists.isEmpty(puntosVenta)}">
+            <span class="material-symbols-outlined" aria-hidden="true">point_of_sale</span>
+            Aún no hay puntos de venta registrados. Usa «Nuevo Punto de Venta» para crear el primero.
+        </div>
+
+        <div class="pos-empty is-hidden" id="posSinResultados">
+            <span class="material-symbols-outlined" aria-hidden="true">search_off</span>
+            No hay puntos de venta que coincidan con el filtro o la búsqueda.
+        </div>
+
+        <div class="pos-note">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span><strong>Acceso a configuraciones:</strong> haz clic en cualquier punto de venta para abrir su consola de configuración dedicada, editar la numeración fiscal, gestionar las notas crédito/débito y auditar la conectividad DIAN / SAP.</span>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         PANTALLA 2 · VISTA DEDICADA DE EDICIÓN
+         ============================================================ -->
+    <section class="pos-view is-hidden" id="vistaDetalle">
+        <div class="pos-detail-top">
+            <div>
+                <button type="button" class="pos-back" onclick="volverAlDirectorio()">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    Volver a Directorio de Puntos de Venta
+                </button>
+                <p class="pos-crumbs">Configuración / Puntos de Venta / Editar <strong id="detalleCrumbNombre">Punto de Venta</strong></p>
+            </div>
+            <span class="pos-tenant">
+                <span class="pos-dot ok"></span>
+                Multi-Tenant Activo
+                <span class="sep">•</span>
+                Punto de Venta ID: <strong id="detalleTenant">#—</strong>
+            </span>
+        </div>
+
+        <div class="pos-detail-head">
+            <span class="pos-mono pos-mono-lg" id="panelMono">PV</span>
+            <div class="pos-detail-id">
+                <div class="pos-detail-name-row">
+                    <h2 id="panelNombre">Punto de Venta</h2>
+                    <span class="pos-pill" id="panelEstado">Consulta local activa</span>
+                    <span class="pos-pill ok" id="panelLocal">Consulta local activa</span>
+                </div>
+                <p class="pos-detail-meta">
+                    <span>Código: <strong id="posCodigoMeta">—</strong></span>
+                    <span class="sep">•</span>
+                    <span>Sociedad: <strong id="posSociedadMeta">—</strong></span>
+                    <span class="sep">•</span>
+                    <span>Prefijo FE: <strong id="posPrefijoMeta">—</strong></span>
+                </p>
+            </div>
+            <div class="pos-detail-actions">
+                <button type="button" class="pos-btn pos-btn-ghost" onclick="probarConectividad()">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings_ethernet</span>
+                    Probar Conectividad
+                </button>
+                <label class="pos-switch">
+                    <input type="checkbox" id="modoEdicion" checked onchange="toggleModoEdicion(this)">
+                    <span class="pos-switch-track"></span>
+                    <span>Modo Edición</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="alert alert-danger rounded-4 d-none" id="dianResolutionAlert"></div>
+        <div class="d-none" id="dianResolutionPickerWrap" style="margin: 0 0 14px;">
+            <label class="pos-label" for="dianResolutionPicker">Resoluciones autorizadas por DIAN</label>
+            <select class="pos-select" id="dianResolutionPicker"></select>
+            <p class="pos-help">Seleccione prefijo y rango. Se autocompletan resolución, clave técnica, numeración y vigencia.</p>
+        </div>
+
+        <div class="pos-panel" id="posPanel">
+            <div class="pos-tabs" role="tablist">
+                <button type="button" class="pos-tab is-active" data-tab="general" onclick="selectTab(this)">
+                    <span class="num">1</span> Identidad del POS &amp; Sociedad
+                </button>
+                <button type="button" class="pos-tab" data-tab="numeracion" onclick="selectTab(this)">
+                    <span class="num">2</span> Numeración DIAN &amp; Rangos
+                </button>
+                <button type="button" class="pos-tab" data-tab="notas" onclick="selectTab(this)">
+                    <span class="num">3</span> Notas Crédito y Débito
+                </button>
+                <button type="button" class="pos-tab" data-tab="erp" onclick="selectTab(this)">
+                    <span class="num">4</span> Integración ERP / Facturación
+                </button>
+            </div>
+
+            <form id="puntoVentaForm" th:action="@{/portal/admin/puntos-venta}" method="post" autocomplete="off">
                 <input type="hidden" name="id" id="puntoVentaId">
 
-                <div class="col-md-4">
-                    <label class="form-label" for="sociedadId">Sociedad</label>
-                    <select class="form-select" id="sociedadId" name="sociedadId" required>
-                        <option value="">Seleccione...</option>
-                        <option th:each="sociedad : ${sociedades}" th:value="${sociedad.id}" th:text="${sociedad.razonSocial}">
-                            Sociedad
-                        </option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="codigo">Código POS</label>
-                    <input class="form-control" id="codigo" name="codigo" placeholder="PV-001" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="nombre">Nombre</label>
-                    <input class="form-control" id="nombre" name="nombre" placeholder="Caja principal" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="direccion">Dirección</label>
-                    <input class="form-control" id="direccion" name="direccion" placeholder="Cra 1 # 2-03">
+                <!-- ============ Pestaña 1 ============ -->
+                <div class="pos-pane is-active" data-pane="general">
+                    <h3 class="pos-pane-title">Identidad del Punto de Venta y Configuración Fiscal</h3>
+                    <p class="pos-pane-sub">Identificación comercial del terminal y resolución de facturación electrónica DIAN.</p>
+
+                    <div class="pos-grid">
+                        <div class="pos-col-4">
+                            <label class="pos-label" for="sociedadId">Sociedad Asociada <span class="pos-req">*</span></label>
+                            <select class="pos-select" id="sociedadId" name="sociedadId" required>
+                                <option value="">Seleccione...</option>
+                                <option th:each="sociedad : ${sociedades}"
+                                        th:value="${sociedad.id}"
+                                        th:text="${sociedad.razonSocial}">Sociedad</option>
+                            </select>
+                        </div>
+                        <div class="pos-col-4">
+                            <label class="pos-label" for="codigo">Código POS <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="codigo" name="codigo" placeholder="PV-001" required>
+                        </div>
+                        <div class="pos-col-4">
+                            <label class="pos-label" for="nombre">Nombre de la Caja / Terminal <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="nombre" name="nombre" placeholder="Caja Principal - Sede Central" required>
+                        </div>
+
+                        <div class="pos-col-6">
+                            <label class="pos-label" for="direccion">Dirección o Ubicación del POS <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="direccion" name="direccion" placeholder="Cra 1 # 2-03">
+                        </div>
+                        <div class="pos-col-6">
+                            <label class="pos-label" for="prefijo">Prefijo Factura Electrónica <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="prefijo" name="prefijo" placeholder="FE" maxlength="12" required>
+                        </div>
+
+                        <div class="pos-col-6">
+                            <label class="pos-label" for="resolucionDian">Número de Resolución DIAN <span class="pos-req">*</span></label>
+                            <div class="pos-inline">
+                                <input class="pos-input" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
+                                <button class="pos-btn pos-btn-outline pos-dian-btn" id="btnConsultarDianFe" type="button">
+                                    Consultar DIAN
+                                </button>
+                            </div>
+                            <p class="pos-help">Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.</p>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="rangoDesde">Rango Desde <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="rangoDesde" name="rangoDesde" type="number" min="1" value="1" required>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="rangoHasta">Rango Hasta <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="rangoHasta" name="rangoHasta" type="number" min="1" required>
+                        </div>
+
+                        <div class="pos-col-12">
+                            <label class="pos-label" for="claveTecnica">Clave Técnica DIAN <span class="pos-req">*</span></label>
+                            <div class="pos-input-wrap">
+                                <input class="pos-input" type="password" id="claveTecnica" name="claveTecnica"
+                                       autocomplete="off" readonly placeholder="Se completa al consultar la resolución en DIAN">
+                                <button type="button" class="pos-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                            <p class="pos-help">Clave técnica del rango DIAN.
+                                <span class="pos-chip warn" id="claveEstado">Estado: Pendiente</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="pos-subhead" style="margin-top:22px;">
+                        <span class="material-symbols-outlined" aria-hidden="true">lan</span>
+                        Conectores Asociados
+                    </div>
+                    <div class="pos-connectors">
+                        <div class="pos-connector">
+                            <span class="pos-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">receipt_long</span>
+                            </span>
+                            <span class="pos-connector-info">
+                                <strong>Resolución DIAN (01/05)</strong>
+                                <span id="connResolucion">Sin resolución registrada</span>
+                            </span>
+                            <span class="pos-chip warn" id="connResolucionEstado">Pendiente</span>
+                        </div>
+                        <div class="pos-connector">
+                            <span class="pos-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">cloud_sync</span>
+                            </span>
+                            <span class="pos-connector-info">
+                                <strong>Servicio DIAN Facturación (SOAP/REST)</strong>
+                                <span id="connServicio">Sin credenciales DIAN</span>
+                            </span>
+                            <span class="pos-chip warn" id="connServicioEstado">Pendiente</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="col-md-2">
-                    <label class="form-label" for="prefijo">Prefijo factura</label>
-                    <input class="form-control" id="prefijo" name="prefijo" placeholder="FE" maxlength="12" required>
+                <!-- ============ Pestaña 2 ============ -->
+                <div class="pos-pane" data-pane="numeracion">
+                    <h3 class="pos-pane-title">Numeración DIAN y Rangos Autorizados</h3>
+                    <p class="pos-pane-sub">Consecutivos y vigencia del rango de facturación electrónica.</p>
+
+                    <div class="pos-grid">
+                        <div class="pos-col-6">
+                            <label class="pos-label">Rango Autorizado (Desde - Hasta)</label>
+                            <div class="pos-range-summary" id="rangoResumen">—</div>
+                            <p class="pos-help">Se edita en la pestaña «Identidad del POS &amp; Sociedad».</p>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="numeroActual">Número Actual <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="numeroActual" name="numeroActual" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="vigenciaDesde">Vigencia Desde <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="vigenciaDesde" name="vigenciaDesde" type="date" required>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="vigenciaHasta">Vigencia Hasta <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="vigenciaHasta" name="vigenciaHasta" type="date" required>
+                        </div>
+                        <div class="pos-col-9">
+                            <label class="pos-label">Estado del Punto de Venta</label>
+                            <div class="pos-switch-row">
+                                <div>
+                                    <strong style="font-size:12.5px;color:#111827;">Activo para facturación</strong>
+                                    <p class="pos-help" style="margin:2px 0 0;">Si se desactiva, el POS no aparecerá en emisión ni recepción.</p>
+                                </div>
+                                <label class="pos-switch">
+                                    <input type="checkbox" id="activo" name="activo" value="true" checked>
+                                    <span class="pos-switch-track"></span>
+                                    <span>Activo</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4" style="width: 220px; transform: translateX(-30px);">
-                    <label class="form-label" for="resolucionDian">Resolución de facturación</label>
-                    <div class="input-group">
-                        <input class="form-control" style="width: 60px;" id="resolucionDian" name="resolucionDian" placeholder="18764000000000" required>
-                        <button class="btn btn-outline-primary" style="transform: translate(170px, -35px);" id="btnConsultarDianFe" type="button" data-doc-kind="fe">
-                            Consultar DIAN
+
+                <!-- ============ Pestaña 3 ============ -->
+                <div class="pos-pane" data-pane="notas">
+                    <h3 class="pos-pane-title">Notas Crédito y Débito</h3>
+                    <p class="pos-pane-sub">Prefijos y consecutivos de los documentos electrónicos de ajuste.</p>
+
+                    <div class="pos-subhead">
+                        <span class="material-symbols-outlined" aria-hidden="true">assignment_return</span>
+                        Nota Crédito (tipo 91)
+                    </div>
+                    <div class="pos-grid">
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="prefijoNc">Prefijo NC <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="prefijoNc" name="prefijoNc" value="NC" maxlength="12" required>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="numeroActualNc">Número Actual NC <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="numeroActualNc" name="numeroActualNc" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="pos-col-6" style="display:flex;align-items:flex-end;">
+                            <button class="pos-btn pos-btn-outline pos-dian-btn" id="btnConsultarDianNc" type="button">
+                                Consultar prefijo NC en DIAN
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pos-subhead">
+                        <span class="material-symbols-outlined" aria-hidden="true">assignment_returned</span>
+                        Nota Débito (tipo 92)
+                    </div>
+                    <div class="pos-grid">
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="prefijoNd">Prefijo ND <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="prefijoNd" name="prefijoNd" value="ND" maxlength="12" required>
+                        </div>
+                        <div class="pos-col-3">
+                            <label class="pos-label" for="numeroActualNd">Número Actual ND <span class="pos-req">*</span></label>
+                            <input class="pos-input" id="numeroActualNd" name="numeroActualNd" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="pos-col-6" style="display:flex;align-items:flex-end;">
+                            <button class="pos-btn pos-btn-outline pos-dian-btn" id="btnConsultarDianNd" type="button">
+                                Consultar prefijo ND en DIAN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ Pestaña 4 ============ -->
+                <div class="pos-pane" data-pane="erp">
+                    <h3 class="pos-pane-title">Integración ERP / Facturación</h3>
+                    <p class="pos-pane-sub">Resumen de la sociedad vinculada y del conector SAP usado para emitir desde el ERP.</p>
+
+                    <div class="pos-connectors">
+                        <div class="pos-connector">
+                            <span class="pos-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">receipt_long</span>
+                            </span>
+                            <span class="pos-connector-info">
+                                <strong id="erpSociedad">—</strong>
+                                <span id="erpFacturacion">Sin configuración fiscal</span>
+                            </span>
+                            <span class="pos-chip warn" id="erpFacturacionEstado">Pendiente</span>
+                        </div>
+                        <div class="pos-connector">
+                            <span class="pos-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">dns</span>
+                            </span>
+                            <span class="pos-connector-info">
+                                <strong>Conector SAP ERP (SOAP)</strong>
+                                <span id="erpSap">Sin empresa SAP vinculada</span>
+                            </span>
+                            <span class="pos-chip warn" id="erpSapEstado">Pendiente</span>
+                        </div>
+                    </div>
+
+                    <div class="pos-note" style="margin-top:18px;">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span>Los datos de la sociedad (ambiente DIAN, empresa SAP y usuario) se administran desde <strong>Configuración → Sociedades</strong>. Este POS hereda esa configuración.</span>
+                    </div>
+                </div>
+
+                <div class="pos-actionbar">
+                    <div class="pos-actionbar-msg">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span><strong>Edición de Punto de Venta en curso:</strong> Hay cambios pendientes de confirmación.</span>
+                    </div>
+                    <div class="pos-actionbar-actions">
+                        <button type="button" class="pos-btn-bar" onclick="revertirCambios()">
+                            Descartar cambios
+                        </button>
+                        <button type="button" class="pos-btn-bar" onclick="probarConectividad()">
+                            <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+                            Validar Resolución DIAN
+                        </button>
+                        <button type="submit" class="pos-btn-bar primary" id="btnGuardar">
+                            Guardar Cambios de
+                            <span id="guardarNombre">EL PUNTO DE VENTA</span>
                         </button>
                     </div>
-                    <div class="form-text" style="width: 300px; transform: translateY(-30px);">
-                        Factura electrónica (01/05). GetNumberingRange autocompleta clave, prefijo y rangos.
-                    </div>
-                </div>
-                <div class="col-md-6" style="width: 190px; transform: translate(80px,  10px);">
-                    <label class="form-label" for="claveTecnica">Clave técnica</label>
-                    <input class="form-control font-monospace" id="claveTecnica" name="claveTecnica" autocomplete="off" readonly>
-                </div>
-
-                <div class="col-md-2" style="transform: translateX(80px);">
-                    <label class="form-label" for="rangoDesde">Rango desde</label>
-                    <input class="form-control" id="rangoDesde" name="rangoDesde" type="number" min="1" value="1" required>
-                </div>
-                <div class="col-md-2" style="transform: translateX(80px);">
-                    <label class="form-label" for="rangoHasta">Rango hasta</label>
-                    <input class="form-control" id="rangoHasta" name="rangoHasta" type="number" min="1" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="numeroActual">Número actual</label>
-                    <input class="form-control" id="numeroActual" name="numeroActual" type="number" min="0" value="0" required>
-                    <div class="form-text">Último emitido. Sin emisiones: rango desde − 1.</div>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="vigenciaDesde">Vigencia desde</label>
-                    <input class="form-control" id="vigenciaDesde" name="vigenciaDesde" type="date" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="vigenciaHasta">Vigencia hasta</label>
-                    <input class="form-control" id="vigenciaHasta" name="vigenciaHasta" type="date" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="form-check">
-                        <input class="form-check-input" id="activo" name="activo" type="checkbox" value="true" checked>
-                        <label class="form-check-label" for="activo">Activo</label>
-                    </div>
-                </div>
-
-                <div class="col-12 d-none" id="dianResolutionPickerWrap">
-                    <label class="form-label" for="dianResolutionPicker">Resoluciones autorizadas por DIAN</label>
-                    <select class="form-select" id="dianResolutionPicker"></select>
-                    <div class="form-text">
-                        Seleccione prefijo y rango. Se autocompletan resolución, clave técnica, numeración y vigencia.
-                    </div>
-                </div>
-
-                <div class="col-12">
-                    <hr class="my-1">
-                    <h3 class="h6 mb-2">Nota crédito (tipo 91)</h3>
-                    <p class="text-muted small mb-3">
-                        Usa la misma resolución y rango autorizado. Configure el prefijo DIAN de NC y el último consecutivo emitido.
-                    </p>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="prefijoNc">Prefijo NC</label>
-                    <input class="form-control" id="prefijoNc" name="prefijoNc" placeholder="NC" maxlength="12" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="numeroActualNc">Número actual NC</label>
-                    <input class="form-control" id="numeroActualNc" name="numeroActualNc" type="number" min="0" value="0" required>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" style="transform: translateY(-15px);" id="btnConsultarDianNc" type="button" data-doc-kind="nc">
-                        Consultar prefijo NC en DIAN
-                    </button>
-                </div>
-
-                <div class="col-12">
-                    <h3 class="h6 mb-2 mt-2">Nota débito (tipo 92)</h3>
-                    <p class="text-muted small mb-3">
-                        Misma resolución compartida. Configure prefijo ND y consecutivo actual.
-                    </p>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="prefijoNd">Prefijo ND</label>
-                    <input class="form-control" id="prefijoNd" name="prefijoNd" placeholder="ND" maxlength="12" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="numeroActualNd">Número actual ND</label>
-                    <input class="form-control" id="numeroActualNd" name="numeroActualNd" type="number" min="0" value="0" required>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary w-100" style="transform: translateY(-15px);" id="btnConsultarDianNd" type="button" data-doc-kind="nd">
-                        Consultar prefijo ND en DIAN
-                    </button>
-                </div>
-
-                <div class="col-12 text-end">
-                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar punto de venta</button>
                 </div>
             </form>
         </div>
     </section>
-
-    <section class="card zk-card">
-        <div class="card-body p-0">
-            <div class="px-4 py-4 border-bottom">
-                <h2 class="h4 mb-1">Puntos de venta registrados</h2>
-            </div>
-            <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th>Sociedad</th>
-                    <th>Código</th>
-                    <th>Nombre / Dirección</th>
-                    <th>Prefijo FE</th>
-                    <th>NC / ND</th>
-                    <th>Resolución</th>
-                    <th>Rango</th>
-                    <th>Vigencia</th>
-                    <th>Estado</th>
-                    <th class="text-end">Acción</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="punto : ${puntosVenta}">
-                    <td th:text="${punto.sociedadRazonSocial}">Sociedad</td>
-                    <td th:text="${punto.codigo}">PV-001</td>
-                    <td>
-                        <div th:text="${punto.nombre}">Caja principal</div>
-                        <small class="text-muted" th:text="${punto.direccion}">Dirección</small>
-                    </td>
-                    <td th:text="${punto.prefijo}">FE</td>
-                    <td>
-                        <div><span class="text-muted">NC:</span> <span th:text="${punto.prefijoNc}">NC</span>
-                            <small class="text-muted">(<span th:text="${punto.numeroActualNc}">0</span>)</small>
-                        </div>
-                        <div><span class="text-muted">ND:</span> <span th:text="${punto.prefijoNd}">ND</span>
-                            <small class="text-muted">(<span th:text="${punto.numeroActualNd}">0</span>)</small>
-                        </div>
-                    </td>
-                    <td>
-                        <div th:text="${punto.resolucionDian}">18764000000000</div>
-                        <small class="text-muted" th:if="${punto.claveTecnica != null and !#strings.isEmpty(punto.claveTecnica)}">
-                            Clave técnica configurada
-                        </small>
-                    </td>
-                    <td>
-                        <span th:text="${punto.rangoDesde}">1</span>
-                        -
-                        <span th:text="${punto.rangoHasta}">1000</span>
-                        <small class="text-muted d-block">Actual: <span th:text="${punto.numeroActual}">0</span></small>
-                    </td>
-                    <td>
-                        <span th:text="${punto.vigenciaDesde}">2026-01-01</span>
-                        <small class="text-muted d-block" th:text="${punto.vigenciaHasta}">2026-12-31</small>
-                    </td>
-                    <td>
-                        <span class="badge" th:classappend="${punto.activo} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${punto.activo} ? 'Activo' : 'Inactivo'">
-                            Activo
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <button
-                                type="button"
-                                class="btn btn-sm btn-outline-primary"
-                                th:attr="data-id=${punto.id},data-sociedad=${punto.sociedadId},data-codigo=${punto.codigo},data-nombre=${punto.nombre},data-direccion=${punto.direccion},data-prefijo=${punto.prefijo},data-resolucion=${punto.resolucionDian},data-clave=${punto.claveTecnica},data-rango-desde=${punto.rangoDesde},data-rango-hasta=${punto.rangoHasta},data-numero-actual=${punto.numeroActual},data-prefijo-nc=${punto.prefijoNc},data-numero-actual-nc=${punto.numeroActualNc},data-prefijo-nd=${punto.prefijoNd},data-numero-actual-nd=${punto.numeroActualNd},data-vigencia-desde=${punto.vigenciaDesde},data-vigencia-hasta=${punto.vigenciaHasta},data-activo=${punto.activo}"
-                                onclick="editarPuntoVenta(this)">
-                            Editar
-                        </button>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(puntosVenta)}">
-                    <td colspan="10" class="text-center text-muted py-4">No hay puntos de venta registrados.</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
 </main>
 
+<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
+<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+
+<div id="zkSociedadesData" class="is-hidden">
+    <span th:each="s : ${sociedades}"
+          th:attr="data-id=${s.id},
+                   data-razon=${s.razonSocial},
+                   data-ambiente=${s.dianAmbiente},
+                   data-id-empresa=${s.idEmpresa},
+                   data-sap-usuario=${s.sapUsuario}"></span>
+</div>
+
 <script>
+    const POS_PANEL = document.getElementById('posPanel');
+    const VISTA_DIRECTORIO = document.getElementById('vistaDirectorio');
+    const VISTA_DETALLE = document.getElementById('vistaDetalle');
+    const ZK_SOCIEDADES = {};
+    let idActual = null;
     let dianResolutionsCache = [];
     let dianDocKind = 'fe';
 
+    document.querySelectorAll('#zkSociedadesData [data-id]').forEach(el => {
+        ZK_SOCIEDADES[el.dataset.id] = {
+            razon: el.dataset.razon || '',
+            ambiente: el.dataset.ambiente || '',
+            idEmpresa: el.dataset.idEmpresa || null,
+            sapUsuario: el.dataset.sapUsuario || ''
+        };
+    });
+
+    function setVal(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = (value === null || value === undefined) ? '' : value;
+        }
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = value;
+        }
+    }
+
+    function actualizarResumenRango() {
+        const desde = document.getElementById('rangoDesde').value;
+        const hasta = document.getElementById('rangoHasta').value;
+        setText('rangoResumen', (desde || hasta)
+            ? ((desde || '—') + '  -  ' + (hasta || '—'))
+            : '—');
+    }
+
+    function sociedadDe(sociedadId) {
+        return ZK_SOCIEDADES[sociedadId] || {};
+    }
+
+    function ambienteSociedad(sociedadId) {
+        const ambiente = sociedadDe(sociedadId).ambiente;
+        return ambiente || 'Mock';
+    }
+
+    function setEstadoPanel(ambiente) {
+        const pill = document.getElementById('panelEstado');
+        pill.classList.remove('ok', 'warn', 'bad');
+        if (ambiente === 'Produccion') {
+            pill.textContent = 'DIAN Producción';
+            pill.classList.add('ok');
+        } else if (ambiente === 'Habilitacion') {
+            pill.textContent = 'DIAN Habilitación';
+            pill.classList.add('warn');
+        } else {
+            pill.textContent = 'DIAN Mock / Pruebas';
+            pill.classList.add('warn');
+        }
+    }
+
+    function activarTab(panel, tab) {
+        panel.querySelectorAll('.pos-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+        panel.querySelectorAll('.pos-pane').forEach(p => p.classList.toggle('is-active', p.dataset.pane === tab));
+    }
+
+    function mostrarVista(vista, push) {
+        const detalle = vista === 'detalle';
+        VISTA_DIRECTORIO.classList.toggle('is-hidden', detalle);
+        VISTA_DETALLE.classList.toggle('is-hidden', !detalle);
+        if (push) {
+            let url = location.pathname;
+            if (detalle) {
+                url += idActual ? ('?pos=' + encodeURIComponent(idActual)) : '?nuevo=1';
+            }
+            history.pushState({vista: vista, id: idActual}, '', url);
+        }
+    }
+
+    function mapearAmbientes() {
+        document.querySelectorAll('.pos-card').forEach(card => {
+            const ambiente = ambienteSociedad(card.dataset.sociedad);
+            card.dataset.ambiente = ambiente;
+            const badge = card.querySelector('.pos-env');
+            const dot = card.querySelector('.pos-env .pos-dot');
+            const label = badge ? badge.querySelector('span:last-child') : null;
+            if (!badge || !dot || !label) {
+                return;
+            }
+            badge.classList.toggle('warn', ambiente !== 'Produccion');
+            dot.classList.toggle('ok', ambiente === 'Produccion');
+            dot.classList.toggle('warn', ambiente !== 'Produccion');
+            label.textContent = ambiente === 'Produccion'
+                ? 'DIAN Producción'
+                : (ambiente === 'Habilitacion' ? 'DIAN Habilitación' : 'DIAN Mock / Pruebas');
+        });
+    }
+
+    function setChip(id, estado, texto) {
+        const chip = document.getElementById(id);
+        if (!chip) {
+            return;
+        }
+        chip.textContent = texto;
+        chip.className = 'pos-chip' + (estado ? '' : ' warn');
+    }
+
+    function actualizarChipClave(clave) {
+        const activa = clave != null && String(clave).length > 0;
+        setChip('claveEstado', activa, activa ? 'Estado: Activa y autorizada' : 'Estado: Pendiente');
+    }
+
+    function actualizarConectores(d) {
+        const resolucion = d.resolucion != null && String(d.resolucion).length > 0;
+        const clave = d.clave != null && String(d.clave).length > 0;
+        const vinculado = resolucion && clave;
+
+        setText('connResolucion', resolucion
+            ? (d.resolucion + ' · ' + (d.vigenciaDesde || '—') + ' a ' + (d.vigenciaHasta || '—'))
+            : 'Sin resolución registrada');
+        setChip('connResolucionEstado', resolucion, resolucion ? 'Configurado' : 'Pendiente');
+
+        setText('connServicio', vinculado ? 'SOAP/REST · GetNumberingRange' : 'Sin credenciales DIAN');
+        setChip('connServicioEstado', vinculado, vinculado ? 'Vinculado' : 'Pendiente');
+    }
+
+    function actualizarErp(d) {
+        const sociedad = sociedadDe(d.sociedad);
+        const resolucion = d.resolucion != null && String(d.resolucion).length > 0;
+        const sapOk = sociedad.idEmpresa != null;
+
+        setText('erpSociedad', sociedad.razon || '—');
+        setText('erpFacturacion', resolucion
+            ? ((d.prefijo || '—') + ' · Resolución ' + d.resolucion)
+            : 'Sin configuración fiscal');
+        setChip('erpFacturacionEstado', resolucion, resolucion ? 'Configurado' : 'Pendiente');
+
+        setText('erpSap', sapOk
+            ? ('Empresa ID ' + sociedad.idEmpresa + ' · ' + (sociedad.sapUsuario || 'sin usuario'))
+            : 'Sin empresa SAP vinculada');
+        setChip('erpSapEstado', sapOk, sapOk ? 'Vinculado' : 'Pendiente');
+    }
+
+    function actualizarMetaSociedad() {
+        const select = document.getElementById('sociedadId');
+        const option = select.options[select.selectedIndex];
+        const razon = option && option.value ? option.textContent.trim() : '—';
+        setText('posSociedadMeta', razon);
+        setEstadoPanel(ambienteSociedad(select.value));
+        actualizarErp({
+            sociedad: select.value,
+            prefijo: document.getElementById('prefijo').value,
+            resolucion: document.getElementById('resolucionDian').value
+        });
+    }
+
+    function resetClaveVisibility() {
+        const input = document.getElementById('claveTecnica');
+        if (input) {
+            input.type = 'password';
+        }
+        const icon = document.querySelector('.pos-eye .material-symbols-outlined');
+        if (icon) {
+            icon.textContent = 'visibility';
+        }
+    }
+
+    function rellenarFormulario(d) {
+        resetClaveVisibility();
+        setVal('puntoVentaId', d.id);
+        setVal('sociedadId', d.sociedad);
+        setVal('codigo', d.codigo);
+        setVal('nombre', d.nombre);
+        setVal('direccion', d.direccion);
+        setVal('prefijo', d.prefijo);
+        setVal('resolucionDian', d.resolucion);
+        setVal('claveTecnica', d.clave);
+        setVal('rangoDesde', d.rangoDesde || '1');
+        setVal('rangoHasta', d.rangoHasta || '');
+        setVal('numeroActual', d.numeroActual || '0');
+        setVal('prefijoNc', d.prefijoNc || 'NC');
+        setVal('numeroActualNc', d.numeroActualNc || '0');
+        setVal('prefijoNd', d.prefijoNd || 'ND');
+        setVal('numeroActualNd', d.numeroActualNd || '0');
+        setVal('vigenciaDesde', d.vigenciaDesde);
+        setVal('vigenciaHasta', d.vigenciaHasta);
+        actualizarResumenRango();
+        document.getElementById('activo').checked = d.activo === 'true';
+
+        const sociedad = sociedadDe(d.sociedad);
+        setText('panelMono', (d.mono || 'PV').toUpperCase());
+        setText('panelNombre', d.nombre || 'Punto de Venta');
+        setText('detalleTenant', '#' + (d.codigo || 'NUEVO'));
+        setText('detalleCrumbNombre', d.nombre || 'Nuevo Punto de Venta');
+        setText('guardarNombre', (d.nombre || 'EL PUNTO DE VENTA').toUpperCase());
+        setText('posCodigoMeta', d.codigo || '—');
+        setText('posSociedadMeta', sociedad.razon || '—');
+        setText('posPrefijoMeta', d.prefijo || '—');
+        setEstadoPanel(ambienteSociedad(d.sociedad));
+
+        actualizarChipClave(d.clave);
+        actualizarConectores(d);
+        actualizarErp(d);
+
+        ocultarAlertaDian();
+        POS_PANEL.classList.remove('is-new');
+    }
+
+    function limpiarFormulario() {
+        resetClaveVisibility();
+        ['razonSocial', 'nit', 'codigo', 'nombre', 'direccion', 'prefijo',
+            'resolucionDian', 'claveTecnica', 'rangoHasta',
+            'vigenciaDesde', 'vigenciaHasta', 'puntoVentaId'].forEach(id => setVal(id, ''));
+        setVal('sociedadId', '');
+        setVal('rangoDesde', '1');
+        setVal('numeroActual', '0');
+        setVal('prefijoNc', 'NC');
+        setVal('numeroActualNc', '0');
+        setVal('prefijoNd', 'ND');
+        setVal('numeroActualNd', '0');
+        actualizarResumenRango();
+        document.getElementById('activo').checked = true;
+
+        setText('panelMono', '+');
+        setText('panelNombre', 'Nuevo Punto de Venta');
+        setText('detalleTenant', '#NUEVO');
+        setText('detalleCrumbNombre', 'Nuevo Punto de Venta');
+        setText('guardarNombre', 'EL NUEVO PUNTO DE VENTA');
+        setText('posCodigoMeta', '—');
+        setText('posSociedadMeta', '—');
+        setText('posPrefijoMeta', '—');
+
+        const estado = document.getElementById('panelEstado');
+        estado.className = 'pos-pill warn';
+        estado.textContent = 'Sin guardar';
+
+        setChip('claveEstado', false, 'Estado: Pendiente');
+        setText('connResolucion', 'Sin resolución registrada');
+        setChip('connResolucionEstado', false, 'Pendiente');
+        setText('connServicio', 'Sin credenciales DIAN');
+        setChip('connServicioEstado', false, 'Pendiente');
+        setText('erpSociedad', '—');
+        setText('erpFacturacion', 'Sin configuración fiscal');
+        setChip('erpFacturacionEstado', false, 'Pendiente');
+        setText('erpSap', 'Sin empresa SAP vinculada');
+        setChip('erpSapEstado', false, 'Pendiente');
+
+        ocultarAlertaDian();
+        POS_PANEL.classList.add('is-new');
+    }
+
+    function abrirDetalle(card, push) {
+        if (typeof card === 'string') {
+            card = document.querySelector('.pos-card[data-id="' + card + '"]');
+        }
+        if (!card) {
+            return;
+        }
+        document.querySelectorAll('.pos-card').forEach(c => c.classList.remove('is-active'));
+        card.classList.add('is-active');
+        idActual = card.dataset.id;
+        rellenarFormulario(card.dataset);
+        activarModoEdicion(true);
+        activarTab(POS_PANEL, 'general');
+        mostrarVista('detalle', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function nuevoPuntoVenta(push) {
+        document.querySelectorAll('.pos-card').forEach(c => c.classList.remove('is-active'));
+        idActual = null;
+        limpiarFormulario();
+        activarModoEdicion(true);
+        activarTab(POS_PANEL, 'general');
+        mostrarVista('detalle', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function volverAlDirectorio(push) {
+        document.querySelectorAll('.pos-card').forEach(c => c.classList.remove('is-active'));
+        idActual = null;
+        mostrarVista('directorio', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function revertirCambios() {
+        const activa = document.querySelector('.pos-card.is-active');
+        if (activa) {
+            rellenarFormulario(activa.dataset);
+        } else {
+            limpiarFormulario();
+        }
+        activarModoEdicion(true);
+        activarTab(POS_PANEL, 'general');
+    }
+
+    function selectTab(button) {
+        const panel = button.closest('.pos-panel');
+        activarTab(panel, button.dataset.tab);
+    }
+
+    function togglePassword(button) {
+        const input = button.parentElement.querySelector('input');
+        if (!input) {
+            return;
+        }
+        const icon = button.querySelector('.material-symbols-outlined');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) { icon.textContent = 'visibility_off'; }
+        } else {
+            input.type = 'password';
+            if (icon) { icon.textContent = 'visibility'; }
+        }
+    }
+
+    function activarModoEdicion(activar) {
+        const checkbox = document.getElementById('modoEdicion');
+        checkbox.checked = activar;
+        POS_PANEL.classList.toggle('is-readonly', !activar);
+        POS_PANEL.querySelectorAll('input, select, textarea').forEach(el => {
+            if (el.type === 'hidden') {
+                return;
+            }
+            if (el.id === 'claveTecnica') {
+                el.readOnly = true;
+                return;
+            }
+            if (el.type === 'checkbox') {
+                const label = el.closest('.pos-switch');
+                if (label) {
+                    label.style.pointerEvents = activar ? '' : 'none';
+                }
+                el.tabIndex = activar ? 0 : -1;
+                return;
+            }
+            if (el.tagName === 'SELECT') {
+                el.style.pointerEvents = activar ? '' : 'none';
+                el.tabIndex = activar ? 0 : -1;
+                return;
+            }
+            el.readOnly = !activar;
+        });
+        POS_PANEL.querySelectorAll('.pos-dian-btn').forEach(btn => { btn.disabled = !activar; });
+    }
+
+    function toggleModoEdicion(checkbox) {
+        activarModoEdicion(checkbox.checked);
+    }
+
+    /* ===================== Buscador y filtros ===================== */
+    function setFiltro(button) {
+        document.querySelectorAll('.pos-filter').forEach(b => b.classList.remove('is-active'));
+        button.classList.add('is-active');
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const q = (document.getElementById('posSearch').value || '').trim().toLowerCase();
+        const activo = document.querySelector('.pos-filter.is-active');
+        const filtro = activo ? activo.dataset.filter : 'todos';
+        let visibles = 0;
+
+        document.querySelectorAll('.pos-card').forEach(card => {
+            const d = card.dataset;
+            const texto = [d.codigo, d.nombre, d.sociedadRazon, d.prefijo]
+                .filter(Boolean).join(' ').toLowerCase();
+            const coincideTexto = !q || texto.indexOf(q) !== -1;
+            const coincideFiltro = filtro === 'todos'
+                || (filtro === 'activos' && d.activo === 'true')
+                || (filtro === 'pruebas' && d.ambiente !== 'Produccion');
+            const mostrar = coincideTexto && coincideFiltro;
+            card.classList.toggle('is-hidden', !mostrar);
+            if (mostrar) { visibles++; }
+        });
+
+        const vacio = document.getElementById('posSinResultados');
+        if (vacio) { vacio.classList.toggle('is-hidden', visibles > 0); }
+    }
+
+    function actualizarContadores() {
+        const cards = Array.prototype.slice.call(document.querySelectorAll('.pos-card'));
+        const total = cards.length;
+        const activos = cards.filter(c => c.dataset.activo === 'true').length;
+        const pruebas = cards.filter(c => c.dataset.ambiente !== 'Produccion').length;
+        const vinculados = cards.filter(c => c.dataset.vinculado === 'true').length;
+
+        setText('countTodos', total);
+        setText('countActivos', activos);
+        setText('countPruebas', pruebas);
+        setText('metricTotal', total + ' Activos');
+        setText('metricTotalBadge', total + ' Activos');
+        setText('metricSap', vinculados + ' Vinculados');
+
+        const badge = document.getElementById('metricSapBadge');
+        if (badge) {
+            const completo = total > 0 && vinculados === total;
+            badge.textContent = completo ? 'Online' : (vinculados > 0 ? 'Parcial' : 'Pendiente');
+            badge.className = 'pos-metric-badge' + (completo ? '' : ' neutral');
+        }
+    }
+
+    /* ===================== DIAN ===================== */
     function showDianAlert(message, isError) {
         const alert = document.getElementById('dianResolutionAlert');
         alert.textContent = message;
         alert.classList.toggle('alert-danger', isError);
         alert.classList.toggle('alert-success', !isError);
         alert.classList.remove('d-none');
+    }
+
+    function ocultarAlertaDian() {
+        const alert = document.getElementById('dianResolutionAlert');
+        if (alert) {
+            alert.classList.add('d-none');
+            alert.textContent = '';
+        }
     }
 
     function parseDianDate(value) {
@@ -273,12 +968,18 @@
     }
 
     function hideResolutionPicker() {
-        document.getElementById('dianResolutionPickerWrap').classList.add('d-none');
+        const wrap = document.getElementById('dianResolutionPickerWrap');
+        if (wrap) {
+            wrap.classList.add('d-none');
+        }
     }
 
     function fillResolutionPicker(resolutions, selectedIndex) {
         const wrap = document.getElementById('dianResolutionPickerWrap');
         const select = document.getElementById('dianResolutionPicker');
+        if (!wrap || !select) {
+            return;
+        }
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
@@ -354,10 +1055,18 @@
             if (resolution.validDateTo) {
                 document.getElementById('vigenciaHasta').value = parseDianDate(resolution.validDateTo);
             }
+            actualizarChipClave(document.getElementById('claveTecnica').value);
+            actualizarConectores({
+                resolucion: document.getElementById('resolucionDian').value,
+                clave: document.getElementById('claveTecnica').value,
+                vigenciaDesde: document.getElementById('vigenciaDesde').value,
+                vigenciaHasta: document.getElementById('vigenciaHasta').value
+            });
         }
         if (docKind === 'fe' && resolution.prefix) {
             document.getElementById('prefijo').value = resolution.prefix;
         }
+        actualizarResumenRango();
         if (docKind === 'nc' && resolution.prefix) {
             document.getElementById('prefijoNc').value = resolution.prefix;
         }
@@ -450,6 +1159,28 @@
         }
     }
 
+    function probarConectividad() {
+        consultarResolucionDian('fe');
+    }
+
+    /* ===================== Navegación Master-Detail ===================== */
+    function abrirDesdeUrl() {
+        const params = new URLSearchParams(location.search);
+        if (params.get('nuevo') === '1') {
+            nuevoPuntoVenta(false);
+            return true;
+        }
+        const id = params.get('pos');
+        if (id) {
+            const card = document.querySelector('.pos-card[data-id="' + id + '"]');
+            if (card) {
+                abrirDetalle(card, false);
+                return true;
+            }
+        }
+        return false;
+    }
+
     document.getElementById('btnConsultarDianFe').addEventListener('click', () => consultarResolucionDian('fe'));
     document.getElementById('btnConsultarDianNc').addEventListener('click', () => consultarResolucionDian('nc'));
     document.getElementById('btnConsultarDianNd').addEventListener('click', () => consultarResolucionDian('nd'));
@@ -465,30 +1196,27 @@
             false
         );
     });
+    document.getElementById('sociedadId').addEventListener('change', actualizarMetaSociedad);
 
-    function editarPuntoVenta(button) {
-        document.getElementById('puntoVentaId').value = button.dataset.id || '';
-        document.getElementById('sociedadId').value = button.dataset.sociedad || '';
-        document.getElementById('codigo').value = button.dataset.codigo || '';
-        document.getElementById('nombre').value = button.dataset.nombre || '';
-        document.getElementById('direccion').value = button.dataset.direccion || '';
-        document.getElementById('prefijo').value = button.dataset.prefijo || '';
-        document.getElementById('resolucionDian').value = button.dataset.resolucion || '';
-        document.getElementById('claveTecnica').value = button.dataset.clave || '';
-        document.getElementById('rangoDesde').value = button.dataset.rangoDesde || '1';
-        document.getElementById('rangoHasta').value = button.dataset.rangoHasta || '';
-        document.getElementById('numeroActual').value = button.dataset.numeroActual || '0';
-        document.getElementById('prefijoNc').value = button.dataset.prefijoNc || 'NC';
-        document.getElementById('numeroActualNc').value = button.dataset.numeroActualNc || '0';
-        document.getElementById('prefijoNd').value = button.dataset.prefijoNd || 'ND';
-        document.getElementById('numeroActualNd').value = button.dataset.numeroActualNd || '0';
-        document.getElementById('vigenciaDesde').value = button.dataset.vigenciaDesde || '';
-        document.getElementById('vigenciaHasta').value = button.dataset.vigenciaHasta || '';
-        document.getElementById('activo').checked = button.dataset.activo === 'true';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    // Mantiene el resumen de rango de la pestaña 2 sincronizado con los campos editables.
+    ['rangoDesde', 'rangoHasta'].forEach(id => {
+        document.getElementById(id).addEventListener('input', actualizarResumenRango);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        mapearAmbientes();
+        actualizarContadores();
+        aplicarFiltros();
+        if (!abrirDesdeUrl()) {
+            mostrarVista('directorio', false);
+        }
+    });
+
+    window.addEventListener('popstate', function () {
+        if (!abrirDesdeUrl()) {
+            volverAlDirectorio(false);
+        }
+    });
 </script>
-<div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
-<div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
 </body>
 </html>
