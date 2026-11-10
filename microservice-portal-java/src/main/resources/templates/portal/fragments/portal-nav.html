@@ -28,48 +28,48 @@
 
     #sidebar-drawer {
         width: min(320px, calc(100vw - 24px)) !important;
-        background: #fcf9f5 !important;
-        border-right: 1px solid #e8e3db !important;
-        box-shadow: 0 18px 48px rgba(38, 31, 20, 0.16) !important;
+        background: #f1f3f6 !important;
+        border-right: 1px solid #dfe4ea !important;
+        box-shadow: 0 18px 48px rgba(15, 31, 51, 0.16) !important;
     }
 
     #sidebar-drawer nav > a {
-        color: #5f5d58 !important;
+        color: #5b6675 !important;
         border: 1px solid transparent;
         border-radius: 14px !important;
         transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     #sidebar-drawer nav > a:hover {
-        background: #f4f1eb !important;
-        border-color: #ece5d8;
-        color: #211f1a !important;
+        background: #eef1f5 !important;
+        border-color: #dfe4ea;
+        color: #101b2b !important;
         transform: translateX(2px);
     }
 
     #sidebar-drawer nav > a[class*="bg-primary/5"] {
-        background: #f1eadb !important;
-        border-color: #e7dcc3 !important;
-        color: #362b14 !important;
-        box-shadow: inset 3px 0 0 #967117 !important;
+        background: #dfe9f4 !important;
+        border-color: #d6e0ea !important;
+        color: #12283f !important;
+        box-shadow: inset 3px 0 0 #1c7c5a !important;
     }
 
     #sidebar-drawer nav > a[class*="bg-primary/5"] > span:first-child {
-        color: #806521 !important;
+        color: #146c50 !important;
     }
 
     #sidebar-drawer > div > div:first-child {
-        background: #fcf9f5;
-        border-bottom-color: #e8e3db !important;
+        background: #f1f3f6;
+        border-bottom-color: #dfe4ea !important;
     }
 
     #sidebar-drawer > div > div:last-child {
-        border-top-color: #e8e3db !important;
+        border-top-color: #dfe4ea !important;
     }
 
     #sidebar-drawer > div > div:last-child > div {
-        background: #f4f1eb !important;
-        border: 1px solid #ece5d8;
+        background: #eef1f5 !important;
+        border: 1px solid #dfe4ea;
         border-radius: 16px !important;
     }
 
@@ -78,7 +78,7 @@
     }
 
     #sidebar-drawer nav > a:focus-visible {
-        outline: 3px solid rgba(150, 113, 23, 0.35);
+        outline: 3px solid rgba(28, 124, 90, 0.35);
         outline-offset: 2px;
     }
 </style>
@@ -451,7 +451,7 @@
             padding: 0;
             border: 0;
             border-radius: 24px;
-            color: #1c1c1a;
+            color: #101b2b;
             background: #fff;
             box-shadow: 0 24px 80px rgba(20, 20, 20, .24);
             font-family: 'TT Commons', Arial, sans-serif;
@@ -471,8 +471,8 @@
             margin: 0 auto 18px;
             place-items: center;
             border-radius: 20px;
-            color: #806521;
-            background: #f8f1df;
+            color: #146c50;
+            background: #e6f4ee;
         }
         .zk-permission-dialog__icon .material-symbols-outlined {
             font-size: 30px;
@@ -486,7 +486,7 @@
         .zk-permission-dialog p {
             margin: 0 auto 24px;
             max-width: 340px;
-            color: #66645f;
+            color: #5b6675;
             font-size: 16px;
             line-height: 1.5;
         }
@@ -496,7 +496,7 @@
             border: 0;
             border-radius: 999px;
             color: white;
-            background: #171717;
+            background: #12283f;
             font: inherit;
             font-size: 15px;
             font-weight: 600;
@@ -504,11 +504,11 @@
             transition: background .18s ease, transform .18s ease;
         }
         .zk-permission-dialog__close:hover {
-            background: #806521;
+            background: #146c50;
             transform: translateY(-1px);
         }
         .zk-permission-dialog__close:focus-visible {
-            outline: 3px solid #c7a85a;
+            outline: 3px solid #1c7c5a;
             outline-offset: 3px;
         }
         @media (max-width: 480px) {
@@ -593,8 +593,8 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
     <link th:href="@{/vendor/bootstrap/bootstrap.min.css}" rel="stylesheet">
-    <link th:href="@{/css/zonak-portal.css}" rel="stylesheet">
-    <link th:href="@{/css/portal-ui.css(v=20261001-tt-commons)}" rel="stylesheet">
+    <link th:href="@{/css/zonak-portal.css(v=20261109-navy)}" rel="stylesheet">
+    <link th:href="@{/css/portal-ui.css(v=20261109-navy)}" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -602,20 +602,20 @@
                 extend: {
                     colors: {
                         "surface-container-lowest": "#ffffff",
-                        "surface-container-highest": "#e5e2de",
-                        "on-surface-variant": "#444748",
-                        "primary": "#000000",
+                        "surface-container-highest": "#dfe4ea",
+                        "on-surface-variant": "#5b6675",
+                        "primary": "#12283f",
                         "on-primary": "#ffffff",
-                        "surface-container-low": "#f6f3ef",
-                        "on-surface": "#1c1c1a",
-                        "surface": "#fcf9f5",
-                        "secondary-fixed": "#f4f1eb",
-                        "on-secondary-fixed": "#806521",
-                        "accent-gold": "#967117",
-                        "accent-gold-light": "#f5d88e",
-                        "brand-subtitle": "#dccea9",
-                        "header-bg": "#080808",
-                        "header-border": "#292929"
+                        "surface-container-low": "#eef1f5",
+                        "on-surface": "#101b2b",
+                        "surface": "#f1f3f6",
+                        "secondary-fixed": "#e6f4ee",
+                        "on-secondary-fixed": "#146c50",
+                        "accent-gold": "#1c7c5a",
+                        "accent-gold-light": "#bfe3d2",
+                        "brand-subtitle": "#b9c6d4",
+                        "header-bg": "#0f1f33",
+                        "header-border": "#22364d"
                     },
                     spacing: {
                         "margin-desktop": "48px",

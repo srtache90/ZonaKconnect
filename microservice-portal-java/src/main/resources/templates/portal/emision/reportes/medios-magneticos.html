@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Medios magnéticos DIAN | Zona K e-Docs')}"></th:block>
@@ -27,6 +27,59 @@
                 grid-template-columns: minmax(0, 1fr);
             }
         }
+        .mag-control {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            padding: 10px 12px;
+            border: 1px solid #dfe4ea;
+            border-radius: 12px;
+            background-color: #f1f3f6;
+            color: #101b2b;
+            font: inherit;
+            font-size: 14px;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+        .mag-control:hover { border-color: #cbd5e1; }
+        .mag-control:focus {
+            border-color: #1c7c5a;
+            outline: 0;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(28, 124, 90, 0.12);
+        }
+        .mag-format-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #e6f4ee;
+            border: 1px solid #dfe4ea;
+            color: #146c50;
+            margin-bottom: 12px;
+        }
+        .mag-format-icon .material-symbols-outlined { font-size: 22px; }
+        .mag-format-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #146c50;
+            background: #e6f4ee;
+            border: 1px solid #dfe4ea;
+            border-radius: 999px;
+            padding: 4px 10px;
+            margin-bottom: 10px;
+        }
+        .magnetic-format-cards .zk-card { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+        .magnetic-format-cards .zk-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(37, 35, 31, 0.10); }
+        .magnetic-note { display: flex; align-items: flex-start; gap: 12px; }
+        .magnetic-note .material-symbols-outlined { color: #146c50; flex: 0 0 auto; margin-top: 1px; }
     </style>
 </head>
 <body class="text-on-surface">
@@ -35,17 +88,25 @@
 
 <main class="dc-page dc-page-wide dc-page-narrow px-margin-mobile md:px-margin-desktop">
     <div class="mb-8">
-       
+        <p class="dc-page-subtitle mb-1">Zona K / Reportes · Emisión</p>
         <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Medios magnéticos DIAN</h2>
         <p class="font-body-md text-on-surface-variant">Generación de archivos para información exógena según formatos DIAN.</p>
     </div>
 
-    <section class="zk-filter-card p-4 mb-4">
-        <h3 class="font-headline-md text-headline-md text-primary mb-4">Parámetros de exportación</h3>
+    <section class="zk-filter-card p-4 md:p-6 mb-4">
+        <div class="flex items-center gap-3 mb-5">
+            <span class="material-symbols-outlined flex items-center justify-center rounded-xl border"
+                  style="width: 36px; height: 36px; color: #146c50; background: #e6f4ee; border-color: #dfe4ea; font-size: 20px;"
+                  aria-hidden="true">tune</span>
+            <div>
+                <h3 class="font-headline-md text-headline-md text-primary leading-tight">Parámetros de exportación</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5 mb-0">Define el formato y el período del archivo a generar.</p>
+            </div>
+        </div>
         <form method="get" th:action="@{/portal/emision/reportes/medios-magneticos/export}" class="grid md:grid-cols-2 gap-4">
             <div class="md:col-span-2">
                 <label class="block font-label-md mb-1" for="formato">Formato DIAN</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="formato" name="formato" required>
+                <select class="mag-control" id="formato" name="formato" required>
                     <option th:each="format : ${formats}"
                             th:value="${format.code()}"
                             th:text="${format.code() + ' - ' + format.title()}">1007</option>
@@ -53,7 +114,7 @@
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
+                <select class="mag-control" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
                     <option th:each="sociedad : ${sociedades}"
                             th:value="${sociedad.id}"
                             th:selected="${sociedad.id.toString() == selectedSociedadId}"
@@ -62,7 +123,7 @@
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="emissionPointId">Punto de venta</label>
-                <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="emissionPointId" name="emissionPointId">
+                <select class="mag-control" id="emissionPointId" name="emissionPointId">
                     <option value="">Todos</option>
                     <option th:each="puntoVenta : ${puntosVenta}"
                             th:value="${puntoVenta.id}"
@@ -73,19 +134,19 @@
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="fromDate">Fecha inicio</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="fromDate" name="fromDate" th:value="${fromDate}" required>
+                <input class="mag-control" type="date" id="fromDate" name="fromDate" th:value="${fromDate}" required>
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="toDate">Fecha fin</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="toDate" name="toDate" th:value="${toDate}" required>
+                <input class="mag-control" type="date" id="toDate" name="toDate" th:value="${toDate}" required>
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="anio">Año gravable</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="number" id="anio" name="anio" th:value="${selectedYear}" min="2000" max="2100" required>
+                <input class="mag-control" type="number" id="anio" name="anio" th:value="${selectedYear}" min="2000" max="2100" required>
             </div>
             <div>
                 <label class="block font-label-md mb-1" for="periodo">Periodo (mes)</label>
-                <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="number" id="periodo" name="periodo" th:value="${selectedPeriod}" min="1" max="12" required>
+                <input class="mag-control" type="number" id="periodo" name="periodo" th:value="${selectedPeriod}" min="1" max="12" required>
             </div>
             <div class="md:col-span-2">
                 <button class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-on-primary font-label-md" type="submit">
@@ -98,14 +159,17 @@
 
     <section class="magnetic-format-cards">
         <article class="card zk-card" th:each="format : ${formats}">
+            <span class="mag-format-tag"><span class="material-symbols-outlined" style="font-size: 13px;">description</span>Formato DIAN</span>
+            <div class="mag-format-icon"><span class="material-symbols-outlined">folder_open</span></div>
             <h4 class="font-headline-md text-headline-md text-primary mb-2" th:text="${format.code() + ' - ' + format.title()}">1007</h4>
             <p class="font-body-md text-on-surface-variant mb-0" th:text="${format.description()}">Descripción</p>
         </article>
     </section>
 
-    <div class="rounded-2xl border border-surface-container-highest bg-surface-container-low px-5 py-4 font-body-md text-on-surface-variant">
-        Los archivos se generan con separador pipe (|), codificación UTF-8 con BOM y agrupan ingresos por tercero.
-        Valide el archivo con el prevalidador DIAN antes del envío oficial.
+    <div class="magnetic-note rounded-2xl border border-surface-container-highest bg-surface-container-low px-5 py-4 font-body-md text-on-surface-variant">
+        <span class="material-symbols-outlined">info</span>
+        <p class="mb-0">Los archivos se generan con separador pipe (|), codificación UTF-8 con BOM y agrupan ingresos por tercero.
+        Valide el archivo con el prevalidador DIAN antes del envío oficial.</p>
     </div>
 </main>
 

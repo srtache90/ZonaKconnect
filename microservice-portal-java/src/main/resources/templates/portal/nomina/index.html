@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Nómina Electrónica | Zona K e-Docs')}"></th:block>
@@ -6,6 +6,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zona K e-Docs</title>
     <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
+    <style>
+        .nom-card-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 24px;
+            border-bottom: 1px solid #dfe4ea;
+        }
+        .nom-card-heading { display: flex; align-items: center; gap: 12px; }
+        .nom-card-icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #e6f4ee;
+            border: 1px solid #dfe4ea;
+            color: #146c50;
+            font-size: 20px;
+        }
+        .nom-card-heading h2 {
+            font-size: 17px;
+            font-weight: 600;
+            color: #101b2b;
+            line-height: 1.25;
+            margin: 0;
+        }
+        .nom-card-heading p {
+            font-size: 12.5px;
+            color: #5b6675;
+            margin: 2px 0 0;
+        }
+
+        .registros-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e6f4ee;
+            color: #146c50;
+            border: 1px solid #dfe4ea;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            white-space: nowrap;
+        }
+        .registros-badge .material-symbols-outlined { font-size: 15px; }
+
+        .nom-table thead th {
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.07em;
+            color: #5b6675;
+            white-space: nowrap;
+            border-bottom: 2px solid #dfe4ea;
+            background: #f7f9fb;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .nom-table tbody td { padding-top: 14px; padding-bottom: 14px; }
+        .nom-table tbody tr:nth-child(even) { background: #f7f9fb; }
+        .nom-table tbody tr:hover { background: #eef2f6; }
+
+        .empty-report { padding: 2.5rem 1.5rem; text-align: center; }
+        .empty-report-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e6f4ee;
+            border: 1px solid #dfe4ea;
+            color: #1c7c5a;
+        }
+        .empty-report-icon .material-symbols-outlined { font-size: 30px; }
+        .empty-report-title { font-size: 16px; font-weight: 600; color: #101b2b; margin: 0 0 4px; }
+        .empty-report-sub { font-size: 13px; color: #5b6675; margin: 0 auto; max-width: 52ch; line-height: 1.5; }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -14,22 +97,36 @@
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
+            <p class="dc-page-subtitle mb-1">Zona K / Emisión · Nómina electrónica</p>
             <h1 class="dc-page-title">Nómina electrónica</h1>
-            <p class="dc-page-subtitle">Comprobantes de nómina individual emitidos por sociedad.</p>
+            <p class="dc-page-subtitle mb-0">Comprobantes de nómina individual emitidos por sociedad.</p>
         </div>
-        <a class="btn btn-zk rounded-pill px-4" th:href="@{/portal/nomina-electronica/nuevo}">Nueva nómina</a>
+        <a class="btn btn-zk rounded-pill px-4 d-inline-flex align-items-center gap-2"
+           th:href="@{/portal/nomina-electronica/nuevo}">
+            <span class="material-symbols-outlined" style="font-size: 18px;" aria-hidden="true">add</span>
+            Nueva nómina
+        </a>
     </div>
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
     <section class="card zk-card">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span>Nóminas emitidas</span>
-            <span class="badge text-bg-secondary" th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+        <div class="nom-card-header">
+            <div class="nom-card-heading">
+                <span class="nom-card-icon material-symbols-outlined" aria-hidden="true">badge</span>
+                <div>
+                    <h2>Nóminas emitidas</h2>
+                    <p>Comprobantes de nómina individual generados por la sociedad activa.</p>
+                </div>
+            </div>
+            <span class="registros-badge">
+                <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+                <span th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+            </span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
+            <table class="table align-middle mb-0 nom-table">
                 <thead>
                 <tr>
                     <th>Documento</th>
@@ -42,12 +139,16 @@
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(documents)}">
-                    <td colspan="6" class="text-center text-muted py-4">
-                        No hay nóminas electrónicas para la sociedad activa.
+                    <td colspan="6">
+                        <div class="empty-report">
+                            <div class="empty-report-icon"><span class="material-symbols-outlined" aria-hidden="true">note_add</span></div>
+                            <p class="empty-report-title">Aún no hay nóminas electrónicas</p>
+                            <p class="empty-report-sub">Los comprobantes de nómina que emitas para la sociedad activa aparecerán en esta lista. Usa «Nueva nómina» para crear el primero.</p>
+                        </div>
                     </td>
                 </tr>
                 <tr th:each="doc : ${documents}">
-                    <td th:text="${doc.documento}">NI1</td>
+                    <td class="fw-semibold" th:text="${doc.documento}">NI1</td>
                     <td th:text="${doc.partyName}">Trabajador</td>
                     <td th:text="${doc.partyId}">CC</td>
                     <td class="text-end" th:text="${#numbers.formatDecimal(doc.total, 1, 'POINT', 2, 'COMMA')}">0</td>

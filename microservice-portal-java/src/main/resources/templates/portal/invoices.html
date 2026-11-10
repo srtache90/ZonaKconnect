@@ -8,7 +8,7 @@
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c9c2ba; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dian-detail-panel {
             width: min(100%, 48rem);
             min-width: min(100%, 20rem);
@@ -88,19 +88,15 @@
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="zk-filter-card p-4 mb-4">
-        <div class="mb-3">
-            <h2 class="h5 mb-1">Contexto de emisión</h2>
-            <p class="text-muted small mb-0">Seleccione la sociedad y el punto de venta para listar las facturas asociadas.</p>
-        </div>
-        <form class="row g-3 align-items-end" id="context-form" method="get" th:action="@{/portal/invoices}">
+    <section class="zk-filter-card px-4 py-3 md:px-5 md:py-4 mb-4">
+        <form class="flex flex-col md:flex-row md:items-end gap-3" id="context-form" method="get" th:action="@{/portal/invoices}">
             <input name="page" type="hidden" value="1">
             <input name="estado" th:if="${estado != null}" th:value="${estado}" type="hidden">
             <input name="tipo" th:if="${tipo != null}" th:value="${tipo}" type="hidden">
             <input name="documentKind" th:if="${documentKind != null}" th:value="${documentKind}" type="hidden">
             <input name="limit" th:value="${limit}" type="hidden">
 
-            <div class="flex flex-col gap-2">
+            <div class="flex-1 flex flex-col gap-1 min-w-0">
                 <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="sociedadId">Sociedad</label>
                 <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
                         id="sociedadId"
@@ -115,7 +111,7 @@
                 </select>
             </div>
 
-            <div class="flex flex-col gap-2">
+            <div class="flex-1 flex flex-col gap-1 min-w-0">
                 <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="emissionPointId">Punto de venta</label>
                 <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
                         id="emissionPointId"
@@ -131,9 +127,8 @@
                 </select>
             </div>
 
-            <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">&nbsp;</label>
-                <button class="px-5 py-3 bg-primary text-on-primary rounded-lg font-label-md" type="submit">Aplicar contexto</button>
+            <div class="md:w-auto w-full">
+                <button class="w-full md:w-auto px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md whitespace-nowrap" type="submit">Aplicar contexto</button>
             </div>
         </form>
         <p class="font-body-md text-on-surface-variant mt-4 mb-0"
@@ -143,58 +138,67 @@
         </p>
     </section>
 
-    <section class="zk-filter-card p-4 mb-4"  style="font-size: 11px;">
-        <form class="grid grid-cols-1 md:grid-cols-4 gap-6" method="get" th:action="@{/portal/invoices}">
-            <input name="sociedadId" th:value="${selectedSociedadId}" type="hidden">
-            <input name="emissionPointId" th:value="${selectedEmissionPointId}" type="hidden">
-            <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Filtrar por Estado</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">person_search</span>
-                    <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md" style="text-transform: uppercase; font-size: 11px;"
-                           name="estado"
-                           placeholder="ENVIADO / RECHAZADO_DIAN..."
-                           th:value="${estado}"
-                           type="text">
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Tipo flujo</label>
-                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
-                        name="tipo">
-                    <option value="" th:selected="${tipo == null or #strings.isEmpty(tipo)}">Todos</option>
-                    <option value="EMITIDA" th:selected="${tipo == 'EMITIDA'}">Emitidas</option>
-                </select>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Clase documento</label>
-                <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
-                        name="documentKind">
-                    <option value="" th:selected="${documentKind == null or #strings.isEmpty(documentKind)}">Todas</option>
-                    <option value="INVOICE" th:selected="${documentKind == 'INVOICE'}">Factura (01/05)</option>
-                    <option value="CREDIT_NOTE" th:selected="${documentKind == 'CREDIT_NOTE'}">Nota crédito (91)</option>
-                    <option value="DEBIT_NOTE" th:selected="${documentKind == 'DEBIT_NOTE'}">Nota débito (92)</option>
-                </select>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="font-label-sm text-on-surface-variant uppercase tracking-wider">Registros por página</label>
-                <div class="flex gap-3">
-                    <input class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
-                           min="1"
-                           max="100"
-                           name="limit"
-                           th:value="${limit}"
-                           type="number">
-                    <button class="px-5 py-3 bg-primary text-on-primary rounded-lg font-label-md" type="submit">Filtrar</button>
-                </div>
-            </div>
-        </form>
-    </section>
-
     <section class="card zk-card">
+        <div class="px-6 pt-5 pb-4 border-b border-surface-container-highest bg-surface-container-lowest">
+            <div class="flex flex-col gap-1 mb-4">
+                <h2 class="font-headline-md font-semibold text-primary leading-tight">Facturas emitidas</h2>
+                <p class="text-xs text-on-surface-variant mb-0">Comprobantes electrónicos del punto de venta seleccionado.</p>
+            </div>
+            <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" method="get" th:action="@{/portal/invoices}">
+                <input name="sociedadId" th:value="${selectedSociedadId}" type="hidden">
+                <input name="emissionPointId" th:value="${selectedEmissionPointId}" type="hidden">
+
+                <div class="md:col-span-3 flex flex-col gap-1">
+                    <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="estadoFiltro">Filtrar por Estado</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">filter_list</span>
+                        <input class="w-full pl-10 pr-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md" style="text-transform: uppercase;"
+                               id="estadoFiltro"
+                               name="estado"
+                               placeholder="ENVIADO / RECHAZADO_DIAN..."
+                               th:value="${estado}"
+                               type="text">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 flex flex-col gap-1">
+                    <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="tipoFiltro">Tipo de flujo</label>
+                    <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                            id="tipoFiltro"
+                            name="tipo">
+                        <option value="" th:selected="${tipo == null or #strings.isEmpty(tipo)}">Todos</option>
+                        <option value="EMITIDA" th:selected="${tipo == 'EMITIDA'}">Emitidas</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2 flex flex-col gap-1">
+                    <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="claseFiltro">Clase documento</label>
+                    <select class="w-full px-4 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md appearance-none"
+                            id="claseFiltro"
+                            name="documentKind">
+                        <option value="" th:selected="${documentKind == null or #strings.isEmpty(documentKind)}">Todas</option>
+                        <option value="INVOICE" th:selected="${documentKind == 'INVOICE'}">Factura (01/05)</option>
+                        <option value="CREDIT_NOTE" th:selected="${documentKind == 'CREDIT_NOTE'}">Nota crédito (91)</option>
+                        <option value="DEBIT_NOTE" th:selected="${documentKind == 'DEBIT_NOTE'}">Nota débito (92)</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-5 flex flex-col gap-1">
+                    <label class="font-label-sm text-on-surface-variant uppercase tracking-wider" for="limitFiltro">Registros por página</label>
+                    <div class="flex gap-2">
+                        <input class="w-20 px-3 py-3 bg-white border border-surface-container-highest rounded-lg focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none transition-all font-body-md"
+                               id="limitFiltro"
+                               min="1"
+                               max="100"
+                               name="limit"
+                               th:value="${limit}"
+                               type="number">
+                        <button class="flex-1 px-5 py-3 bg-primary text-on-primary rounded-lg font-label-md" type="submit">Filtrar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
         <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low border-b border-surface-container-highest font-label-sm text-on-surface-variant">
             <div class="col-span-2">No. Factura</div>
             <div class="col-span-3">Documento</div>
@@ -557,44 +561,10 @@
             </form>
         </div>
     </div>
-<section class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-none px-0 mx-0 items-stretch">
-    
-    <!-- 2. TOTAL REGISTROS (Ancho completo y limpio) -->
-    <div class="card zk-card p-5 flex flex-col gap-2 !bg-white shadow-sm rounded-2xl" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
-        <span class="font-label-sm text-on-surface-variant uppercase tracking-wider text-xs">Total Registros</span>
-        <div class="flex flex-col mt-auto">
-            <span class="text-4xl font-bold text-primary leading-none" th:text="${totalRecords}">0</span>
-            <span class="text-xs text-on-surface-variant mt-1 font-medium">facturas</span>
-        </div> 
-    </div>
-
-    <!-- 3. PÁGINA ACTUAL (Ancho completo y limpio) -->
-    <div class="card zk-card p-5 flex flex-col gap-2 !bg-white shadow-sm rounded-2xl" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
-        <span class="font-label-sm text-on-surface-variant uppercase tracking-wider text-xs">Página Actual</span>
-        <div class="flex flex-col mt-auto">
-            <span class="text-4xl font-bold text-primary leading-none" th:text="${page}">1</span>
-            <span class="text-xs text-on-surface-variant mt-1 font-medium" th:text="'de ' + ${totalPages}">de 1</span>
-        </div>
-    </div>  
-
-    <!-- 4. FLUJO DIAN EMISIÓN (Mismo tamaño exacto que las blancas y texto fluido) -->
-    <div class="bg-primary p-6 rounded-2xl flex flex-col text-on-primary relative overflow-hidden group" style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; float: none !important; margin: 0 !important;">
-        <div class="relative z-10 flex flex-col h-full justify-between">
-            <div>
-                <span class="font-label-sm opacity-70 uppercase text-xs tracking-wider">Flujo DIAN</span>
-                <div class="flex items-end gap-2 mt-1">
-                    <span class="text-3xl md:text-4xl font-bold leading-none tracking-tight">Emisión</span>
-                </div>
-            </div>
-            <!-- Eliminamos cualquier max-w en píxeles para que la caja no empuje de más el Grid -->
-            <p class="mt-4 text-xs md:text-sm opacity-80 w-full whitespace-normal break-words leading-relaxed">
-                Control operativo de comprobantes, validación y documentos.
-            </p>
-        </div>
-        <div class="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-            <span class="material-symbols-outlined text-[130px]">insights</span>
-        </div>
-    </div>
+<section class="mt-6 bg-primary rounded-2xl px-5 py-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-on-primary">
+    <span class="material-symbols-outlined text-[26px] opacity-90">insights</span>
+    <span class="font-label-sm uppercase tracking-wider opacity-80">Flujo DIAN · Emisión</span>
+    <span class="text-xs md:text-sm opacity-90">Control operativo de comprobantes, validación y documentos.</span>
 </section>
 
 
