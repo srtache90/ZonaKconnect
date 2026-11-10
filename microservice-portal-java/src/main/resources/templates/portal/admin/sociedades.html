@@ -1,319 +1,1580 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <link rel="preconnect" href="https://googleapis.com">
-    <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Sociedades | Zona K e-Docs')}"></th:block>
-     <link rel="icon"
-          type="image/png"
-          th:href="@{/imagen/zonak.png}"
-          href="/imagen/zonak.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zona K e-Docs</title>
+    <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
+    <style>
+        /* ===================== Base ===================== */
+        .soc-view { animation: socFade .18s ease; }
+        @keyframes socFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .is-hidden { display: none !important; }
+
+        /* ===================== Encabezado de sección ===================== */
+        .soc-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+        .soc-crumbs {
+            font-size: 11.5px;
+            color: #94a3b8;
+            margin: 0 0 6px;
+            letter-spacing: .01em;
+        }
+        .soc-crumbs strong { color: #5b6675; font-weight: 600; }
+        .soc-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .soc-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -.015em;
+            margin: 0;
+            line-height: 1.15;
+        }
+        .soc-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e6f4ee;
+            border: 1px solid #cfe4da;
+            color: #146c50;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+        }
+        .soc-sub { font-size: 12.5px; color: #5b6675; margin: 7px 0 0; max-width: 720px; }
+        .soc-top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        /* ===================== Botones ===================== */
+        .soc-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            line-height: 1;
+            border-radius: 10px;
+            padding: 10px 15px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+        }
+        .soc-btn .material-symbols-outlined { font-size: 17px; }
+        .soc-btn-ghost { background: #fff; border-color: #dfe4ea; color: #374151; }
+        .soc-btn-ghost:hover { background: #f7f9fb; border-color: #cbd5e1; color: #111827; }
+        .soc-btn-primary {
+            background: linear-gradient(135deg, #24996b 0%, #146c50 100%);
+            color: #fff;
+            border-color: #146c50;
+            box-shadow: 0 6px 16px rgba(28, 124, 90, .18);
+        }
+        .soc-btn-primary:hover { filter: brightness(.97); box-shadow: 0 7px 18px rgba(28, 124, 90, .24); }
+        .soc-btn-outline { background: #fff; border-color: #cfe4da; color: #146c50; }
+        .soc-btn-outline:hover { background: #eef7f2; border-color: #a9ccbb; }
+        .soc-link-danger {
+            background: none;
+            border: 0;
+            padding: 0;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #b91c1c;
+            cursor: pointer;
+        }
+        .soc-link-danger:hover { text-decoration: underline; }
+
+        /* ===================== Métricas ===================== */
+        .soc-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .soc-metric {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 14px;
+            padding: 14px 16px;
+        }
+        .soc-metric-icon {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: #eef1f5;
+            color: #12283f;
+        }
+        .soc-metric-icon .material-symbols-outlined { font-size: 20px; }
+        .soc-metric-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 3px;
+        }
+        .soc-metric-value { display: block; font-size: 15px; font-weight: 700; color: #111827; }
+        .soc-metric-badge {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e6f4ee;
+            border: 1px solid #cfe4da;
+            color: #146c50;
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 600;
+            padding: 4px 10px;
+        }
+        .soc-metric-badge.neutral { background: #eef1f5; border-color: #dfe4ea; color: #5b6675; }
+
+        /* ===================== Buscador + filtros ===================== */
+        .soc-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 18px;
+        }
+        .soc-search { position: relative; flex: 1 1 300px; min-width: 220px; }
+        .soc-search .material-symbols-outlined {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .soc-search input {
+            width: 100%;
+            height: 38px;
+            border: 1px solid #dfe4ea;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 0 12px 0 36px;
+            font-size: 12.5px;
+            color: #111827;
+            transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .soc-search input::placeholder { color: #94a3b8; }
+        .soc-search input:focus {
+            outline: 0;
+            background: #fff;
+            border-color: #1c7c5a;
+            box-shadow: 0 0 0 3px rgba(28, 124, 90, .14);
+        }
+        .soc-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .soc-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #5b6675;
+            cursor: pointer;
+            transition: background .15s ease, color .15s ease, border-color .15s ease;
+        }
+        .soc-filter span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 999px;
+            background: #eef1f5;
+            color: #5b6675;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .soc-filter:hover { background: #f1f5f9; color: #12283f; }
+        .soc-filter.is-active { background: #12283f; border-color: #12283f; color: #fff; }
+        .soc-filter.is-active span { background: rgba(255, 255, 255, .2); color: #fff; }
+
+        /* ===================== Tarjetas de sociedades ===================== */
+        .soc-cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .soc-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            padding: 0;
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            font: inherit;
+            color: inherit;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        .soc-card:hover,
+        .soc-card:focus-visible {
+            transform: translateY(-2px);
+            border-color: #b9c6d4;
+            box-shadow: 0 14px 30px rgba(15, 31, 51, .09);
+            outline: none;
+        }
+        .soc-card.is-active { border-color: #1c7c5a; box-shadow: 0 0 0 3px rgba(28, 124, 90, .12); }
+        .soc-card-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 16px 13px;
+            border-bottom: 1px solid #eef1f5;
+        }
+        .soc-mono {
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1c3a5c, #12283f);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+        .soc-mono-lg { width: 52px; height: 52px; border-radius: 14px; font-size: 16px; }
+        .soc-card-id { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .soc-card-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .soc-card-nit { font-size: 11px; color: #5b6675; }
+        .soc-env {
+            margin-left: auto;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 999px;
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border: 1px solid #cfe4da;
+            background: #e6f4ee;
+            color: #146c50;
+        }
+        .soc-env.warn { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+        .soc-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            padding: 14px 16px;
+        }
+        .soc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .soc-row-label { font-size: 10.5px; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+        .soc-row-value {
+            font-size: 11.5px;
+            color: #374151;
+            font-weight: 600;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .soc-row-value.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 11px; }
+        .soc-sap { display: inline-flex; align-items: center; gap: 6px; }
+        .soc-dot {
+            width: 7px;
+            height: 7px;
+            flex: 0 0 auto;
+            border-radius: 999px;
+            background: #cbd5e1;
+        }
+        .soc-dot.ok { background: #1c7c5a; box-shadow: 0 0 0 3px rgba(28, 124, 90, .14); }
+        .soc-dot.warn { background: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, .14); }
+        .soc-card-foot {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px;
+            border-top: 1px solid #eef1f5;
+            background: #fbfcfd;
+            font-size: 12px;
+            font-weight: 700;
+            color: #12283f;
+        }
+        .soc-card-foot .material-symbols-outlined { font-size: 17px; transition: transform .16s ease; }
+        .soc-card:hover .soc-card-foot .material-symbols-outlined { transform: translateX(3px); }
+
+        .soc-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1px solid #d6e0ea;
+            background: #eef4f9;
+            color: #5b6675;
+            font-size: 11.5px;
+            line-height: 1.5;
+        }
+        .soc-note .material-symbols-outlined { font-size: 17px; color: #12283f; }
+        .soc-note strong { color: #12283f; }
+
+        .soc-empty {
+            text-align: center;
+            padding: 44px 20px;
+            background: #fff;
+            border: 1px dashed #dfe4ea;
+            border-radius: 16px;
+            color: #5b6675;
+            font-size: 12.5px;
+            margin-bottom: 18px;
+        }
+        .soc-empty .material-symbols-outlined { display: block; font-size: 34px; color: #94a3b8; margin-bottom: 8px; }
+
+        /* ===================== Vista de detalle ===================== */
+        .soc-detail-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .soc-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: 0;
+            padding: 0;
+            margin-bottom: 8px;
+            color: #12283f;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .soc-back:hover { color: #1c7c5a; }
+        .soc-back .material-symbols-outlined { font-size: 18px; }
+        .soc-tenant {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 11px;
+            color: #5b6675;
+        }
+        .soc-tenant strong { color: #12283f; }
+        .soc-tenant .sep { color: #cbd5e1; }
+
+        .soc-detail-head {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+        }
+        .soc-detail-id { min-width: 0; flex: 1 1 420px; }
+        .soc-detail-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .soc-detail-name-row h2 {
+            margin: 0;
+            font-size: 19px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -.015em;
+        }
+        .soc-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #eef4f9;
+            border: 1px solid #d6e0ea;
+            color: #12283f;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 9px;
+            white-space: nowrap;
+        }
+        .soc-pill.ok { background: #e6f4ee; border-color: #cfe4da; color: #146c50; }
+        .soc-pill.warn { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+        .soc-pill.bad { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+        .soc-detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #5b6675;
+            margin: 5px 0 0;
+        }
+        .soc-detail-meta strong { color: #374151; font-weight: 600; }
+        .soc-detail-meta .sep { color: #cbd5e1; }
+        .soc-detail-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+
+        .soc-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            user-select: none;
+        }
+        .soc-switch input { position: absolute; opacity: 0; pointer-events: none; }
+        .soc-switch-track {
+            position: relative;
+            width: 34px;
+            height: 19px;
+            border-radius: 999px;
+            background: #cbd5e1;
+            transition: background .18s ease;
+        }
+        .soc-switch-track::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 15px;
+            height: 15px;
+            border-radius: 999px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(17, 24, 39, .25);
+            transition: transform .18s ease;
+        }
+        .soc-switch input:checked + .soc-switch-track { background: linear-gradient(135deg, #24996b, #146c50); }
+        .soc-switch input:checked + .soc-switch-track::after { transform: translateX(15px); }
+
+        .soc-panel {
+            background: #fff;
+            border: 1px solid #dfe4ea;
+            border-radius: 16px;
+            overflow: visible;
+        }
+
+        /* ===================== Pestañas ===================== */
+        .soc-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px;
+            border-bottom: 1px solid #eef1f5;
+            background: #f7f9fb;
+            border-radius: 16px 16px 0 0;
+            overflow-x: auto;
+        }
+        .soc-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            padding: 9px 13px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #5b6675;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background .15s ease, color .15s ease, border-color .15s ease;
+        }
+        .soc-tab:hover { background: #eef1f5; color: #374151; }
+        .soc-tab .num {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #eef1f5;
+            color: #5b6675;
+            font-size: 9.5px;
+            font-weight: 700;
+        }
+        .soc-tab.is-active { background: #12283f; border-color: #12283f; color: #fff; }
+        .soc-tab.is-active .num { background: rgba(255, 255, 255, .2); color: #fff; }
+
+        /* ===================== Formulario ===================== */
+        .soc-pane { display: none; padding: 22px 24px 6px; }
+        .soc-pane.is-active { display: block; }
+        .soc-pane-title { font-size: 14.5px; font-weight: 700; color: #111827; margin: 0 0 3px; }
+        .soc-pane-sub { font-size: 11.5px; color: #5b6675; margin: 0 0 18px; }
+        .soc-subhead {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: #5b6675;
+            border-bottom: 1px solid #eef1f5;
+            padding-bottom: 8px;
+            margin: 4px 0 14px;
+        }
+        .soc-subhead .material-symbols-outlined { font-size: 16px; color: #1c7c5a; }
+        .soc-subhead:not(:first-child) { margin-top: 22px; }
+
+        .soc-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 15px 18px;
+        }
+        .soc-col-2 { grid-column: span 2; }
+        .soc-col-3 { grid-column: span 3; }
+        .soc-col-4 { grid-column: span 4; }
+        .soc-col-5 { grid-column: span 5; }
+        .soc-col-6 { grid-column: span 6; }
+        .soc-col-8 { grid-column: span 8; }
+        .soc-col-12 { grid-column: span 12; }
+
+        .soc-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0 0 6px;
+        }
+        .soc-req { color: #dc2626; font-weight: 700; }
+        .soc-input, .soc-select {
+            width: 100%;
+            border: 1px solid #dfe4ea;
+            border-radius: 10px;
+            background: #fff;
+            padding: 9px 12px;
+            font-size: 12.5px;
+            color: #111827;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .soc-input::placeholder { color: #b0b4bb; }
+        .soc-input:focus, .soc-select:focus {
+            outline: 0;
+            border-color: #1c7c5a;
+            box-shadow: 0 0 0 3px rgba(28, 124, 90, .14);
+        }
+        .soc-input-wrap { position: relative; }
+        .soc-input-wrap .soc-input { padding-right: 38px; }
+        .soc-input-wrap .soc-input.has-icon { padding-left: 34px; }
+        .soc-input-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .soc-eye {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 8px;
+            background: none;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+        .soc-eye:hover { background: #eef1f5; color: #4b5563; }
+        .soc-eye .material-symbols-outlined { font-size: 17px; }
+        .soc-help { font-size: 10.5px; color: #94a3b8; margin: 5px 0 0; line-height: 1.45; }
+        .soc-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 9px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+        .soc-chip.warn { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+
+        /* Conectores asociados */
+        .soc-connectors {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .soc-connector {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            border: 1px solid #dfe4ea;
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #fbfcfd;
+        }
+        .soc-connector-icon {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: #eef1f5;
+            color: #12283f;
+        }
+        .soc-connector-icon .material-symbols-outlined { font-size: 18px; }
+        .soc-connector-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .soc-connector-info strong { font-size: 11.5px; color: #111827; }
+        .soc-connector-info span { font-size: 10.5px; color: #5b6675; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .soc-connector .soc-chip { margin-left: auto; flex: 0 0 auto; }
+
+        /* Modo lectura */
+        .soc-panel.is-readonly .soc-input,
+        .soc-panel.is-readonly .soc-select {
+            background: #f7f9fb;
+            color: #5b6675;
+            pointer-events: none;
+        }
+        .soc-panel.is-readonly .soc-eye { display: none; }
+        .soc-panel.is-readonly .soc-btn-bar.primary { opacity: .5; pointer-events: none; }
+
+        /* ===================== Barra de acciones ===================== */
+        .soc-danger-row { display: flex; justify-content: flex-end; padding: 0 24px 14px; }
+        .soc-actionbar {
+            position: sticky;
+            bottom: 14px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin: 0 14px 16px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            background: #0f1f33;
+            color: #fff;
+            box-shadow: 0 16px 34px rgba(15, 31, 51, .26);
+        }
+        .soc-actionbar-msg {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11.5px;
+            color: #cbd5e1;
+            min-width: 220px;
+            flex: 1 1 320px;
+        }
+        .soc-actionbar-msg .material-symbols-outlined { font-size: 18px; color: #bfe3d2; }
+        .soc-actionbar-msg strong { color: #fff; }
+        .soc-actionbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+        .soc-btn-bar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 14px;
+            border-radius: 9px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, .28);
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease;
+        }
+        .soc-btn-bar:hover { background: rgba(255, 255, 255, .1); }
+        .soc-btn-bar .material-symbols-outlined { font-size: 16px; }
+        .soc-btn-bar.primary {
+            background: linear-gradient(135deg, #24996b, #146c50);
+            border-color: #146c50;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .18);
+        }
+        .soc-btn-bar.primary:hover { filter: brightness(1.04); }
+
+        /* ===================== Iconos ===================== */
+        .soc-metric-icon .material-symbols-outlined,
+        .soc-card-foot .material-symbols-outlined,
+        .soc-back .material-symbols-outlined,
+        .soc-connector-icon .material-symbols-outlined,
+        .soc-count .material-symbols-outlined { color: inherit !important; }
+        .soc-subhead .material-symbols-outlined { color: #1c7c5a !important; }
+        .soc-note .material-symbols-outlined { color: #12283f !important; }
+        .soc-empty .material-symbols-outlined { color: #94a3b8 !important; }
+        .soc-actionbar .material-symbols-outlined { color: #bfe3d2 !important; }
+
+        /* ===================== Responsive ===================== */
+        @media (max-width: 1100px) {
+            .soc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 900px) {
+            .soc-grid > * { grid-column: span 12; }
+            .soc-metrics { grid-template-columns: 1fr; }
+            .soc-connectors { grid-template-columns: 1fr; }
+            .soc-detail-actions { width: 100%; margin-left: 0; justify-content: space-between; }
+        }
+        @media (max-width: 640px) {
+            .soc-cards { grid-template-columns: 1fr; }
+            .soc-title { font-size: 22px; }
+            .soc-pane { padding: 18px 16px 4px; }
+            .soc-detail-head { padding: 14px; }
+            .soc-actionbar { margin: 0 8px 12px; }
+            .soc-actionbar-actions { width: 100%; }
+            .soc-btn-bar { flex: 1 1 auto; }
+            .soc-danger-row { padding: 0 16px 12px; }
+        }
+    </style>
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
-    <div class="mb-5">
-        <p class="dc-page-subtitle mb-1">Configuración / Sociedades</p>
-        <h1 class="dc-page-title">Administración de Sociedades</h1>
-        <p class="dc-page-subtitle">Configuración multi-tenant, emisión y recepción de correo</p>
-    </div>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop"
+      th:with="inicial=${#lists.isEmpty(sociedades) ? null : sociedades[0]}">
 
     <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
     <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="card zk-card mb-4">
-        <div class="card-body">
-            <h2 class="h4 mb-1">Crear o editar Sociedad</h2>
-            <p class="text-muted small mb-4">Datos fiscales, correo, credenciales DIAN y conectividad IMAP/SMTP.</p>
-            <form th:action="@{/portal/admin/sociedades}" method="post" class="row g-3">
-                <input type="hidden" name="id" id="sociedadId">
+    <!-- ============================================================
+         PANTALLA 1 · DIRECTORIO DE SOCIEDADES
+         ============================================================ -->
+    <section class="soc-view" id="vistaDirectorio">
+        <div class="soc-top">
+            <div>
+                <p class="soc-crumbs">Configuración / Sociedades / Directorio</p>
+                <div class="soc-title-row">
+                    <h1 class="soc-title">Administración de Sociedades</h1>
+                    <span class="soc-count">
+                        <span class="material-symbols-outlined" style="font-size:14px;" aria-hidden="true">corporate_fare</span>
+                        <span th:text="${#lists.size(sociedades)} + ' Registradas'">0 Registradas</span>
+                    </span>
+                </div>
+                <p class="soc-sub">Directorio multi-tenant para emisión, recepción fiscal y conectividad SAP SOAP.</p>
+            </div>
+            <div class="soc-top-actions">
+                <button type="button" class="soc-btn soc-btn-ghost" onclick="window.location.reload()">
+                    <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+                    Sincronizar Estados
+                </button>
+                <button type="button" class="soc-btn soc-btn-primary" onclick="nuevaSociedad()">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                    Nueva Sociedad
+                </button>
+            </div>
+        </div>
 
-                <div class="col-md-6">
-                    <label class="form-label" for="razonSocial">Razón social</label>
-                    <input class="form-control" id="razonSocial" name="razonSocial" required>
+        <!-- Métricas -->
+        <div class="soc-metrics">
+            <div class="soc-metric">
+                <span class="soc-metric-icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">domain</span>
+                </span>
+                <div>
+                    <span class="soc-metric-label">Total Sociedades</span>
+                    <span class="soc-metric-value" id="metricTotal"
+                          th:text="${#lists.size(sociedades)} + ' Activas'">0 Activas</span>
                 </div>
-                <div class="col-md-3-3">
-                    <label class="form-label" for="nit">NIT</label>
-                    <input class="form-control" id="nit" name="nit" required>
+                <span class="soc-metric-badge" id="metricTotalBadge"
+                      th:text="${#lists.size(sociedades)} + ' Activas'">0 Activas</span>
+            </div>
+            <div class="soc-metric">
+                <span class="soc-metric-icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">hub</span>
+                </span>
+                <div>
+                    <span class="soc-metric-label">Conectividad SAP SOAP</span>
+                    <span class="soc-metric-value" id="metricSap"
+                          th:text="${#lists.size(sociedades)} + ' Vinculadas'">0 Vinculadas</span>
                 </div>
-                <div class="col-md-3-2" style="width: 37.5%; margin-top: 4px;">
-                    <label class="form-label" for="apiKey">API Key ingesta</label>
-                    <input class="form-control" id="apiKey" name="apiKey" autocomplete="off" placeholder="Dejar vacío conserva la actual">
+                <span class="soc-metric-badge" id="metricSapBadge">Online</span>
+            </div>
+        </div>
+
+        <!-- Buscador + filtros -->
+        <div class="soc-toolbar">
+            <div class="soc-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="search" id="socSearch" autocomplete="off"
+                       placeholder="Buscar por razón social, NIT o buzón..."
+                       oninput="aplicarFiltros()">
+            </div>
+            <div class="soc-filters" role="tablist" aria-label="Filtros de sociedades">
+                <button type="button" class="soc-filter is-active" data-filter="todas" onclick="setFiltro(this)">
+                    Todas las sociedades <span id="countTodas" th:text="${#lists.size(sociedades)}">0</span>
+                </button>
+                <button type="button" class="soc-filter" data-filter="conectadas" onclick="setFiltro(this)">
+                    Conectadas <span id="countConectadas">0</span>
+                </button>
+                <button type="button" class="soc-filter" data-filter="pruebas" onclick="setFiltro(this)">
+                    En pruebas <span id="countPruebas">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid de tarjetas -->
+        <div class="soc-cards" id="socCards" th:if="${!#lists.isEmpty(sociedades)}">
+            <button type="button"
+                    class="soc-card"
+                    th:each="sociedad : ${sociedades}"
+                    th:attr="data-id=${sociedad.id},
+                             data-razon-social=${sociedad.razonSocial},
+                             data-nit=${sociedad.nit},
+                             data-correo-emision=${sociedad.correoEmision},
+                             data-correo-recepcion=${sociedad.correoRecepcion},
+                             data-host-smtp=${sociedad.hostSmtp},
+                             data-puerto-smtp=${sociedad.puertoSmtp},
+                             data-usuario-smtp=${sociedad.usuarioSmtp},
+                             data-host-imap=${sociedad.hostImap},
+                             data-puerto-imap=${sociedad.puertoImap},
+                             data-usuario-imap=${sociedad.usuarioImap},
+                             data-ambiente=${sociedad.dianAmbiente},
+                             data-test-set-id=${sociedad.dianTestSetId},
+                             data-regimen-fiscal=${sociedad.dianRegimenFiscal},
+                             data-software-id=${sociedad.dianSoftwareId},
+                             data-id-empresa=${sociedad.idEmpresa},
+                             data-sap-usuario=${sociedad.sapUsuario},
+                             data-api-configurada=${sociedad.apiKey != null and !#strings.isEmpty(sociedad.apiKey)},
+                             data-imap-configurado=${sociedad.hostImap != null and !#strings.isEmpty(sociedad.hostImap)},
+                             data-test-url=@{/portal/admin/sociedades/{id}/probar-conexion(id=${sociedad.id})},
+                             data-eliminable=${sociedad.id.toString() != '00000000-0000-0000-0000-000000000001'},
+                             data-mono=${#strings.toUpperCase(#strings.substring(sociedad.razonSocial, 0, 2))}"
+                    onclick="abrirDetalle(this)">
+
+                <span class="soc-card-head">
+                    <span class="soc-mono" th:text="${#strings.toUpperCase(#strings.substring(sociedad.razonSocial, 0, 2))}">SO</span>
+                    <span class="soc-card-id">
+                        <span class="soc-card-name" th:text="${sociedad.razonSocial}">Sociedad</span>
+                        <span class="soc-card-nit" th:text="'NIT: ' + ${sociedad.nit}">NIT: 000</span>
+                    </span>
+                    <span class="soc-env"
+                          th:classappend="${sociedad.dianAmbiente == 'Produccion' ? '' : 'warn'}">
+                        <span class="soc-dot"
+                              th:classappend="${sociedad.dianAmbiente == 'Produccion' ? 'ok' : 'warn'}"></span>
+                        <span th:text="${sociedad.dianAmbiente == 'Produccion' ? 'DIAN Producción' : (sociedad.dianAmbiente == 'Mock' ? 'DIAN Mock / Pruebas' : 'DIAN Habilitación')}">DIAN</span>
+                    </span>
+                </span>
+
+                <span class="soc-card-body">
+                    <span class="soc-row">
+                        <span class="soc-row-label">Correo Emisión</span>
+                        <span class="soc-row-value"
+                              th:text="${sociedad.correoEmision != null and !#strings.isEmpty(sociedad.correoEmision) ? sociedad.correoEmision : '—'}">—</span>
+                    </span>
+                    <span class="soc-row">
+                        <span class="soc-row-label">Correo Recepción</span>
+                        <span class="soc-row-value"
+                              th:text="${sociedad.correoRecepcion != null and !#strings.isEmpty(sociedad.correoRecepcion) ? sociedad.correoRecepcion : '—'}">—</span>
+                    </span>
+                    <span class="soc-row">
+                        <span class="soc-row-label">TaxLevel</span>
+                        <span class="soc-row-value mono"
+                              th:text="${sociedad.dianRegimenFiscal != null and !#strings.isEmpty(sociedad.dianRegimenFiscal) ? sociedad.dianRegimenFiscal : '—'}">—</span>
+                    </span>
+                    <span class="soc-row">
+                        <span class="soc-row-label">SAP</span>
+                        <span class="soc-row-value soc-sap">
+                            <span class="soc-dot"
+                                  th:classappend="${(sociedad.idEmpresa != null and sociedad.sapUsuario != null and !#strings.isEmpty(sociedad.sapUsuario)) ? 'ok' : (sociedad.idEmpresa != null ? 'warn' : '')}"></span>
+                            <span th:text="${sociedad.idEmpresa != null ? 'Empresa ID: ' + sociedad.idEmpresa : 'Empresa ID: —'}">Empresa ID: —</span>
+                            <span style="color:#94a3b8;font-weight:500;"
+                                  th:text="${(sociedad.idEmpresa != null and sociedad.sapUsuario != null and !#strings.isEmpty(sociedad.sapUsuario)) ? '(Sincronizado)' : (sociedad.idEmpresa != null ? '(Configurado)' : '(Pendiente)')}">(Pendiente)</span>
+                        </span>
+                    </span>
+                </span>
+
+                <span class="soc-card-foot">
+                    <span>Gestionar y Configurar</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                </span>
+            </button>
+        </div>
+
+        <div class="soc-empty" th:if="${#lists.isEmpty(sociedades)}">
+            <span class="material-symbols-outlined" aria-hidden="true">domain_disabled</span>
+            Aún no hay sociedades registradas. Usa «Nueva Sociedad» para crear la primera.
+        </div>
+
+        <div class="soc-empty is-hidden" id="socSinResultados">
+            <span class="material-symbols-outlined" aria-hidden="true">search_off</span>
+            No hay sociedades que coincidan con el filtro o la búsqueda.
+        </div>
+
+        <div class="soc-note">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span><strong>Acceso a configuraciones:</strong> haz clic en cualquier sociedad para abrir su consola de configuración dedicada, editar parámetros fiscales, gestionar servidores IMAP/SMTP y auditar los endpoints SOAP de SAP.</span>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         PANTALLA 2 · VISTA DEDICADA DE EDICIÓN
+         ============================================================ -->
+    <section class="soc-view is-hidden" id="vistaDetalle">
+        <div class="soc-detail-top">
+            <div>
+                <button type="button" class="soc-back" onclick="volverAlDirectorio()">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    Volver a Directorio de Sociedades
+                </button>
+                <p class="soc-crumbs">Configuración / Sociedades / Editar <strong id="detalleCrumbNombre"
+                        th:text="${inicial != null ? inicial.razonSocial : 'Nueva Sociedad'}">Sociedad</strong></p>
+            </div>
+            <span class="soc-tenant">
+                <span class="soc-dot ok"></span>
+                Multi-Tenant Activo
+                <span class="sep">•</span>
+                Tenant ID: <strong id="detalleTenant">#—</strong>
+            </span>
+        </div>
+
+        <div class="soc-detail-head">
+            <span class="soc-mono soc-mono-lg" id="panelMono"
+                  th:text="${inicial != null ? #strings.toUpperCase(#strings.substring(inicial.razonSocial, 0, 2)) : 'SO'}">SO</span>
+            <div class="soc-detail-id">
+                <div class="soc-detail-name-row">
+                    <h2 id="panelNombre"
+                        th:text="${inicial != null ? inicial.razonSocial : 'Nueva Sociedad'}">Sociedad</h2>
+                    <span class="soc-pill" id="panelEstado">Consulta local activa</span>
+                    <span class="soc-pill ok" id="panelLocal">Consulta local activa</span>
                 </div>
-                <div class="col-md-3-1">
-                    <label class="form-label" for="correoEmision">Correo emisión</label>
-                    <input class="form-control" id="correoEmision" name="correoEmision" type="email">
+                <p class="soc-detail-meta">
+                    <span>NIT: <strong id="panelNit"
+                                      th:text="${inicial != null ? inicial.nit : '—'}">—</strong></span>
+                    <span class="sep">·</span>
+                    <span id="panelApi"
+                          th:text="${inicial != null and inicial.apiKey != null and !#strings.isEmpty(inicial.apiKey)} ? 'API Key configurada' : 'API Key pendiente'">API Key pendiente</span>
+                    <span class="sep">·</span>
+                    <span id="panelImap"
+                          th:text="${inicial != null and inicial.hostImap != null and !#strings.isEmpty(inicial.hostImap)} ? 'IMAP configurado' : 'IMAP pendiente'">IMAP pendiente</span>
+                </p>
+            </div>
+            <div class="soc-detail-actions">
+                <button type="button" class="soc-btn soc-btn-ghost" id="btnProbar"
+                        data-url="" onclick="probarConexionImap(this)">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings_ethernet</span>
+                    Probar Conectividad
+                </button>
+                <label class="soc-switch">
+                    <input type="checkbox" id="modoEdicion" checked onchange="toggleModoEdicion(this)">
+                    <span class="soc-switch-track"></span>
+                    <span>Modo Edición</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="soc-panel" id="socPanel">
+            <div class="soc-tabs" role="tablist">
+                <button type="button" class="soc-tab is-active" data-tab="general" onclick="selectTab(this)">
+                    <span class="num">1</span> Identidad Fiscal &amp; Acceso
+                </button>
+                <button type="button" class="soc-tab" data-tab="correo" onclick="selectTab(this)">
+                    <span class="num">2</span> Servidores de Correo (IMAP / SMTP)
+                </button>
+                <button type="button" class="soc-tab" data-tab="dian" onclick="selectTab(this)">
+                    <span class="num">3</span> Facturación Electrónica DIAN
+                </button>
+                <button type="button" class="soc-tab" data-tab="sap" onclick="selectTab(this)">
+                    <span class="num">4</span> Integración SAP SOAP
+                </button>
+            </div>
+
+            <form id="sociedadForm" th:action="@{/portal/admin/sociedades}" method="post" autocomplete="off">
+                <input type="hidden" name="id" id="sociedadId"
+                       th:value="${inicial != null ? inicial.id : ''}">
+
+                <!-- ============ Pestaña 1 ============ -->
+                <div class="soc-pane is-active" data-pane="general">
+                    <h3 class="soc-pane-title">Identidad Fiscal y Canales de Ingesta</h3>
+                    <p class="soc-pane-sub">Identidad tributaria oficial y endpoints de correo para servicios electrónicos.</p>
+
+                    <div class="soc-grid">
+                        <div class="soc-col-5">
+                            <label class="soc-label" for="razonSocial">Razón Social <span class="soc-req">*</span></label>
+                            <input class="soc-input" id="razonSocial" name="razonSocial" required
+                                   th:value="${inicial != null ? inicial.razonSocial : ''}">
+                        </div>
+                        <div class="soc-col-4">
+                            <label class="soc-label" for="nit">NIT con Dígito de Verificación <span class="soc-req">*</span></label>
+                            <input class="soc-input" id="nit" name="nit" required
+                                   th:value="${inicial != null ? inicial.nit : ''}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="dianRegimenFiscal">Responsabilidad Fiscal <span class="soc-req">*</span></label>
+                            <input class="soc-input" id="dianRegimenFiscal" name="dianRegimenFiscal" required
+                                   list="regimenFiscalList" autocomplete="off" placeholder="O-23 o O-23;O-33"
+                                   th:value="${inicial != null ? inicial.dianRegimenFiscal : ''}">
+                            <p class="soc-help">Código fiscal DIAN (ej. O-23, O-47 según RUT oficial).</p>
+                        </div>
+
+                        <div class="soc-col-6">
+                            <label class="soc-label" for="correoEmision">Correo Oficial de Emisión (Remitente DIAN) <span class="soc-req">*</span></label>
+                            <div class="soc-input-wrap">
+                                <span class="material-symbols-outlined soc-input-icon" aria-hidden="true">mail</span>
+                                <input class="soc-input has-icon" type="email" id="correoEmision" name="correoEmision"
+                                       placeholder="emision@empresa.com"
+                                       th:value="${inicial != null ? inicial.correoEmision : ''}">
+                            </div>
+                        </div>
+                        <div class="soc-col-6">
+                            <label class="soc-label" for="correoRecepcion">Buzón Electrónico de Recepción (Radicación DIAN) <span class="soc-req">*</span></label>
+                            <div class="soc-input-wrap">
+                                <span class="material-symbols-outlined soc-input-icon" aria-hidden="true">mail</span>
+                                <input class="soc-input has-icon" type="email" id="correoRecepcion" name="correoRecepcion"
+                                       placeholder="facturacion@empresa.com"
+                                       th:value="${inicial != null ? inicial.correoRecepcion : ''}">
+                            </div>
+                        </div>
+
+                        <div class="soc-col-12">
+                            <label class="soc-label" for="apiKey">API Key de Ingesta &amp; Webhooks <span class="soc-req">*</span></label>
+                            <div class="soc-input-wrap">
+                                <span class="material-symbols-outlined soc-input-icon" aria-hidden="true">link</span>
+                                <input class="soc-input has-icon" type="password" id="apiKey" name="apiKey"
+                                       autocomplete="new-password"
+                                       placeholder="••••••••  (Dejar vacío conserva la actual)">
+                                <button type="button" class="soc-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                            <p class="soc-help">Clave de autorización para consumo de webhooks y recepción de documentos.
+                                <span class="soc-chip"
+                                      id="apiEstado"
+                                      th:classappend="${inicial != null and inicial.apiKey != null and !#strings.isEmpty(inicial.apiKey)} ? '' : ' warn'"
+                                      th:text="${inicial != null and inicial.apiKey != null and !#strings.isEmpty(inicial.apiKey)} ? 'Estado: Activa y autorizada' : 'Estado: Pendiente'">Estado: Pendiente</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="soc-subhead" style="margin-top:22px;">
+                        <span class="material-symbols-outlined" aria-hidden="true">lan</span>
+                        Conectores Asociados
+                    </div>
+                    <div class="soc-connectors">
+                        <div class="soc-connector">
+                            <span class="soc-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">mail</span>
+                            </span>
+                            <span class="soc-connector-info">
+                                <strong>Servidores IMAP / SMTP (Office 365)</strong>
+                                <span id="connCorreo">outlook.office365.com · IMAP</span>
+                            </span>
+                            <span class="soc-chip warn" id="connCorreoEstado">Pendiente</span>
+                        </div>
+                        <div class="soc-connector">
+                            <span class="soc-connector-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">dns</span>
+                            </span>
+                            <span class="soc-connector-info">
+                                <strong>Conector SAP ERP (SOAP / WSDL)</strong>
+                                <span id="connSap">Sin endpoint configurado</span>
+                            </span>
+                            <span class="soc-chip warn" id="connSapEstado">Pendiente</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3-1">
-                    <label class="form-label" for="correoRecepcion">Correo recepción</label>
-                    <input class="form-control" id="correoRecepcion" name="correoRecepcion" type="email">
+
+                <!-- ============ Pestaña 2 ============ -->
+                <div class="soc-pane" data-pane="correo">
+                    <h3 class="soc-pane-title">Configuración de Correo Electrónico</h3>
+                    <p class="soc-pane-sub">Credenciales de envío y recepción usadas por el motor de radicación DIAN.</p>
+
+                    <div class="soc-subhead">
+                        <span class="material-symbols-outlined" aria-hidden="true">outbox</span>
+                        Correo Saliente (SMTP)
+                    </div>
+                    <div class="soc-grid">
+                        <div class="soc-col-4">
+                            <label class="soc-label" for="hostSmtp">Host SMTP</label>
+                            <input class="soc-input" id="hostSmtp" name="hostSmtp" placeholder="smtp.office365.com"
+                                   th:value="${inicial != null ? inicial.hostSmtp : ''}">
+                        </div>
+                        <div class="soc-col-2">
+                            <label class="soc-label" for="puertoSmtp">Puerto</label>
+                            <input class="soc-input" type="number" min="1" max="65535" id="puertoSmtp" name="puertoSmtp"
+                                   th:value="${inicial != null and inicial.puertoSmtp != null ? inicial.puertoSmtp : 587}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="usuarioSmtp">Usuario SMTP</label>
+                            <input class="soc-input" id="usuarioSmtp" name="usuarioSmtp"
+                                   th:value="${inicial != null ? inicial.usuarioSmtp : ''}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="passwordSmtp">Password SMTP</label>
+                            <div class="soc-input-wrap">
+                                <input class="soc-input" type="password" id="passwordSmtp" name="passwordSmtp"
+                                       autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                                <button type="button" class="soc-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="soc-subhead">
+                        <span class="material-symbols-outlined" aria-hidden="true">inbox</span>
+                        Correo Entrante (IMAP)
+                    </div>
+                    <div class="soc-grid">
+                        <div class="soc-col-4">
+                            <label class="soc-label" for="hostImap">Host IMAP</label>
+                            <input class="soc-input" id="hostImap" name="hostImap" placeholder="imap.office365.com"
+                                   th:value="${inicial != null ? inicial.hostImap : ''}">
+                        </div>
+                        <div class="soc-col-2">
+                            <label class="soc-label" for="puertoImap">Puerto</label>
+                            <input class="soc-input" type="number" min="1" max="65535" id="puertoImap" name="puertoImap"
+                                   th:value="${inicial != null and inicial.puertoImap != null ? inicial.puertoImap : 993}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="usuarioImap">Usuario IMAP</label>
+                            <input class="soc-input" id="usuarioImap" name="usuarioImap"
+                                   th:value="${inicial != null ? inicial.usuarioImap : ''}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="passwordImap">Password IMAP</label>
+                            <div class="soc-input-wrap">
+                                <input class="soc-input" type="password" id="passwordImap" name="passwordImap"
+                                       autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                                <button type="button" class="soc-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="soc-help" style="margin-bottom:14px;">
+                        Las contraseñas vacías conservan la credencial guardada. Usa «Probar Conectividad» para validar el buzón IMAP.
+                    </p>
                 </div>
-                <div class="col-12">
-                    <h2 class="h6 border-bottom pb-2 mb-0">Correo saliente (SMTP)</h2>
+
+                <!-- ============ Pestaña 3 ============ -->
+                <div class="soc-pane" data-pane="dian">
+                    <h3 class="soc-pane-title">Parámetros Técnicos DIAN</h3>
+                    <p class="soc-pane-sub">Ambiente de facturación y credenciales del software asignado por la DIAN.</p>
+
+                    <div class="soc-grid">
+                        <div class="soc-col-4">
+                            <label class="soc-label" for="dianAmbiente">Web Service DIAN</label>
+                            <select class="soc-select" id="dianAmbiente" name="dianAmbiente" onchange="syncDianTestSetField()">
+                                <option value="Mock" th:selected="${inicial == null or inicial.dianAmbiente == 'Mock'}">Mock (local / sin DIAN)</option>
+                                <option value="Habilitacion" th:selected="${inicial != null and inicial.dianAmbiente == 'Habilitacion'}">Pruebas / Habilitación</option>
+                                <option value="Produccion" th:selected="${inicial != null and inicial.dianAmbiente == 'Produccion'}">Producción</option>
+                            </select>
+                            <p class="soc-help">Mock no envía a la DIAN real. Producción exige certificado vigente.</p>
+                        </div>
+                        <div class="soc-col-8" id="dianTestSetWrap"
+                             th:classappend="${inicial == null or inicial.dianAmbiente != 'Habilitacion'} ? ' is-hidden'">
+                            <label class="soc-label" for="dianTestSetId">TestSetId de habilitación</label>
+                            <input class="soc-input" id="dianTestSetId" name="dianTestSetId" autocomplete="off"
+                                   placeholder="UUID del set de pruebas"
+                                   th:value="${inicial != null ? inicial.dianTestSetId : ''}">
+                            <p class="soc-help">Obligatorio en Habilitación. Se envía con factura, nota crédito y nota débito.</p>
+                        </div>
+                        <div class="soc-col-5">
+                            <label class="soc-label" for="dianSoftwareId">ID Software DIAN</label>
+                            <input class="soc-input" id="dianSoftwareId" name="dianSoftwareId"
+                                   placeholder="UUID asignado por la DIAN"
+                                   th:value="${inicial != null ? inicial.dianSoftwareId : ''}">
+                        </div>
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="dianSoftwarePin">PIN Software DIAN</label>
+                            <div class="soc-input-wrap">
+                                <input class="soc-input" type="password" id="dianSoftwarePin" name="dianSoftwarePin"
+                                       autocomplete="new-password" placeholder="Dejar vacío conserva el actual">
+                                <button type="button" class="soc-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="hostSmtp">Host SMTP</label>
-                    <input class="form-control" id="hostSmtp" name="hostSmtp" placeholder="smtp.office365.com">
+
+                <!-- ============ Pestaña 4 ============ -->
+                <div class="soc-pane" data-pane="sap">
+                    <h3 class="soc-pane-title">Conectividad SAP Dispapeles (SOAP)</h3>
+                    <p class="soc-pane-sub">Deben coincidir con <code>idEmpresa</code>, <code>usuario</code> y <code>contrasenia</code> del XML que envía SAP.</p>
+
+                    <div class="soc-grid">
+                        <div class="soc-col-3">
+                            <label class="soc-label" for="idEmpresa">ID Empresa SAP</label>
+                            <input class="soc-input" type="number" min="1" id="idEmpresa" name="idEmpresa" placeholder="Ej. 154"
+                                   th:value="${inicial != null and inicial.idEmpresa != null ? inicial.idEmpresa : ''}">
+                        </div>
+                        <div class="soc-col-5">
+                            <label class="soc-label" for="sapUsuario">Usuario SAP</label>
+                            <input class="soc-input" id="sapUsuario" name="sapUsuario" autocomplete="off"
+                                   th:value="${inicial != null ? inicial.sapUsuario : ''}">
+                        </div>
+                        <div class="soc-col-4">
+                            <label class="soc-label" for="sapPassword">Contraseña SAP</label>
+                            <div class="soc-input-wrap">
+                                <input class="soc-input" type="password" id="sapPassword" name="sapPassword"
+                                       autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
+                                <button type="button" class="soc-eye" onclick="togglePassword(this)" aria-label="Mostrar u ocultar">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="puertoSmtp">Puerto SMTP</label>
-                    <input class="form-control" id="puertoSmtp" name="puertoSmtp" type="number" min="1" max="65535" value="587">
+
+                <div class="soc-danger-row">
+                    <button type="submit" class="soc-link-danger is-hidden" id="btnEliminar"
+                            th:attr="formaction=@{/portal/admin/sociedades/eliminar}"
+                            data-razon=""
+                            onclick="return confirmarEliminar(this)">Eliminar sociedad</button>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="usuarioSmtp">Usuario SMTP</label>
-                    <input class="form-control" id="usuarioSmtp" name="usuarioSmtp">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="passwordSmtp">Password SMTP</label>
-                    <input class="form-control" id="passwordSmtp" name="passwordSmtp" type="password" autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
-                </div>
-                <div class="col-12">
-                    <h2 class="h6 border-bottom pb-2 mb-0">Correo entrante (IMAP)</h2>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="hostImap">Host IMAP</label>
-                    <input class="form-control" id="hostImap" name="hostImap" placeholder="imap.office365.com">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label" for="puertoImap">Puerto IMAP</label>
-                    <input class="form-control" id="puertoImap" name="puertoImap" type="number" min="1" max="65535" value="993">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="usuarioImap">Usuario IMAP</label>
-                    <input class="form-control" id="usuarioImap" name="usuarioImap">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label" for="passwordImap">Password IMAP</label>
-                    <input class="form-control" id="passwordImap" name="passwordImap" type="password" autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
-                </div>
-                <div class="col-12">
-                    <h2 class="h6 border-bottom pb-2 mb-0">Configuración DIAN</h2>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="dianAmbiente">Web Service DIAN</label>
-                    <select class="form-select" id="dianAmbiente" name="dianAmbiente" onchange="syncDianTestSetField()">
-                        <option value="Mock">Mock (local / sin DIAN)</option>
-                        <option value="Habilitacion">Pruebas / Habilitación</option>
-                        <option value="Produccion">Producción</option>
-                    </select>
-                </div>
-                <div class="col-md-8 d-none" id="dianTestSetWrap">
-                    <label class="form-label" for="dianTestSetId">TestSetId de habilitación</label>
-                    <input class="form-control" id="dianTestSetId" name="dianTestSetId" autocomplete="off"
-                           placeholder="UUID del set de pruebas">
-                    <div class="form-text">Se envía en el web service al emitir factura, nota crédito y nota débito en habilitación.</div>
-                </div>
-                <div class="col-md-4-1">
-                    <label class="form-label" for="dianRegimenFiscal">Responsabilidad fiscal (TaxLevelCode)</label>
-                    <input class="form-control" id="dianRegimenFiscal" name="dianRegimenFiscal" required
-                           list="regimenFiscalList" autocomplete="off" placeholder="O-23 o O-23;O-33">
-                    <datalist id="regimenFiscalList">
-                        <option th:each="opt : ${regimenFiscalOptions}"
-                                th:value="${opt.code}"
-                                th:text="${opt.label}">O-99</option>
-                    </datalist>
-                    <div class="form-text">Solo códigos FE DIAN: O-13, O-15, O-23, O-47, ZZ. RUT 48 (IVA) no va aquí. RUT 09 → O-23.</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="dianSoftwareId">ID Software DIAN</label>
-                    <input class="form-control" id="dianSoftwareId" name="dianSoftwareId"
-                           autocomplete="off" placeholder="UUID asignado por la DIAN">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="dianSoftwarePin">PIN Software DIAN</label>
-                    <input class="form-control" id="dianSoftwarePin" name="dianSoftwarePin" type="password"
-                           autocomplete="new-password" placeholder="Dejar vacío conserva el actual">
-                </div>
-                <div class="col-12">
-                    <h2 class="h6 border-bottom pb-2 mb-0">Integración SAP (SOAP Dispapeles)</h2>
-                    <p class="text-muted small mb-0">Deben coincidir con <code>idEmpresa</code>, <code>usuario</code> y <code>contrasenia</code> del XML que envía SAP.</p>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="idEmpresa">ID Empresa SAP</label>
-                    <input class="form-control" id="idEmpresa" name="idEmpresa" type="number" min="1" placeholder="Ej. 154">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="sapUsuario">Usuario SAP</label>
-                    <input class="form-control" id="sapUsuario" name="sapUsuario" autocomplete="off">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="sapPassword">Contraseña SAP</label>
-                    <input class="form-control" id="sapPassword" name="sapPassword" type="password"
-                           autocomplete="new-password" placeholder="Dejar vacío conserva la actual">
-                </div>
-                <div class="col-12 text-end">
-                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar Sociedad</button>
+
+                <div class="soc-actionbar">
+                    <div class="soc-actionbar-msg">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span><strong>Edición de Sociedad en curso:</strong> Hay cambios pendientes de confirmación.</span>
+                    </div>
+                    <div class="soc-actionbar-actions">
+                        <button type="button" class="soc-btn-bar" onclick="revertirCambios()">
+                            Descartar cambios
+                        </button>
+                        <button type="button" class="soc-btn-bar" id="btnValidar"
+                                data-url="" onclick="probarConexionImap(this)">
+                            <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+                            Validar Credenciales
+                        </button>
+                        <button type="submit" class="soc-btn-bar primary" id="btnGuardar">
+                            Guardar Cambios de
+                            <span id="guardarNombre"
+                                  th:text="${inicial != null ? #strings.toUpperCase(inicial.razonSocial) : 'LA SOCIEDAD'}">LA SOCIEDAD</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </section>
 
-    <section class="card zk-card">
-        <div class="card-body p-0">
-            <div class="px-4 py-4 border-bottom">
-                <h2 class="h4 mb-1">Sociedades registradas</h2>
-                <p class="text-muted small mb-0">Listado multi-tenant con acceso rápido a edición y prueba IMAP.</p>
-            </div>
-            <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th class="caj">Razón social</th>
-                    <th class="caj">NIT</th>
-                    <th class="caj">Correo emisión</th>
-                    <th class="caj">Correo recepción</th>
-                    <th class="caj">API Key</th>
-                    <th class="caj">Correo saliente</th>
-                    <th class="caj">Correo entrante</th>
-                    <th class="caj">DIAN</th>
-                    <th class="caj">TaxLevelCode</th>
-                    <th class="caj">Software</th>
-                    <th class="caj">SAP</th>
-                    <th class="text-end">Acción</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="sociedad : ${sociedades}">
-                    <td th:text="${sociedad.razonSocial}">Sociedad</td>
-                    <td th:text="${sociedad.nit}">900123456</td>
-                    <td th:text="${sociedad.correoEmision}">emision@zonak.local</td>
-                    <td th:text="${sociedad.correoRecepcion}">recepcion@zonak.local</td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${sociedad.apiKey != null and !#strings.isEmpty(sociedad.apiKey)} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${sociedad.apiKey != null and !#strings.isEmpty(sociedad.apiKey)} ? 'Configurada' : 'Sin API Key'">
-                            Configurada
-                        </span>
-                    </td>
-                    <td>
-                        <span th:text="${sociedad.hostSmtp}">smtp</span>:<span th:text="${sociedad.puertoSmtp}">587</span>
-                    </td>
-                    <td>
-                        <span th:text="${sociedad.hostImap}">imap</span>:<span th:text="${sociedad.puertoImap}">993</span>
-                    </td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${sociedad.dianAmbiente == 'Produccion'} ? ' text-bg-danger' : (${sociedad.dianAmbiente == 'Mock'} ? ' text-bg-warning' : ' text-bg-light')"
-                              th:text="${sociedad.dianAmbiente == 'Produccion'} ? 'Producción' : (${sociedad.dianAmbiente == 'Mock'} ? 'Mock' : 'Pruebas')">
-                            Pruebas
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge text-bg-light" th:text="${sociedad.dianRegimenFiscal}">O-99</span>
-                    </td>
-                    <td>
-                        <div class="small">
-                            <span class="text-muted">ID:</span>
-                            <span th:text="${sociedad.dianSoftwareId != null and !#strings.isEmpty(sociedad.dianSoftwareId)} ? ${sociedad.dianSoftwareId} : 'Sin configurar'">Sin configurar</span>
-                        </div>
-                        <div class="small" th:if="${sociedad.dianAmbiente == 'Habilitacion'}">
-                            <span class="text-muted">TestSet:</span>
-                            <span th:text="${sociedad.dianTestSetId != null and !#strings.isEmpty(sociedad.dianTestSetId)} ? ${sociedad.dianTestSetId} : 'Sin configurar'">Sin configurar</span>
-                        </div>
-                        <span class="badge"
-                              th:classappend="${sociedad.dianSoftwarePinConfigured} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${sociedad.dianSoftwarePinConfigured} ? 'PIN configurado' : 'PIN pendiente'">
-                            PIN pendiente
-                        </span>
-                    </td>
-                    <td>
-                        <div class="small">
-                            <span class="text-muted">idEmpresa:</span>
-                            <span th:text="${sociedad.idEmpresa != null} ? ${sociedad.idEmpresa} : '—'">—</span>
-                        </div>
-                        <div class="small">
-                            <span class="text-muted">usuario:</span>
-                            <span th:text="${sociedad.sapUsuario != null and !#strings.isEmpty(sociedad.sapUsuario)} ? ${sociedad.sapUsuario} : '—'">—</span>
-                        </div>
-                        <span class="badge"
-                              th:classappend="${sociedad.sapPasswordConfigured} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${sociedad.sapPasswordConfigured} ? 'Clave SOAP' : 'Sin clave'">
-                            Clave SOAP
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <div class="d-inline-flex gap-1">
-                            <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-success"
-                                    th:data-url="@{/portal/admin/sociedades/{id}/probar-conexion(id=${sociedad.id})}"
-                                    onclick="probarConexionImap(this)">
-                                Probar conexión
-                            </button>
-                            <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-primary"
-                                    th:attr="data-id=${sociedad.id},data-razon=${sociedad.razonSocial},data-nit=${sociedad.nit},data-emision=${sociedad.correoEmision},data-recepcion=${sociedad.correoRecepcion},data-host-smtp=${sociedad.hostSmtp},data-puerto-smtp=${sociedad.puertoSmtp},data-usuario-smtp=${sociedad.usuarioSmtp},data-host-imap=${sociedad.hostImap},data-puerto-imap=${sociedad.puertoImap},data-usuario-imap=${sociedad.usuarioImap},data-ambiente=${sociedad.dianAmbiente},data-regimen-fiscal=${sociedad.dianRegimenFiscal},data-software-id=${sociedad.dianSoftwareId},data-test-set-id=${sociedad.dianTestSetId},data-id-empresa=${sociedad.idEmpresa},data-sap-usuario=${sociedad.sapUsuario}"
-                                    onclick="editarSociedad(this)">
-                                Editar
-                            </button>
-                            <form th:action="@{/portal/admin/sociedades/eliminar}" method="post" class="d-inline"
-                                  onsubmit="return confirmarEliminar(this)"
-                                  th:data-razon="${sociedad.razonSocial}"
-                                  th:if="${sociedad.id.toString() != '00000000-0000-0000-0000-000000000001'}">
-                                <input type="hidden" name="id" th:value="${sociedad.id}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(sociedades)}">
-                        <td colspan="12" class="text-center text-muted py-4">No hay sociedades registradas.</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+    <datalist id="regimenFiscalList">
+        <option th:each="opt : ${regimenFiscalOptions}"
+                th:value="${opt.code}"
+                th:text="${opt.label}">O-99</option>
+    </datalist>
 </main>
 
 <script>
-    document.addEventListener('DOMContentLoaded', syncDianTestSetField);
+    const SOC_PANEL = document.getElementById('socPanel');
+    const VISTA_DIRECTORIO = document.getElementById('vistaDirectorio');
+    const VISTA_DETALLE = document.getElementById('vistaDetalle');
+    let idActual = null;
 
-    function confirmarEliminar(form) {
-        const razonSocial = form.dataset.razon || 'seleccionada';
-        return window.confirm(
-            '¿Eliminar la sociedad "' + razonSocial + '"? Se borrarán certificados, puntos de venta y datos asociados sin facturas.'
-        );
+    function setVal(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = (value === null || value === undefined) ? '' : value;
+        }
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = value;
+        }
     }
 
     function syncDianTestSetField() {
-        const ambiente = document.getElementById('dianAmbiente').value;
+        const ambiente = document.getElementById('dianAmbiente');
         const wrap = document.getElementById('dianTestSetWrap');
         const input = document.getElementById('dianTestSetId');
-        const habilitation = ambiente === 'Habilitacion';
-        wrap.classList.toggle('d-none', !habilitation);
+        if (!ambiente || !wrap || !input) {
+            return;
+        }
+        const habilitation = ambiente.value === 'Habilitacion';
+        wrap.classList.toggle('is-hidden', !habilitation);
         input.required = habilitation;
     }
 
-    function editarSociedad(button) {
-        document.getElementById('sociedadId').value = button.dataset.id || '';
-        document.getElementById('razonSocial').value = button.dataset.razon || '';
-        document.getElementById('nit').value = button.dataset.nit || '';
-        document.getElementById('apiKey').value = '';
-        document.getElementById('correoEmision').value = button.dataset.emision || '';
-        document.getElementById('correoRecepcion').value = button.dataset.recepcion || '';
-        document.getElementById('hostSmtp').value = button.dataset.hostSmtp || '';
-        document.getElementById('puertoSmtp').value = button.dataset.puertoSmtp || '';
-        document.getElementById('usuarioSmtp').value = button.dataset.usuarioSmtp || '';
-        document.getElementById('passwordSmtp').value = '';
-        document.getElementById('hostImap').value = button.dataset.hostImap || '';
-        document.getElementById('puertoImap').value = button.dataset.puertoImap || '';
-        document.getElementById('usuarioImap').value = button.dataset.usuarioImap || '';
-        document.getElementById('passwordImap').value = '';
-        document.getElementById('dianAmbiente').value = button.dataset.ambiente || 'Habilitacion';
-        document.getElementById('dianRegimenFiscal').value = button.dataset.regimenFiscal || 'O-99';
-        document.getElementById('dianSoftwareId').value = button.dataset.softwareId || '';
-        document.getElementById('dianTestSetId').value = button.dataset.testSetId || '';
+    function setEstadoPanel(ambiente) {
+        const pill = document.getElementById('panelEstado');
+        pill.classList.remove('ok', 'warn', 'bad');
+        if (ambiente === 'Produccion') {
+            pill.textContent = 'DIAN Producción';
+            pill.classList.add('ok');
+        } else if (ambiente === 'Habilitacion') {
+            pill.textContent = 'DIAN Habilitación';
+            pill.classList.add('warn');
+        } else {
+            pill.textContent = 'DIAN Mock / Pruebas';
+            pill.classList.add('warn');
+        }
+    }
+
+    function activarTab(panel, tab) {
+        panel.querySelectorAll('.soc-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+        panel.querySelectorAll('.soc-pane').forEach(p => p.classList.toggle('is-active', p.dataset.pane === tab));
+    }
+
+    function mostrarVista(vista, push) {
+        const detalle = vista === 'detalle';
+        VISTA_DIRECTORIO.classList.toggle('is-hidden', detalle);
+        VISTA_DETALLE.classList.toggle('is-hidden', !detalle);
+        if (push) {
+            let url = location.pathname;
+            if (detalle) {
+                url += idActual ? ('?sociedad=' + encodeURIComponent(idActual)) : '?nueva=1';
+            }
+            history.pushState({vista: vista, id: idActual}, '', url);
+        }
+    }
+
+    function rellenarFormulario(d) {
+        setVal('sociedadId', d.id);
+        setVal('razonSocial', d.razonSocial);
+        setVal('nit', d.nit);
+        setVal('correoEmision', d.correoEmision);
+        setVal('correoRecepcion', d.correoRecepcion);
+        setVal('hostSmtp', d.hostSmtp);
+        setVal('puertoSmtp', d.puertoSmtp || '587');
+        setVal('usuarioSmtp', d.usuarioSmtp);
+        setVal('passwordSmtp', '');
+        setVal('hostImap', d.hostImap);
+        setVal('puertoImap', d.puertoImap || '993');
+        setVal('usuarioImap', d.usuarioImap);
+        setVal('passwordImap', '');
+        setVal('dianAmbiente', d.ambiente || 'Mock');
+        setVal('dianTestSetId', d.testSetId);
         syncDianTestSetField();
-        document.getElementById('dianSoftwarePin').value = '';
-        document.getElementById('idEmpresa').value = button.dataset.idEmpresa || '';
-        document.getElementById('sapUsuario').value = button.dataset.sapUsuario || '';
-        document.getElementById('sapPassword').value = '';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setVal('dianRegimenFiscal', d.regimenFiscal || 'O-23');
+        setVal('dianSoftwareId', d.softwareId);
+        setVal('dianSoftwarePin', '');
+        setVal('idEmpresa', d.idEmpresa);
+        setVal('sapUsuario', d.sapUsuario);
+        setVal('sapPassword', '');
+        setVal('apiKey', '');
+
+        setText('panelMono', (d.mono || 'SO').toUpperCase());
+        setText('panelNombre', d.razonSocial || 'Sociedad');
+        setText('panelNit', d.nit || '—');
+        setText('guardarNombre', (d.razonSocial || 'LA SOCIEDAD').toUpperCase());
+        setText('detalleTenant', d.id ? ('#' + d.id.slice(0, 8).toUpperCase()) : '#NUEVO');
+        setText('detalleCrumbNombre', d.razonSocial || 'Nueva Sociedad');
+        setEstadoPanel(d.ambiente);
+
+        const apiConfigurada = d.apiConfigurada === 'true';
+        setText('panelApi', apiConfigurada ? 'API Key configurada' : 'API Key pendiente');
+        setText('panelImap', d.imapConfigurado === 'true' ? 'IMAP configurado' : 'IMAP pendiente');
+
+        const apiChip = document.getElementById('apiEstado');
+        apiChip.textContent = apiConfigurada ? 'Estado: Activa y autorizada' : 'Estado: Pendiente';
+        apiChip.classList.toggle('warn', !apiConfigurada);
+
+        actualizarConectores(d);
+
+        ['btnProbar', 'btnValidar'].forEach(id => {
+            const btn = document.getElementById(id);
+            btn.dataset.url = d.testUrl || '';
+            btn.classList.toggle('is-hidden', !d.testUrl);
+        });
+
+        const eliminar = document.getElementById('btnEliminar');
+        const eliminable = d.eliminable === 'true';
+        eliminar.classList.toggle('is-hidden', !eliminable);
+        eliminar.dataset.razon = d.razonSocial || '';
+
+        SOC_PANEL.classList.remove('is-new');
+    }
+
+    function actualizarConectores(d) {
+        const correoOk = d.imapConfigurado === 'true';
+        setText('connCorreo', d.hostImap ? (d.hostImap + ' · IMAP') : 'Sin servidor IMAP configurado');
+        const correoEstado = document.getElementById('connCorreoEstado');
+        correoEstado.textContent = correoOk ? 'Configurado' : 'Pendiente';
+        correoEstado.className = 'soc-chip' + (correoOk ? '' : ' warn');
+
+        const sapOk = d.idEmpresa && d.sapUsuario;
+        setText('connSap', d.idEmpresa
+            ? ('Empresa ID ' + d.idEmpresa + ' · /Dispapeles/Mock')
+            : 'Sin empresa SAP vinculada');
+        const sapEstado = document.getElementById('connSapEstado');
+        sapEstado.textContent = sapOk ? 'Vinculado' : (d.idEmpresa ? 'Configurado' : 'Pendiente');
+        sapEstado.className = 'soc-chip' + (d.idEmpresa ? '' : ' warn');
+    }
+
+    function abrirDetalle(card, push) {
+        if (typeof card === 'string') {
+            card = document.querySelector('.soc-card[data-id="' + card + '"]');
+        }
+        if (!card) {
+            return;
+        }
+        document.querySelectorAll('.soc-card').forEach(c => c.classList.remove('is-active'));
+        card.classList.add('is-active');
+        idActual = card.dataset.id;
+        rellenarFormulario(card.dataset);
+        activarModoEdicion(true);
+        activarTab(SOC_PANEL, 'general');
+        mostrarVista('detalle', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function limpiarFormulario() {
+        ['razonSocial', 'nit', 'correoEmision', 'correoRecepcion',
+            'hostSmtp', 'usuarioSmtp', 'hostImap', 'usuarioImap',
+            'dianSoftwareId', 'idEmpresa', 'sapUsuario',
+            'passwordSmtp', 'passwordImap', 'dianSoftwarePin', 'sapPassword', 'apiKey'].forEach(id => setVal(id, ''));
+        setVal('sociedadId', '');
+        setVal('puertoSmtp', '587');
+        setVal('puertoImap', '993');
+        setVal('dianAmbiente', 'Mock');
+        setVal('dianTestSetId', '');
+        syncDianTestSetField();
+        setVal('dianRegimenFiscal', 'O-23');
+
+        setText('panelMono', '+');
+        setText('panelNombre', 'Nueva Sociedad');
+        setText('panelNit', '—');
+        setText('panelApi', 'API Key pendiente');
+        setText('panelImap', 'IMAP pendiente');
+        setText('guardarNombre', 'LA NUEVA SOCIEDAD');
+        setText('detalleTenant', '#NUEVO');
+        setText('detalleCrumbNombre', 'Nueva Sociedad');
+
+        const estado = document.getElementById('panelEstado');
+        estado.className = 'soc-pill warn';
+        estado.textContent = 'Sin guardar';
+
+        const apiChip = document.getElementById('apiEstado');
+        apiChip.className = 'soc-chip warn';
+        apiChip.textContent = 'Estado: Pendiente';
+
+        setText('connCorreo', 'Sin servidor IMAP configurado');
+        const correoEstado = document.getElementById('connCorreoEstado');
+        correoEstado.textContent = 'Pendiente';
+        correoEstado.className = 'soc-chip warn';
+        setText('connSap', 'Sin empresa SAP vinculada');
+        const sapEstado = document.getElementById('connSapEstado');
+        sapEstado.textContent = 'Pendiente';
+        sapEstado.className = 'soc-chip warn';
+
+        ['btnProbar', 'btnValidar'].forEach(id => {
+            const btn = document.getElementById(id);
+            btn.dataset.url = '';
+            btn.classList.add('is-hidden');
+        });
+        document.getElementById('btnEliminar').classList.add('is-hidden');
+
+        SOC_PANEL.classList.add('is-new');
+    }
+
+    function nuevaSociedad(push) {
+        document.querySelectorAll('.soc-card').forEach(c => c.classList.remove('is-active'));
+        idActual = null;
+        limpiarFormulario();
+        activarModoEdicion(true);
+        activarTab(SOC_PANEL, 'general');
+        mostrarVista('detalle', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function volverAlDirectorio(push) {
+        document.querySelectorAll('.soc-card').forEach(c => c.classList.remove('is-active'));
+        idActual = null;
+        mostrarVista('directorio', push !== false);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function revertirCambios() {
+        const activa = document.querySelector('.soc-card.is-active');
+        if (activa) {
+            rellenarFormulario(activa.dataset);
+            activarModoEdicion(true);
+            activarTab(SOC_PANEL, 'general');
+        } else {
+            limpiarFormulario();
+            activarModoEdicion(true);
+            activarTab(SOC_PANEL, 'general');
+        }
+    }
+
+    function selectTab(button) {
+        const panel = button.closest('.soc-panel');
+        activarTab(panel, button.dataset.tab);
+    }
+
+    function togglePassword(button) {
+        const input = button.parentElement.querySelector('input');
+        if (!input) {
+            return;
+        }
+        const icon = button.querySelector('.material-symbols-outlined');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) { icon.textContent = 'visibility_off'; }
+        } else {
+            input.type = 'password';
+            if (icon) { icon.textContent = 'visibility'; }
+        }
+    }
+
+    function activarModoEdicion(activar) {
+        const checkbox = document.getElementById('modoEdicion');
+        checkbox.checked = activar;
+        SOC_PANEL.classList.toggle('is-readonly', !activar);
+        SOC_PANEL.querySelectorAll('input, select, textarea').forEach(el => {
+            if (el.type === 'hidden' || el.type === 'checkbox') {
+                return;
+            }
+            if (el.tagName === 'SELECT') {
+                el.style.pointerEvents = activar ? '' : 'none';
+            } else {
+                el.readOnly = !activar;
+            }
+        });
+    }
+
+    function toggleModoEdicion(checkbox) {
+        activarModoEdicion(checkbox.checked);
+    }
+
+    function confirmarEliminar(button) {
+        const razonSocial = button.dataset.razon || 'seleccionada';
+        return window.confirm(
+            '¿Eliminar la sociedad "' + razonSocial + '"? Se borrarán certificados, puntos de venta y datos asociados sin facturas.'
+        );
     }
 
     async function probarConexionImap(button) {
@@ -321,7 +1582,7 @@
         if (!url) {
             return;
         }
-        const original = button.textContent;
+        const original = button.innerHTML;
         button.disabled = true;
         button.textContent = 'Probando...';
         try {
@@ -332,10 +1593,98 @@
             window.alert('No fue posible probar la conexión: ' + error.message);
         } finally {
             button.disabled = false;
-            button.textContent = original;
+            button.innerHTML = original;
         }
     }
+
+    /* ===================== Buscador y filtros ===================== */
+    function setFiltro(button) {
+        document.querySelectorAll('.soc-filter').forEach(b => b.classList.remove('is-active'));
+        button.classList.add('is-active');
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const q = (document.getElementById('socSearch').value || '').trim().toLowerCase();
+        const activo = document.querySelector('.soc-filter.is-active');
+        const filtro = activo ? activo.dataset.filter : 'todas';
+        let visibles = 0;
+
+        document.querySelectorAll('.soc-card').forEach(card => {
+            const d = card.dataset;
+            const texto = [d.razonSocial, d.nit, d.correoEmision, d.correoRecepcion]
+                .filter(Boolean).join(' ').toLowerCase();
+            const coincideTexto = !q || texto.indexOf(q) !== -1;
+            const coincideFiltro = filtro === 'todas'
+                || (filtro === 'conectadas' && d.ambiente === 'Produccion')
+                || (filtro === 'pruebas' && d.ambiente !== 'Produccion');
+            const mostrar = coincideTexto && coincideFiltro;
+            card.classList.toggle('is-hidden', !mostrar);
+            if (mostrar) { visibles++; }
+        });
+
+        const vacio = document.getElementById('socSinResultados');
+        if (vacio) { vacio.classList.toggle('is-hidden', visibles > 0); }
+    }
+
+    function actualizarContadores() {
+        const cards = Array.prototype.slice.call(document.querySelectorAll('.soc-card'));
+        const total = cards.length;
+        const conectadas = cards.filter(c => c.dataset.ambiente === 'Produccion').length;
+        const pruebas = total - conectadas;
+        const sap = cards.filter(c => c.dataset.idEmpresa).length;
+
+        setText('countTodas', total);
+        setText('countConectadas', conectadas);
+        setText('countPruebas', pruebas);
+        setText('metricTotal', total + ' Activas');
+        setText('metricTotalBadge', total + ' Activas');
+        setText('metricSap', sap + ' Vinculadas');
+
+        const badge = document.getElementById('metricSapBadge');
+        if (badge) {
+            const completo = total > 0 && sap === total;
+            badge.textContent = completo ? 'Online' : (sap > 0 ? 'Parcial' : 'Pendiente');
+            badge.className = 'soc-metric-badge' + (completo ? '' : ' neutral');
+        }
+    }
+
+    /* ===================== Navegación Master-Detail ===================== */
+    function abrirDesdeUrl(push) {
+        const params = new URLSearchParams(location.search);
+        if (params.get('nueva') === '1') {
+            nuevaSociedad(false);
+            return true;
+        }
+        const id = params.get('sociedad');
+        if (id) {
+            const card = document.querySelector('.soc-card[data-id="' + id + '"]');
+            if (card) {
+                abrirDetalle(card, false);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        actualizarContadores();
+        aplicarFiltros();
+        if (!abrirDesdeUrl(false)) {
+            mostrarVista('directorio', false);
+        }
+
+        // Los campos de contraseña siempre inician ocultos.
+        document.querySelectorAll('input[type="password"]').forEach(input => { input.type = 'password'; });
+    });
+
+    window.addEventListener('popstate', function () {
+        if (!abrirDesdeUrl(false)) {
+            volverAlDirectorio(false);
+        }
+    });
 </script>
+
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
 </body>

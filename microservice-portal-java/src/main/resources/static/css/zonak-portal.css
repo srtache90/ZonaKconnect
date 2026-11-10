@@ -31,13 +31,13 @@
 }
 
 :root {
-    --zk-black: #000000;
-    --zk-charcoal: #1c1c1a;
-    --zk-muted: #444748;
-    --zk-line: #e5e2de;
-    --zk-cream: #fcf9f5;
-    --zk-gold: #1c1c1a;
-    --zk-bronze: #444748;
+    --zk-black: #12283f;
+    --zk-charcoal: #101b2b;
+    --zk-muted: #5b6675;
+    --zk-line: #dfe4ea;
+    --zk-cream: #f1f3f6;
+    --zk-gold: #1c7c5a;
+    --zk-bronze: #5b6675;
     --zk-shadow: 0 4px 20px rgba(0, 0, 0, .04);
     --zk-font-sans: "TT Commons", Arial, sans-serif;
 }
@@ -54,7 +54,7 @@ body.zk-body {
 }
 
 .zk-dashboard-body {
-    background-color: #f8f8f7;
+    background-color: #f1f3f6;
 }
 
 .zk-dashboard-main {
@@ -71,8 +71,8 @@ body.zk-body {
     min-height: calc(100vh - 16px);
     overflow-x: hidden;
     background: #ffffff !important;
-    color: #202020;
-    border: 8px solid #c9caca;
+    color: #1a2b3d;
+    border: 8px solid #dfe4ea;
     border-radius: 20px;
     box-sizing: border-box;
 }
@@ -81,8 +81,8 @@ body.zk-body {
     height: 80px !important;
     padding: 0 24px !important;
     gap: 16px !important;
-    background: #080808 !important;
-    border-bottom: 1px solid #292929 !important;
+    background: #0f1f33 !important;
+    border-bottom: 1px solid #22364d !important;
 }
 
 .zk-dashboard-brand {
@@ -103,7 +103,7 @@ body.zk-body {
 .zk-dashboard-nav a {
     height: 58px !important;
     padding: 0 18px !important;
-    color: #bdbdbd !important;
+    color: #b9c6d4 !important;
     font-size: 12px !important;
     border-left: 1px solid transparent;
     border-right: 1px solid transparent;
@@ -111,13 +111,13 @@ body.zk-body {
 
 
 .zk-dashboard-nav a:hover {
-    background: #1b1b1b !important;
+    background: #12283f !important;
     color: #ffffff !important;
 }
 
 .zk-dashboard-modules {
     border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+    box-shadow: 0 8px 24px rgba(15, 31, 51, .06);
 }
 
 .zk-dashboard-main > section > div:first-child {
@@ -151,13 +151,13 @@ body.zk-body {
 
 .zk-dashboard-main > aside > section {
     border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+    box-shadow: 0 8px 24px rgba(15, 31, 51, .06);
 }
 
 .zk-dashboard-main > section > div:first-child,
 .zk-dashboard-modules {
     border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(54, 43, 20, .06);
+    box-shadow: 0 8px 24px rgba(15, 31, 51, .06);
 }
 
 .zk-dashboard-modules {
@@ -167,7 +167,7 @@ body.zk-body {
 .zk-module-card {
     min-height: 164px !important;
     border-radius: 14px !important;
-    background: #fffdfa !important;
+    background: #ffffff !important;
 }
 
 .zk-module-card strong {
@@ -197,7 +197,7 @@ body.zk-body {
     position: relative;
     overflow: hidden;
     border-radius: 10px !important;
-    box-shadow: 0 2px 8px rgba(54, 43, 20, .05);
+    box-shadow: 0 2px 8px rgba(15, 31, 51, .05);
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
@@ -206,7 +206,7 @@ body.zk-body {
     inset: auto 0 0;
     height: 3px;
     content: "";
-    background: #18140a;
+    background: #12283f;
     transform: scaleX(0);
     transform-origin: left;
     transition: transform .18s ease;
@@ -226,12 +226,12 @@ body.zk-body {
 
 .zk-module-card > div:first-child > div:first-child > span {
     border-radius: 10px !important;
-    background: linear-gradient(145deg, #fbf8f1, #eee7d7) !important;
-    box-shadow: inset 0 0 0 1px rgba(150, 113, 23, .08);
+    background: linear-gradient(145deg, #eef4f9, #dfe9f4) !important;
+    box-shadow: inset 0 0 0 1px rgba(28, 124, 90, .08);
 }
 
 .zk-module-card > div:last-child {
-    border-top-color: #e8dfcf !important;
+    border-top-color: #dfe4ea !important;
 }
 
 .zk-dashboard-module-grid {
@@ -241,8 +241,8 @@ body.zk-body {
 }
 
 .zk-module-card > div:first-child > span:last-child {
-    background: #111111 !important;
-    border-color: #111111 !important;
+    background: #12283f !important;
+    border-color: #12283f !important;
     color: #ffffff !important;
     border-radius: 4px !important;
 }
@@ -276,8 +276,8 @@ body.zk-body {
 .zk-dashboard-header {
     height: 68px !important;
     padding: 0 32px !important;
-    background: #080808 !important;
-    border-bottom: 1px solid #292929 !important;
+    background: #0f1f33 !important;
+    border-bottom: 1px solid #22364d !important;
 }
 
 .zk-dashboard-header > button {
@@ -313,12 +313,12 @@ body.zk-body {
     padding: 26px 28px !important;
     border-radius: 14px !important;
     border-color: #fffffe !important;
-    box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
+    box-shadow: 0 8px 24px rgba(15, 31, 51, .06) !important;
 }
 
 .zk-dashboard-main > section > div:first-child h1 {
     font-size: 28px !important;
-    color: #171717 !important;
+    color: #12283f !important;
 }
 
 .zk-dashboard-main > section > div:first-child p {
@@ -369,7 +369,7 @@ body.zk-body {
     border-radius: 14px !important;
     border-color: #dddddd !important;
     background: #ffffff !important;
-    box-shadow: 0 8px 24px rgba(54, 43, 20, .06) !important;
+    box-shadow: 0 8px 24px rgba(15, 31, 51, .06) !important;
 }
 
 @media (max-width: 900px) {
@@ -564,8 +564,8 @@ body.zk-body {
 }
 
 .zk-btn-primary:hover {
-    background: #6f5006;
-    border-color: #6f5006;
+    background: #115c43;
+    border-color: #115c43;
     color: #fff;
 }
 
@@ -679,7 +679,7 @@ body {
     width: 34px;
     height: 34px;
     color: var(--zk-gold);
-    background: #f5efe2;
+    background: #e6f4ee;
     border-radius: 6px;
 }
 
@@ -753,7 +753,7 @@ body {
 
 .zk-table th {
     color: var(--zk-charcoal);
-    background: #fbfaf8;
+    background: #f7f9fb;
     font-size: .72rem;
     font-weight: 600;
     letter-spacing: .16em;
@@ -805,7 +805,7 @@ body {
 }
 
 .zk-client-chip.neutral {
-    color: #6a6258;
+    color: #5b6675;
     background: #eeeeeb;
 }
 
@@ -845,7 +845,7 @@ body {
 .zk-pagination {
     color: var(--zk-muted);
     font-size: .82rem;
-    background: #fbfaf8;
+    background: #f7f9fb;
 }
 
 .zk-page-btn {
@@ -925,15 +925,15 @@ body {
     }
 }
 
-/* Brand Manual Layout: #C6A35B / #222221 / TT Commons */
+/* Brand Manual Layout: #1c7c5a / #1a2b3d / TT Commons */
 .zkb-body {
-    --brand-gold: #C6A35B;
-    --brand-black: #222221;
-    --page-bg: #fbfaf8;
+    --brand-gold: #1c7c5a;
+    --brand-black: #1a2b3d;
+    --page-bg: #f7f9fb;
     --panel-bg: rgba(255, 255, 255, .86);
     --panel-solid: #ffffff;
-    --text-main: #222221;
-    --text-muted: #78736a;
+    --text-main: #1a2b3d;
+    --text-muted: #6b7785;
     --hairline: rgba(34, 34, 33, .09);
     --shadow-soft: 0 24px 70px rgba(34, 34, 33, .06);
     min-height: 100vh;
@@ -948,13 +948,13 @@ body {
 .zkb-body[data-theme="dark"] {
     --page-bg: #171716;
     --panel-bg: rgba(34, 34, 33, .84);
-    --panel-solid: #222221;
+    --panel-solid: #1a2b3d;
     --text-main: #fffdf9;
-    --text-muted: #b9b0a2;
-    --hairline: rgba(198, 163, 91, .18);
+    --text-muted: #cbd5e1;
+    --hairline: rgba(28, 124, 90, .18);
     --shadow-soft: 0 24px 70px rgba(0, 0, 0, .28);
     background:
-            radial-gradient(circle at 78% 8%, rgba(198, 163, 91, .10), transparent 25%),
+            radial-gradient(circle at 78% 8%, rgba(28, 124, 90, .10), transparent 25%),
             linear-gradient(90deg, #111110 0, #111110 132px, var(--page-bg) 132px, var(--page-bg) 100%);
 }
 
@@ -1006,7 +1006,7 @@ body {
 
 .zkb-menu a.active,
 .zkb-menu a:hover {
-    background: rgba(198, 163, 91, .13);
+    background: rgba(28, 124, 90, .13);
     color: var(--brand-black);
 }
 
@@ -1130,8 +1130,8 @@ body {
 
 .zkb-btn-primary {
     color: #fff;
-    background: #7b5700;
-    border: 1px solid #7b5700;
+    background: #115c43;
+    border: 1px solid #115c43;
 }
 
 .zkb-btn-primary:hover {
@@ -1182,8 +1182,8 @@ body {
     place-items: center;
     width: 28px;
     height: 28px;
-    color: #7b5700;
-    background: rgba(198, 163, 91, .16);
+    color: #115c43;
+    background: rgba(28, 124, 90, .16);
     border-radius: 4px;
     font-size: .72rem;
 }
@@ -1195,7 +1195,7 @@ body {
 
 .zkb-icon.warning {
     color: #9a6a00;
-    background: rgba(198, 163, 91, .18);
+    background: rgba(180, 83, 9, .14);
 }
 
 .zkb-delta {
@@ -1325,8 +1325,8 @@ body {
     place-items: center;
     width: 28px;
     height: 28px;
-    color: #7b5700;
-    background: rgba(198, 163, 91, .18);
+    color: #115c43;
+    background: rgba(28, 124, 90, .18);
     border-radius: 4px;
     font-size: .55rem;
     font-weight: 600;
@@ -1339,7 +1339,7 @@ body {
 }
 
 .zkb-client span.neutral {
-    color: #6a6258;
+    color: #5b6675;
     background: #ece9e3;
 }
 
@@ -1544,13 +1544,13 @@ body {
 
 /* Module selector inspired by the provided minimal DIAN Connect layout. */
 .zkm-body {
-    --zkm-bg: #fcf9f5;
+    --zkm-bg: #f1f3f6;
     --zkm-panel: #ffffff;
-    --zkm-text: #1c1c1a;
-    --zkm-muted: #444748;
-    --zkm-line: #e5e2de;
-    --zkm-gold: #1c1c1a;
-    --zkm-black: #000000;
+    --zkm-text: #101b2b;
+    --zkm-muted: #5b6675;
+    --zkm-line: #dfe4ea;
+    --zkm-gold: #101b2b;
+    --zkm-black: #12283f;
     min-height: 100vh;
     margin: 0;
     color: var(--zkm-text);
@@ -1562,8 +1562,8 @@ body {
     --zkm-bg: #151514;
     --zkm-panel: rgba(34, 34, 33, .72);
     --zkm-text: #f7f3ea;
-    --zkm-muted: #b7afa2;
-    --zkm-line: rgba(198, 163, 91, .18);
+    --zkm-muted: #cbd5e1;
+    --zkm-line: rgba(28, 124, 90, .18);
 }
 
 .zkm-topbar {
@@ -1596,14 +1596,14 @@ body {
     height: 22px;
     margin-top: 1px;
     color: var(--zkm-black);
-    background: rgba(198, 163, 91, .16);
+    background: rgba(28, 124, 90, .16);
     border-radius: 5px;
     font-size: .72rem;
 }
 
 .zkm-body[data-theme="dark"] .zkm-brand-icon {
     color: var(--zkm-gold);
-    background: rgba(198, 163, 91, .10);
+    background: rgba(28, 124, 90, .10);
 }
 
 .zkm-top-actions {
@@ -1648,7 +1648,7 @@ a.zkm-icon-btn {
     width: 40px;
     height: 40px;
     color: #fff;
-    background: #000;
+    background: #12283f;
     border-radius: 12px;
     font-size: .82rem;
 }
@@ -1755,7 +1755,7 @@ a.zkm-icon-btn {
 }
 
 .zkm-body[data-theme="dark"] .zkm-module-card:hover {
-    background: rgba(198, 163, 91, .08);
+    background: rgba(28, 124, 90, .08);
 }
 
 .zkm-module-icon {
@@ -1765,7 +1765,7 @@ a.zkm-icon-btn {
     width: 38px;
     height: 38px;
     color: var(--zkm-black);
-    background: rgba(198, 163, 91, .20);
+    background: rgba(28, 124, 90, .20);
     border-radius: 12px;
     font-size: .72rem;
 }
@@ -1795,7 +1795,7 @@ a.zkm-icon-btn {
     width: 56px;
     height: 56px;
     color: #fff;
-    background: #000;
+    background: #12283f;
     border-radius: 13px;
     box-shadow: 0 18px 34px rgba(0, 0, 0, .22);
     font-size: 1.35rem;
@@ -1840,14 +1840,14 @@ a.zkm-icon-btn {
 
 .zk-official-body {
     background:
-            linear-gradient(90deg, rgba(250, 248, 243, .96), rgba(250, 248, 243, .78)),
-            radial-gradient(circle at 88% 18%, rgba(95, 89, 75, .22), transparent 24%),
-            #fbfaf7;
+            linear-gradient(90deg, rgba(247, 249, 251, .96), rgba(247, 249, 251, .78)),
+            radial-gradient(circle at 88% 18%, rgba(15, 31, 51, .22), transparent 24%),
+            #f7f9fb;
 }
 
 .zk-official-navbar {
     height: 82px;
-    background: rgba(250, 248, 243, .96);
+    background: rgba(247, 249, 251, .96);
     border-bottom: 1px solid rgba(21, 18, 13, .12);
 }
 

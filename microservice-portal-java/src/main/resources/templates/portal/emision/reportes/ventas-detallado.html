@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
         <meta charset="UTF-8">
@@ -12,13 +12,52 @@
         .cufe-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sales-report-filters {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+            grid-template-columns: minmax(220px, 1.3fr) minmax(230px, 1.3fr) minmax(145px, 0.8fr) minmax(145px, 0.8fr) minmax(170px, 1fr) auto;
             align-items: end;
             gap: 12px;
             width: 100%;
             max-width: 1480px;
             margin-inline: auto;
         }
+        .report-table thead th {
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.07em;
+            color: #5b6675;
+            border-bottom: 2px solid #dfe4ea;
+        }
+        .report-table tbody tr:nth-child(even) { background: #f7f9fb; }
+        .report-table tbody tr:hover { background: #eef2f6; }
+        .registros-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e6f4ee;
+            color: #146c50;
+            border: 1px solid #dfe4ea;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            letter-spacing: 0.02em;
+        }
+        .registros-badge .material-symbols-outlined { font-size: 15px; }
+        .empty-report { padding: 2.25rem 1.5rem; text-align: center; }
+        .empty-report-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e6f4ee;
+            border: 1px solid #dfe4ea;
+            color: #1c7c5a;
+        }
+        .empty-report-icon .material-symbols-outlined { font-size: 30px; }
+        .empty-report-title { font-size: 16px; font-weight: 600; color: #101b2b; margin: 0 0 4px; }
+        .empty-report-sub { font-size: 13px; color: #5b6675; margin: 0 auto; max-width: 46ch; line-height: 1.5; }
         .sales-report-filter-heading {
             display: flex;
             align-items: center;
@@ -35,14 +74,14 @@
         }
         .sales-report-filter-title {
             margin: 0;
-            color: #25231f;
+            color: #101b2b;
             font-size: 20px;
             font-weight: 600;
             line-height: 1.25;
         }
         .sales-report-filter-description {
             margin: 0;
-            color: #6b6861;
+            color: #5b6675;
             font-size: 13px;
             line-height: 1.4;
         }
@@ -52,7 +91,7 @@
         .sales-report-filter-field label {
             display: block;
             margin-bottom: 6px;
-            color: #5f5d58;
+            color: #5b6675;
             font-size: 13px;
             font-weight: 500;
         }
@@ -62,22 +101,22 @@
             min-width: 0;
             min-height: 44px;
             padding: 8px 12px;
-            border: 1px solid #e2ded7;
+            border: 1px solid #dfe4ea;
             border-radius: 10px;
-            background-color: #fcf9f5;
-            color: #25231f;
+            background-color: #f1f3f6;
+            color: #101b2b;
             font: inherit;
             font-size: 14px;
             transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
         }
         .sales-report-filter-control:hover {
-            border-color: #cfc8bb;
+            border-color: #cbd5e1;
         }
         .sales-report-filter-control:focus {
-            border-color: #967117;
+            border-color: #1c7c5a;
             outline: 0;
             background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(150, 113, 23, 0.12);
+            box-shadow: 0 0 0 3px rgba(28, 124, 90, 0.12);
         }
         .sales-report-filter-actions {
             display: flex;
@@ -101,14 +140,14 @@
         .sales-report-export {
             min-width: 68px;
             border-radius: 10px;
-            border-color: #e2ded7;
+            border-color: #dfe4ea;
             background: #fff;
-            color: #25231f;
+            color: #101b2b;
         }
         .sales-report-export:hover {
-            border-color: #cfc8bb;
-            background: #f8f5ef;
-            color: #25231f;
+            border-color: #cbd5e1;
+            background: #eef2f6;
+            color: #101b2b;
         }
         @media (max-width: 1100px) {
             .sales-report-filters {
@@ -139,7 +178,7 @@
 
 <main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1600px] mx-auto">
     <div class="mb-8">
-
+        <p class="dc-page-subtitle mb-1">Zona K / Reportes · Emisión</p>
         <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Reporte detallado de ventas</h2>
         <p class="font-body-md text-on-surface-variant">Facturas emitidas con detalle fiscal completo por documento.</p>
     </div>
@@ -147,7 +186,7 @@
     <section class="zk-filter-card p-4 mb-4">
         <div class="sales-report-filter-heading">
             <span class="material-symbols-outlined flex items-center justify-center rounded-xl border"
-                  style="width: 36px; height: 36px; color: #806521; background: #f5f1e8; border-color: #ece5d8; font-size: 20px;"
+                  style="width: 36px; height: 36px; color: #146c50; background: #e6f4ee; border-color: #dfe4ea; font-size: 20px;"
                   aria-hidden="true">filter_alt</span>
             <div class="sales-report-filter-copy">
                 <h3 class="sales-report-filter-title">Filtros</h3>
@@ -203,7 +242,7 @@
     <section class="card zk-card">
         <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
             <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
-            <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm" th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+            <span class="registros-badge"><span class="material-symbols-outlined">receipt_long</span><span th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span></span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full report-table">
@@ -249,8 +288,12 @@
                     <td class="px-4 py-3 cufe-cell" th:title="${row.cufe}" th:text="${row.cufe}">CUFE</td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(rows)}">
-                    <td class="px-4 py-8 text-center text-on-surface-variant" colspan="15">
-                        No hay facturas emitidas para los filtros seleccionados.
+                    <td class="px-4 py-10" colspan="15">
+                        <div class="empty-report">
+                            <div class="empty-report-icon"><span class="material-symbols-outlined">receipt_long</span></div>
+                            <p class="empty-report-title">Sin resultados para estos filtros</p>
+                            <p class="empty-report-sub">No hay facturas emitidas que coincidan con los criterios. Ajusta el rango de fechas, la sociedad o el estado DIAN y vuelve a consultar.</p>
+                        </div>
                     </td>
                 </tr>
                 </tbody>

@@ -28,10 +28,47 @@
 
         .radian-filter-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 1rem;
             align-items: end;
         }
+
+        .rf-col-2 { grid-column: span 2; }
+        .rf-col-3 { grid-column: span 3; }
+        .rf-col-9 { grid-column: span 9; }
+
+        .report-table thead th {
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.07em;
+            color: #5b6675;
+            border-bottom: 2px solid #dfe4ea;
+        }
+        .report-table tbody tr:nth-child(even) { background: #f7f9fb; }
+        .report-table tbody tr:hover { background: #eef2f6; }
+        .registros-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e6f4ee;
+            color: #146c50;
+            border: 1px solid #dfe4ea;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            letter-spacing: 0.02em;
+        }
+        .registros-badge .material-symbols-outlined { font-size: 15px; }
+        .empty-report { padding: 2.25rem 1.5rem; text-align: center; }
+        .empty-report-icon {
+            width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center;
+            background: #e6f4ee; border: 1px solid #dfe4ea; color: #1c7c5a;
+        }
+        .empty-report-icon .material-symbols-outlined { font-size: 30px; }
+        .empty-report-title { font-size: 16px; font-weight: 600; color: #101b2b; margin: 0 0 4px; }
+        .empty-report-sub { font-size: 13px; color: #5b6675; margin: 0 auto; max-width: 46ch; line-height: 1.5; }
 
         .radian-filter-grid > div {
             min-width: 0;
@@ -49,25 +86,30 @@
             box-sizing: border-box;
             width: 100%;
             min-width: 0;
-            min-height: 2.65rem;
-            padding: .55rem .7rem;
-            border: 1px solid #d9dce2;
-            border-radius: .7rem;
-            background-color: #fff;
-            color: #202124;
+            min-height: 2.75rem;
+            padding: .55rem .75rem;
+            border: 1px solid #dfe4ea;
+            border-radius: .75rem;
+            background-color: #f1f3f6;
+            color: #101b2b;
             font: inherit;
             font-size: .9rem;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
         }
+
+        .radian-filter-grid select:hover,
+        .radian-filter-grid input:hover { border-color: #cbd5e1; }
 
         .radian-filter-grid select:focus,
         .radian-filter-grid input:focus {
-            border-color: #b48a36;
-            outline: 2px solid rgb(180 138 54 / 18%);
-            outline-offset: 1px;
+            border-color: #1c7c5a;
+            background-color: #fff;
+            outline: 0;
+            box-shadow: 0 0 0 3px rgba(28, 124, 90, 0.12);
         }
 
         .radian-filter-actions {
-            grid-column: 1 / -1;
+            grid-column: span 9;
             display: flex;
             justify-content: flex-end;
             align-items: center;
@@ -91,8 +133,11 @@
 
         @media (max-width: 1100px) {
             .radian-filter-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(6, minmax(0, 1fr));
             }
+
+            .rf-col-2, .rf-col-3 { grid-column: span 2; }
+            .rf-col-9 { grid-column: span 6; justify-content: flex-end; }
         }
 
         @media (max-width: 640px) {
@@ -101,9 +146,12 @@
             }
 
             .radian-filter-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1fr;
                 gap: .8rem;
             }
+
+            .rf-col-2, .rf-col-3, .rf-col-9 { grid-column: auto; }
+            .rf-col-9 { justify-content: stretch; }
 
             .radian-filter-actions {
                 justify-content: stretch;
@@ -122,7 +170,7 @@
 
 <main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-[1600px] mx-auto">
     <div class="mb-8">
-
+        <p class="dc-page-subtitle mb-1">Zona K / Reportes · Emisión</p>
         <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Documentos emitidos y eventos RADIAN</h2>
         <p class="font-body-md text-on-surface-variant">
             Facturas, notas crédito y notas débito con CUFE/CUDE, valor total y eventos RADIAN consultados en DIAN (GetDocumentInfo).
@@ -138,9 +186,17 @@
     </ul>
 
     <section class="zk-filter-card p-4 mb-4 radian-filter-card">
-        <h3 class="font-headline-md text-headline-md text-primary">Filtros</h3>
-        <form method="get" th:action="@{/portal/emision/reportes/documentos-radian}" class="radian-filter-grid">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="material-symbols-outlined flex items-center justify-center rounded-xl border"
+                  style="width: 36px; height: 36px; color: #146c50; background: #e6f4ee; border-color: #dfe4ea; font-size: 20px;"
+                  aria-hidden="true">filter_alt</span>
             <div>
+                <h3 class="font-headline-md text-headline-md text-primary leading-tight">Filtros</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5 mb-0">Ajusta los criterios para consultar los documentos y sus eventos DIAN.</p>
+            </div>
+        </div>
+        <form method="get" th:action="@{/portal/emision/reportes/documentos-radian}" class="radian-filter-grid">
+            <div class="rf-col-3">
                 <label class="block font-label-md mb-1" for="sociedadId">Sociedad</label>
                 <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="sociedadId" name="sociedadId" onchange="actualizarPuntosVenta()">
                     <option th:each="sociedad : ${sociedades}"
@@ -149,7 +205,7 @@
                             th:text="${sociedad.razonSocial + ' - ' + sociedad.nit}">Sociedad</option>
                 </select>
             </div>
-            <div>
+            <div class="rf-col-3">
                 <label class="block font-label-md mb-1" for="emissionPointId">Punto de venta</label>
                 <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="emissionPointId" name="emissionPointId">
                     <option value="">Todos</option>
@@ -160,7 +216,7 @@
                             th:text="${puntoVenta.codigo + ' - ' + puntoVenta.nombre}">PV01</option>
                 </select>
             </div>
-            <div>
+            <div class="rf-col-2">
                 <label class="block font-label-md mb-1" for="documentKind">Tipo documento</label>
                 <select class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" id="documentKind" name="documentKind">
                     <option value="" th:selected="${documentKind == null || documentKind == ''}">Todos</option>
@@ -169,15 +225,15 @@
                     <option value="DEBIT_NOTE" th:selected="${documentKind == 'DEBIT_NOTE'}">Nota débito</option>
                 </select>
             </div>
-            <div>
+            <div class="rf-col-2">
                 <label class="block font-label-md mb-1" for="fromDate">Desde</label>
                 <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
             </div>
-            <div>
+            <div class="rf-col-2">
                 <label class="block font-label-md mb-1" for="toDate">Hasta</label>
                 <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="date" id="toDate" name="toDate" th:value="${toDate}">
             </div>
-            <div>
+            <div class="rf-col-3">
                 <label class="block font-label-md mb-1" for="estadoDian">Estado DIAN</label>
                 <input class="w-full rounded-xl border border-surface-container-highest bg-surface px-3 py-2" type="text" id="estadoDian" name="estadoDian" placeholder="Ej: ENVIADO" th:value="${estadoDian}">
             </div>
@@ -204,7 +260,7 @@
     <section class="card zk-card">
         <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest">
             <h3 class="font-headline-md text-headline-md text-primary">Resultados</h3>
-            <span class="px-3 py-1 rounded-full bg-surface-container-low font-label-sm" th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span>
+            <span class="registros-badge"><span class="material-symbols-outlined">receipt_long</span><span th:text="'Registros: ' + ${totalRegistros}">Registros: 0</span></span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full report-table">
@@ -240,8 +296,12 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(rows)}">
-                    <td class="px-4 py-6 text-center text-on-surface-variant" colspan="9">
-                        No hay documentos emitidos para los filtros seleccionados.
+                    <td class="px-4 py-10" colspan="9">
+                        <div class="empty-report">
+                            <div class="empty-report-icon"><span class="material-symbols-outlined">inbox</span></div>
+                            <p class="empty-report-title">Sin resultados para estos filtros</p>
+                            <p class="empty-report-sub">No hay documentos emitidos que coincidan con los criterios. Ajusta el rango de fechas, la sociedad o el estado DIAN y vuelve a consultar.</p>
+                        </div>
                     </td>
                 </tr>
                 </tbody>
