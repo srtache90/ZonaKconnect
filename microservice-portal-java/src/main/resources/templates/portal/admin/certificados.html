@@ -2,98 +2,743 @@
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Certificados Digitales | Zona K e-Docs')}"></th:block>
-     <link rel="icon"type="image/png"th:href="@{/imagen/zonak.png}"href="/imagen/zonak.png">
+    <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
+    <link rel="stylesheet" th:href="@{/css/certificados-admin.css(v=20261112)}" href="/css/certificados-admin.css">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
 <main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
-    <div class="mb-5">
-        <p class="dc-page-subtitle mb-1">Configuración / Certificados</p>
-        <h1 class="dc-page-title">Certificados Digitales</h1>
-        <p class="dc-page-subtitle">Carga segura de certificados .pfx/.p12 por sociedad</p>
-    </div>
+    <div class="cert-page">
 
-    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
+        <!-- ===================== Encabezado ===================== -->
+        <div class="cert-top">
+            <div>
+                <p class="cert-crumbs">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Configuración</span>
+                    <span>/</span>
+                    <strong>Certificados Digitales</strong>
+                    <span class="cert-crumbs-chip">Bóveda</span>
+                </p>
+                <div class="cert-title-row">
+                    <h1 class="cert-title">Certificados Digitales</h1>
+                    <span class="cert-status-pill">
+                        <span class="cert-dot"></span>
+                        Bóveda HSM Activa
+                    </span>
+                </div>
+                <p class="cert-sub">Carga segura y gestión centralizada de certificados .pfx / .p12 con cifrado bancario para firma electrónica DIAN y eventos RADIAN.</p>
+            </div>
+        </div>
 
-    <section class="card zk-card mb-4">
-        <div class="card-body">
-            <h2 class="h4 mb-1">Cargar certificado</h2>
-            <p class="text-muted small mb-4">Archivo .pfx o .p12 asociado a una sociedad.</p>
-            <form th:action="@{/portal/admin/certificados}" method="post" enctype="multipart/form-data" class="row g-3">
-                <div class="col-md-4">
-                    <label for="sociedadId" class="form-label">Sociedad</label>
-                    <select id="sociedadId" name="sociedadId" class="form-select" required>
-                        <option value="">Seleccione...</option>
-                        <option th:each="sociedad : ${sociedades}" th:value="${sociedad.id}" th:text="${sociedad.razonSocial}">
-                            Sociedad
-                        </option>
-                    </select>
+        <!-- ===================== Alertas flash ===================== -->
+        <div class="cert-alert cert-alert-success" th:if="${success != null}">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span th:text="${success}">Certificado guardado correctamente.</span>
+        </div>
+        <div class="cert-alert cert-alert-danger" th:if="${error != null}">
+            <span class="material-symbols-outlined">error</span>
+            <span th:text="${error}">No fue posible completar la operación.</span>
+        </div>
+
+        <!-- ===================== KPIs ===================== -->
+        <section class="cert-kpis" aria-label="Indicadores de certificados digitales">
+            <article class="cert-kpi">
+                <div class="cert-kpi-icon">
+                    <span class="material-symbols-outlined">verified_user</span>
                 </div>
-                <div class="col-md-3">
-                    <label for="alias" class="form-label">Alias</label>
-                    <input id="alias" name="alias" class="form-control" placeholder="certificado-principal" required>
+                <div class="cert-kpi-body">
+                    <p class="cert-kpi-label">Certificados activos</p>
+                    <div class="cert-kpi-value">
+                        <span id="kpiActivos">0 Activos</span>
+                        <span class="cert-dot" id="kpiActivosDot"></span>
+                    </div>
+                    <p class="cert-kpi-sub" id="kpiCobertura">0% Cobertura de Emisión</p>
                 </div>
-                <div class="col-md-2">
-                    <label for="validoHasta" class="form-label">Válido hasta</label>
-                    <input id="validoHasta" name="validoHasta" type="date" class="form-control" required>
+            </article>
+
+            <article class="cert-kpi">
+                <div class="cert-kpi-icon">
+                    <span class="material-symbols-outlined">lock</span>
                 </div>
-                <div class="col-md-3">
-                    <label for="password" class="form-label">Password certificado</label>
-                    <input id="password" name="password" type="password" class="form-control" autocomplete="new-password" required>
+                <div class="cert-kpi-body">
+                    <p class="cert-kpi-label">Criptografía</p>
+                    <div class="cert-kpi-value">
+                        <span>PKCS#12</span>
+                        <span class="cert-kpi-badge">AES-256</span>
+                    </div>
+                    <p class="cert-kpi-sub">X.509 v3 • SSL/TLS</p>
                 </div>
-                <div class="col-md-8">
-                    <label for="certificado" class="form-label">Archivo .pfx / .p12</label>
-                    <input id="certificado" name="certificado" type="file" class="form-control" accept=".pfx,.p12" required>
+            </article>
+
+            <article class="cert-kpi">
+                <div class="cert-kpi-icon">
+                    <span class="material-symbols-outlined">calendar_month</span>
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="form-check">
-                        <input id="activo" name="activo" type="checkbox" class="form-check-input" value="true" checked>
-                        <label for="activo" class="form-check-label">Activo</label>
+                <div class="cert-kpi-body">
+                    <p class="cert-kpi-label">Próximo vencimiento</p>
+                    <div class="cert-kpi-value" id="kpiVencimientoValue">
+                        <span id="kpiVencimiento">Sin registros</span>
+                    </div>
+                    <p class="cert-kpi-sub">
+                        <span class="cert-dot is-muted" id="kpiVencimientoDot"></span>
+                        <span id="kpiVencimientoSub">No hay certificados activos</span>
+                    </p>
+                </div>
+            </article>
+        </section>
+
+        <!-- ===================== Formulario ===================== -->
+        <section class="cert-card cert-form-card" id="formCertificado">
+            <div class="cert-card-head">
+                <div class="cert-form-title-wrap">
+                    <div class="cert-key-icon">
+                        <span class="material-symbols-outlined">key</span>
+                    </div>
+                    <div>
+                        <div class="cert-form-title-row">
+                            <h2 class="cert-card-title">Cargar certificado</h2>
+                            <span class="cert-badge-new">NUEVO REGISTRO</span>
+                        </div>
+                        <p class="cert-card-sub">Archivo PKCS#12 (.pfx / .p12) asociado a una sociedad autorizada ante la DIAN.</p>
                     </div>
                 </div>
-                <div class="col-md-2 d-flex align-items-end justify-content-end">
-                    <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                <span class="cert-status-pill cert-status-pill-sm">
+                    <span class="cert-dot"></span>
+                    Emisión DIAN Habilitada
+                </span>
+            </div>
+
+            <form id="certificadoForm" class="cert-form" th:action="@{/portal/admin/certificados}" method="post" enctype="multipart/form-data" novalidate>
+                <div class="cert-alert cert-alert-danger" id="formError" hidden>
+                    <span class="material-symbols-outlined">error</span>
+                    <span id="formErrorText"></span>
+                </div>
+
+                <div class="cert-grid-4">
+                    <div class="cert-field">
+                        <label for="sociedadId" class="cert-label">Sociedad <span class="req">*</span></label>
+                        <div class="cert-input-wrap">
+                            <span class="material-symbols-outlined cert-input-icon">apartment</span>
+                            <select id="sociedadId" name="sociedadId" class="cert-select" required>
+                                <option value="">Seleccione una sociedad...</option>
+                                <option th:each="sociedad : ${sociedades}"
+                                        th:value="${sociedad.id}"
+                                        th:text="${sociedad.razonSocial}">Sociedad</option>
+                            </select>
+                            <span class="material-symbols-outlined cert-select-arrow">expand_more</span>
+                        </div>
+                    </div>
+
+                    <div class="cert-field">
+                        <label for="alias" class="cert-label">Alias <span class="req">*</span></label>
+                        <div class="cert-input-wrap">
+                            <span class="material-symbols-outlined cert-input-icon">bookmark</span>
+                            <input id="alias" name="alias" class="cert-input" placeholder="certificado-principal" required>
+                        </div>
+                    </div>
+
+                    <div class="cert-field">
+                        <label for="validoHasta" class="cert-label">Válido hasta <span class="req">*</span></label>
+                        <div class="cert-input-wrap">
+                            <span class="material-symbols-outlined cert-input-icon">calendar_month</span>
+                            <input id="validoHasta" name="validoHasta" type="date" class="cert-input" required>
+                        </div>
+                    </div>
+
+                    <div class="cert-field">
+                        <label for="password" class="cert-label">Password certificado <span class="req">*</span></label>
+                        <div class="cert-input-wrap">
+                            <span class="material-symbols-outlined cert-input-icon">key</span>
+                            <input id="password" name="password" type="password" class="cert-input cert-input-password"
+                                   placeholder="••••••••" autocomplete="new-password" required>
+                            <button type="button" class="cert-eye" id="togglePassword"
+                                    aria-label="Mostrar contraseña" aria-pressed="false">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- El input real conserva el name="certificado" que espera el controlador. -->
+                <input id="certificado" name="certificado" type="file" class="cert-file-input"
+                       accept=".pfx,.p12" aria-label="Archivo de certificado .pfx o .p12" tabindex="-1" required>
+
+                <div class="cert-dropzone" id="dropzone">
+                    <div class="cert-dropzone-main">
+                        <div class="cert-file-icon">
+                            <span class="material-symbols-outlined">description</span>
+                            <span class="material-symbols-outlined cert-file-check">check_circle</span>
+                        </div>
+                        <div class="cert-dropzone-copy">
+                            <div class="cert-file-title-row">
+                                <span class="cert-file-name" id="fileName">Ningún archivo seleccionado</span>
+                                <span class="cert-chip-tech">PKCS#12</span>
+                            </div>
+                            <p class="cert-dropzone-hint">Arrastra tu archivo aquí o haz clic para seleccionarlo <span class="cert-dot-sep">•</span> Formatos compatibles: .pfx, .p12 (máx. 5MB)</p>
+                            <p class="cert-e2ee"><span class="material-symbols-outlined">lock</span> Cifrado de extremo a extremo (E2EE)</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cert-btn cert-btn-outline" id="selectFileBtn">
+                        <span class="material-symbols-outlined">upload_file</span>
+                        Seleccionar archivo
+                    </button>
+                </div>
+                <p class="cert-field-error" id="fileError" hidden></p>
+
+                <div class="cert-form-actions">
+                    <div class="cert-switch-wrap">
+                        <label class="cert-switch">
+                            <input id="activo" name="activo" type="checkbox" value="true" checked>
+                            <span class="cert-switch-track"><span class="cert-switch-thumb"></span></span>
+                        </label>
+                        <input type="hidden" name="activo" value="false">
+                        <label for="activo" class="cert-switch-copy">
+                            <span class="cert-switch-title">Certificado Activo para emisión</span>
+                            <span class="cert-switch-sub">Habilitar para firma digital automática de facturas y notas.</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="cert-btn cert-btn-primary" id="guardarCertificado">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        Guardar Certificado
+                    </button>
                 </div>
             </form>
-        </div>
-    </section>
+        </section>
 
-    <section class="card zk-card">
-        <div class="card-header bg-white">Certificados registrados</div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th>Sociedad</th>
-                    <th>Alias</th>
-                    <th>Válido hasta</th>
-                    <th>Estado</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="certificado : ${certificados}">
-                    <td th:text="${certificado.sociedadRazonSocial}">Sociedad</td>
-                    <td th:text="${certificado.alias}">alias</td>
-                    <td th:text="${certificado.validoHasta}">2026-12-31</td>
-                    <td>
-                        <span class="badge" th:classappend="${certificado.activo} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${certificado.activo} ? 'Activo' : 'Inactivo'">
-                            Activo
-                        </span>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(certificados)}">
-                    <td colspan="4" class="text-center text-muted py-4">No hay certificados registrados.</td>
-                </tr>
-                </tbody>
-            </table>
+        <!-- ===================== Tabla ===================== -->
+        <section class="cert-card cert-table-card">
+            <div class="cert-table-toolbar">
+                <div class="cert-table-title-wrap">
+                    <h2 class="cert-card-title">Certificados registrados</h2>
+                    <div class="cert-filter-pills" role="group" aria-label="Filtrar certificados">
+                        <button type="button" class="cert-filter-pill is-active" data-filter="all">
+                            Todos <span id="countAll" th:text="${#lists.size(certificados)}">0</span>
+                        </button>
+                        <button type="button" class="cert-filter-pill" data-filter="active">
+                            <span class="cert-dot"></span> Activos <span id="countActive">0</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="cert-search">
+                    <span class="material-symbols-outlined">search</span>
+                    <input id="certSearch" type="search" placeholder="Filtrar por sociedad o alias..." aria-label="Filtrar certificados por sociedad o alias">
+                </div>
+            </div>
+
+            <div class="cert-table-wrap">
+                <table class="cert-table">
+                    <thead>
+                    <tr>
+                        <th>Sociedad / Razón social</th>
+                        <th>Alias y tipo</th>
+                        <th>Vigencia &amp; vencimiento</th>
+                        <th>Estado DIAN</th>
+                        <th>Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="certTableBody">
+                    <tr class="cert-row"
+                        th:each="certificado : ${certificados}"
+                        th:attr="data-sociedad=${certificado.sociedadRazonSocial},
+                                 data-sociedad-id=${certificado.sociedadId},
+                                 data-alias=${certificado.alias},
+                                 data-valido-hasta=${certificado.validoHasta},
+                                 data-activo=${certificado.activo}">
+                        <td>
+                            <div class="cert-soc-cell">
+                                <div class="cert-monogram">
+                                    <span class="cert-monogram-text"
+                                          th:text="${#strings.substring(#strings.toUpperCase(certificado.sociedadRazonSocial), 0, 2)}">NU</span>
+                                    <span class="material-symbols-outlined cert-monogram-check"
+                                          th:if="${certificado.activo}">check</span>
+                                </div>
+                                <div>
+                                    <p class="cert-soc-name" th:text="${certificado.sociedadRazonSocial}">Sociedad</p>
+                                    <div class="cert-soc-meta">
+                                        <span class="cert-nit"
+                                              th:each="sociedad : ${sociedades}"
+                                              th:if="${sociedad.id == certificado.sociedadId}"
+                                              th:text="|NIT: ${sociedad.nit}|">NIT: —</span>
+                                        <span class="cert-chip-verified" th:if="${certificado.activo}">
+                                            <span class="material-symbols-outlined">verified</span>
+                                            Verificado DIAN
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <p class="cert-alias" th:text="${certificado.alias}">certificado-principal</p>
+                            <p class="cert-format">Formato: PKCS#12 (.pfx / .p12)</p>
+                        </td>
+                        <td>
+                            <div class="cert-date-row">
+                                <span class="cert-date" th:text="${certificado.validoHasta}">2027-05-04</span>
+                                <span class="cert-vig-badge is-muted" data-vig-badge>—</span>
+                            </div>
+                            <p class="cert-date-sub">Vigencia registrada</p>
+                        </td>
+                        <td>
+                            <span class="cert-status-badge"
+                                  th:classappend="${certificado.activo} ? ' is-active' : ' is-inactive'">
+                                <span class="cert-dot"></span>
+                                <span th:text="${certificado.activo} ? 'Activo y Habilitado' : 'Inactivo'">Activo y Habilitado</span>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="cert-row-actions">
+                                <button type="button" class="cert-btn cert-btn-outline cert-btn-sm renovar-btn">
+                                    <span class="material-symbols-outlined">autorenew</span>
+                                    Renovar
+                                </button>
+                                <button type="button" class="cert-icon-btn" disabled
+                                        title="Descarga no disponible desde este módulo"
+                                        aria-label="Descarga no disponible desde este módulo">
+                                    <span class="material-symbols-outlined">download</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr id="certNoResults" hidden>
+                        <td colspan="5" class="cert-empty">
+                            <span class="material-symbols-outlined">search_off</span>
+                            No se encontraron certificados con ese filtro.
+                        </td>
+                    </tr>
+
+                    <tr class="cert-server-empty" th:if="${#lists.isEmpty(certificados)}">
+                        <td colspan="5" class="cert-empty">
+                            <span class="material-symbols-outlined">verified_user</span>
+                            No hay certificados registrados. Carga el primero con el formulario superior.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===================== Banner de seguridad ===================== -->
+        <div class="cert-security-banner">
+            <div class="cert-security-icon">
+                <span class="material-symbols-outlined">shield</span>
+            </div>
+            <p><strong>Seguridad y Bóveda Criptográfica:</strong> Los certificados digitales (.pfx / .p12) y sus respectivas claves se custodian cifrados con estándar bancario AES-256 en un módulo de hardware criptográfico seguro (HSM), garantizando plena validez jurídica ante la DIAN y eventos en plataforma RADIAN.</p>
         </div>
-    </section>
+
+    </div>
 </main>
+
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+
+<script>
+    (function () {
+        'use strict';
+
+        const byId = function (id) { return document.getElementById(id); };
+        const qsa = function (selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); };
+        const rows = function () { return qsa('#certTableBody tr.cert-row'); };
+
+        const form = byId('certificadoForm');
+        const fileInput = byId('certificado');
+        const dropzone = byId('dropzone');
+        const fileName = byId('fileName');
+        const fileError = byId('fileError');
+        const selectFileBtn = byId('selectFileBtn');
+        const passwordInput = byId('password');
+        const togglePassword = byId('togglePassword');
+        const searchInput = byId('certSearch');
+        const noResults = byId('certNoResults');
+        const filterPills = qsa('.cert-filter-pill');
+        let activeFilter = 'all';
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        function daysUntil(iso) {
+            if (!iso) return null;
+            const parsed = new Date(iso + 'T00:00:00');
+            if (Number.isNaN(parsed.getTime())) return null;
+            return Math.round((parsed - today) / 86400000);
+        }
+
+        function initialsFor(name) {
+            if (!name) return '—';
+            const cleaned = name
+                .replace(/\bS\.?\s*A\.?\s*S\.?\b/gi, ' ')
+                .replace(/\bLTDA\.?\b/gi, ' ')
+                .replace(/\bS\.?\s*A\.?\b/gi, ' ')
+                .replace(/\bE\.?\s*U\.?\b/gi, ' ')
+                .replace(/[.,]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const words = cleaned.split(' ').filter(Boolean);
+            if (!words.length) return name.slice(0, 2).toUpperCase();
+            const last = words[words.length - 1];
+            if (last.length >= 2) return last.slice(0, 2).toUpperCase();
+            if (words.length > 1) return (words[0].charAt(0) + last.charAt(0)).toUpperCase();
+            return last.toUpperCase();
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes && bytes !== 0) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function validateFile(file) {
+            if (!file) return 'Seleccione un archivo .pfx o .p12.';
+            const name = (file.name || '').toLowerCase();
+            if (!name.endsWith('.pfx') && !name.endsWith('.p12')) {
+                return 'Formato inválido. Solo se aceptan archivos .pfx o .p12.';
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                return 'El archivo supera el tamaño máximo de 5 MB.';
+            }
+            return '';
+        }
+
+        function showFileError(message) {
+            if (!fileError) return;
+            fileError.textContent = message || '';
+            fileError.hidden = !message;
+        }
+
+        function showFormError(message) {
+            const box = byId('formError');
+            const text = byId('formErrorText');
+            if (!box || !text) return;
+            text.textContent = message || '';
+            box.hidden = !message;
+            if (message) {
+                box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function hideFormError() {
+            showFormError('');
+        }
+
+        function setFile(file) {
+            if (!file) {
+                if (fileName) fileName.textContent = 'Ningún archivo seleccionado';
+                if (dropzone) dropzone.classList.remove('has-file');
+                showFileError('');
+                return;
+            }
+            const error = validateFile(file);
+            if (error) {
+                if (fileInput) fileInput.value = '';
+                if (fileName) fileName.textContent = 'Ningún archivo seleccionado';
+                if (dropzone) dropzone.classList.remove('has-file');
+                showFileError(error);
+                return;
+            }
+            if (fileName) fileName.textContent = file.name + ' · ' + formatBytes(file.size);
+            if (dropzone) dropzone.classList.add('has-file');
+            showFileError('');
+        }
+
+        /* Monogramas: usan la palabra distintiva de la razón social. */
+        rows().forEach(function (row) {
+            const monogram = row.querySelector('.cert-monogram-text');
+            if (monogram) {
+                monogram.textContent = initialsFor(row.getAttribute('data-sociedad') || '');
+            }
+        });
+
+        /* Mostrar / ocultar contraseña. */
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function () {
+                const showing = passwordInput.type === 'text';
+                passwordInput.type = showing ? 'password' : 'text';
+                togglePassword.setAttribute('aria-pressed', String(!showing));
+                togglePassword.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+                const icon = togglePassword.querySelector('.material-symbols-outlined');
+                if (icon) icon.textContent = showing ? 'visibility' : 'visibility_off';
+            });
+        }
+
+        /* Selección de archivo y drag & drop. */
+        if (fileInput) {
+            fileInput.addEventListener('change', function () {
+                setFile(fileInput.files && fileInput.files[0] ? fileInput.files[0] : null);
+            });
+        }
+        if (selectFileBtn && fileInput) {
+            selectFileBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                fileInput.click();
+            });
+        }
+        if (dropzone && fileInput) {
+            dropzone.addEventListener('click', function (event) {
+                if (event.target.closest('button')) return;
+                event.preventDefault();
+                fileInput.click();
+            });
+            ['dragenter', 'dragover'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dropzone.classList.add('is-dragover');
+                });
+            });
+            ['dragleave', 'drop'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dropzone.classList.remove('is-dragover');
+                });
+            });
+            dropzone.addEventListener('drop', function (event) {
+                const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+                if (!file) return;
+                try {
+                    const transfer = new DataTransfer();
+                    transfer.items.add(file);
+                    fileInput.files = transfer.files;
+                    setFile(file);
+                } catch (error) {
+                    fileInput.value = '';
+                    setFile(null);
+                    showFileError('Tu navegador no permite arrastrar archivos. Usa “Seleccionar archivo”.');
+                }
+            });
+        }
+
+        /* Validación previa al submit, manteniendo el envío estándar del formulario. */
+        if (form) {
+            ['sociedadId', 'alias', 'validoHasta', 'password'].forEach(function (id) {
+                const field = byId(id);
+                if (field) {
+                    field.addEventListener('input', hideFormError);
+                    field.addEventListener('change', hideFormError);
+                }
+            });
+
+            form.addEventListener('submit', function (event) {
+                const society = byId('sociedadId');
+                const alias = byId('alias');
+                const date = byId('validoHasta');
+                const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+                let message = '';
+                let focusField = null;
+
+                if (!society || !society.value) {
+                    message = 'Seleccione una sociedad.';
+                    focusField = society;
+                } else if (!alias || !alias.value.trim()) {
+                    message = 'Ingrese un alias para el certificado.';
+                    focusField = alias;
+                } else if (!date || !date.value) {
+                    message = 'Seleccione la fecha de vencimiento.';
+                    focusField = date;
+                } else if (!passwordInput || !passwordInput.value) {
+                    message = 'Ingrese la contraseña del certificado.';
+                    focusField = passwordInput;
+                } else if (!file) {
+                    message = 'Seleccione el archivo .pfx o .p12.';
+                } else {
+                    message = validateFile(file);
+                }
+
+                if (!message) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (focusField) {
+                    hideFormError();
+                    showFileError('');
+                    showFormError(message);
+                    focusField.focus();
+                } else {
+                    hideFormError();
+                    showFileError(message);
+                    if (fileError) fileError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+
+        /* Renovar: precarga la sociedad y el alias, y limpia el archivo/clave anterior. */
+        qsa('.renovar-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const row = button.closest('tr');
+                if (!row) return;
+                const society = byId('sociedadId');
+                const alias = byId('alias');
+                const date = byId('validoHasta');
+                const oldDate = row.getAttribute('data-valido-hasta') || '';
+                const oldDays = daysUntil(oldDate);
+
+                if (society) society.value = row.getAttribute('data-sociedad-id') || '';
+                if (alias) alias.value = row.getAttribute('data-alias') || '';
+                if (date) date.value = oldDays !== null && oldDays < 0 ? '' : oldDate;
+                if (passwordInput) passwordInput.value = '';
+                if (fileInput) fileInput.value = '';
+                setFile(null);
+                hideFormError();
+                showFileError('');
+
+                const card = byId('formCertificado');
+                if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                window.setTimeout(function () { if (alias) alias.focus(); }, 350);
+            });
+        });
+
+        /* Filtro en vivo por sociedad, alias o NIT + pestañas Todos/Activos. */
+        function applyFilter() {
+            const query = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+            let visible = 0;
+            const allRows = rows();
+
+            allRows.forEach(function (row) {
+                const isActive = row.getAttribute('data-activo') === 'true';
+                const nit = row.querySelector('.cert-nit');
+                const haystack = [
+                    row.getAttribute('data-sociedad') || '',
+                    row.getAttribute('data-alias') || '',
+                    nit ? nit.textContent : ''
+                ].join(' ').toLowerCase();
+                const matchesQuery = !query || haystack.indexOf(query) !== -1;
+                const matchesTab = activeFilter === 'all' || (activeFilter === 'active' && isActive);
+                const show = matchesQuery && matchesTab;
+                row.hidden = !show;
+                if (show) visible += 1;
+            });
+
+            if (noResults) {
+                noResults.hidden = !(allRows.length > 0 && visible === 0);
+            }
+        }
+
+        filterPills.forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                filterPills.forEach(function (item) {
+                    item.classList.toggle('is-active', item === pill);
+                });
+                activeFilter = pill.getAttribute('data-filter') || 'all';
+                applyFilter();
+            });
+        });
+
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFilter);
+        }
+
+        function updateSummary() {
+            const allRows = rows();
+            const total = allRows.length;
+            const activeRows = allRows.filter(function (row) {
+                return row.getAttribute('data-activo') === 'true';
+            });
+            const active = activeRows.length;
+
+            const kpiActivos = byId('kpiActivos');
+            const kpiActivosDot = byId('kpiActivosDot');
+            const kpiCobertura = byId('kpiCobertura');
+            const kpiVencimiento = byId('kpiVencimiento');
+            const kpiVencimientoValue = byId('kpiVencimientoValue');
+            const kpiVencimientoDot = byId('kpiVencimientoDot');
+            const kpiVencimientoSub = byId('kpiVencimientoSub');
+            const countAll = byId('countAll');
+            const countActive = byId('countActive');
+
+            if (kpiActivos) kpiActivos.textContent = active + (active === 1 ? ' Activo' : ' Activos');
+            if (kpiCobertura) kpiCobertura.textContent = (total ? Math.round((active / total) * 100) : 0) + '% Cobertura de Emisión';
+            if (countAll) countAll.textContent = String(total);
+            if (countActive) countActive.textContent = String(active);
+
+            if (kpiActivosDot) {
+                kpiActivosDot.classList.toggle('is-muted', active === 0);
+                kpiActivosDot.classList.toggle('is-warn', active > 0 && active < total);
+            }
+
+            allRows.forEach(function (row) {
+                const badge = row.querySelector('[data-vig-badge]');
+                if (!badge) return;
+                const days = daysUntil(row.getAttribute('data-valido-hasta'));
+                badge.classList.remove('is-ok', 'is-warn', 'is-danger', 'is-muted');
+
+                if (days === null) {
+                    badge.textContent = '—';
+                    badge.classList.add('is-muted');
+                } else if (days < 0) {
+                    badge.textContent = 'Vencido';
+                    badge.classList.add('is-danger');
+                } else if (days === 0) {
+                    badge.textContent = 'Vence hoy';
+                    badge.classList.add('is-warn');
+                } else if (days <= 30) {
+                    badge.textContent = 'En ' + days + ' días';
+                    badge.classList.add('is-warn');
+                } else if (days <= 365) {
+                    badge.textContent = 'En ' + days + ' días';
+                    badge.classList.add('is-ok');
+                } else {
+                    const years = Math.floor(days / 365);
+                    badge.textContent = 'En ' + years + (years === 1 ? ' año' : ' años');
+                    badge.classList.add('is-ok');
+                }
+            });
+
+            const dated = activeRows
+                .map(function (row) {
+                    return { iso: row.getAttribute('data-valido-hasta'), days: daysUntil(row.getAttribute('data-valido-hasta')) };
+                })
+                .filter(function (item) {
+                    return item.iso && item.days !== null;
+                });
+
+            if (!dated.length) {
+                if (kpiVencimiento) kpiVencimiento.textContent = 'Sin registros';
+                if (kpiVencimientoValue) {
+                    kpiVencimientoValue.classList.remove('is-warn', 'is-danger');
+                    kpiVencimientoValue.classList.add('is-muted');
+                }
+                if (kpiVencimientoDot) {
+                    kpiVencimientoDot.classList.remove('is-warn', 'is-danger');
+                    kpiVencimientoDot.classList.add('is-muted');
+                }
+                if (kpiVencimientoSub) kpiVencimientoSub.textContent = 'No hay certificados activos';
+                return;
+            }
+
+            dated.sort(function (a, b) { return a.days - b.days; });
+            const next = dated.find(function (item) { return item.days >= 0; }) || dated[dated.length - 1];
+            const isExpired = next.days < 0;
+            const isWarning = !isExpired && next.days <= 30;
+
+            if (kpiVencimiento) {
+                kpiVencimiento.textContent = isExpired
+                    ? 'Vencido'
+                    : 'En ' + next.days + (next.days === 1 ? ' día' : ' días');
+            }
+            if (kpiVencimientoValue) {
+                kpiVencimientoValue.classList.remove('is-muted', 'is-warn', 'is-danger');
+                if (isExpired) kpiVencimientoValue.classList.add('is-danger');
+                else if (isWarning) kpiVencimientoValue.classList.add('is-warn');
+            }
+            if (kpiVencimientoDot) {
+                kpiVencimientoDot.classList.remove('is-muted', 'is-warn', 'is-danger');
+                if (isExpired) kpiVencimientoDot.classList.add('is-danger');
+                else if (isWarning) kpiVencimientoDot.classList.add('is-warn');
+            }
+            if (kpiVencimientoSub) {
+                kpiVencimientoSub.textContent = next.iso + ' • ' + (isExpired ? 'Vencido' : (isWarning ? 'Por vencer' : 'Saludable'));
+            }
+        }
+
+        updateSummary();
+        applyFilter();
+    })();
+</script>
 </body>
 </html>
