@@ -133,27 +133,32 @@ public class IngestInvoiceMapper {
                 .stream()
                 .map(c -> new CreateCreditNoteRequestDTO.ConceptoCorreccionDTO(
                         valueOrDefault(c.referenceId(), "1"),
-                        valueOrDefault(c.codigo(), "2"),
-                        valueOrDefault(c.descripcion(), "Anulación de factura electrónica")
+                        correctionCode(c.codigo(), "2"),
+                        valueOrDefault(c.descripcion(), descripcionConceptoNotaCredito(correctionCode(c.codigo(), "2")))
                 ))
                 .toList();
         if (conceptos.isEmpty()) {
+            String codigo = correctionCode(ticket.creditNoteTypeCode(), "2");
             conceptos = List.of(new CreateCreditNoteRequestDTO.ConceptoCorreccionDTO(
                     "1",
-                    "2",
-                    "Anulación de factura electrónica"
+                    codigo,
+                    valueOrDefault(ticket.creditNoteReason(), descripcionConceptoNotaCredito(codigo))
             ));
         }
 
+        String fechaReferencia = firstText(
+                ref.fechaEmision(),
+                ticket.creditNoteInvoiceDate()
+        );
         return new CreateCreditNoteRequestDTO(
                 ticket.resolvedAmbiente(),
                 valueOrDefault(ticket.customizationId(), "20"),
-                valueOrDefault(ticket.creditNoteTypeCode(), "91"),
+                "91",
                 mapPosCustomer(ticket.cliente()),
                 new CreateCreditNoteRequestDTO.FacturaReferenciaDTO(
                         valueOrDefault(ref.tipoDocumento(), "FV"),
                         ref.numeroDocumento().trim(),
-                        normalizeFechaEmision(ref.fechaEmision()),
+                        normalizeFechaEmision(fechaReferencia),
                         ref.cufe().trim(),
                         valueOrDefault(ref.schemeName(), "CUFE-SHA384")
                 ),
@@ -262,17 +267,6 @@ public class IngestInvoiceMapper {
         for (PosTicketRequest.Item item : rawItems) {
             items.add(mapPosItem(item, index++));
         }
-        BigDecimal tip = parseDecimal(ticket.propina());
-        if (tip.compareTo(BigDecimal.ZERO) > 0 && !ticket.hasExplicitPropinaCargo()) {
-            items.add(new CreateInvoiceRequestDTO.ItemDTO(
-                    "PROPINA",
-                    "Propina",
-                    BigDecimal.ONE,
-                    tip,
-                    BigDecimal.ZERO,
-                    List.of()
-            ));
-        }
         return items;
     }
 
@@ -308,9 +302,18 @@ public class IngestInvoiceMapper {
             BigDecimal tip
     ) {
         BigDecimal itemsTotal = sumItems(items);
+        BigDecimal base = parseDecimal(ticket.base());
+        if (base.compareTo(BigDecimal.ZERO) <= 0) {
+            base = itemsTotal;
+        }
+        BigDecimal declaredSubtotal = parseDecimal(ticket.subtotal());
+        if (declaredSubtotal.compareTo(BigDecimal.ZERO) <= 0) {
+            declaredSubtotal = base;
+        }
+        BigDecimal declaredTax = parseDecimal(firstText(ticket.inc(), ticket.totalImpuestos()));
         BigDecimal declaredTotal = parseDecimal(ticket.total());
         if (declaredTotal.compareTo(BigDecimal.ZERO) <= 0) {
-            declaredTotal = itemsTotal;
+            declaredTotal = declaredSubtotal.add(declaredTax).add(tip.max(BigDecimal.ZERO));
         }
         Map<String, Object> totals = new LinkedHashMap<>();
         totals.put("origen", "POS");
@@ -340,10 +343,20 @@ public class IngestInvoiceMapper {
         totals.put("empleado", valueOrDefault(ticket.empleado(), ""));
         totals.put("fecha_hora", valueOrDefault(ticket.fechaHora(), ""));
         totals.put("propina", tip);
+        totals.put("base", base);
+        if (declaredTax.compareTo(BigDecimal.ZERO) > 0) {
+            totals.put("inc", declaredTax);
+        }
+        if (StringUtils.hasText(ticket.cufe())) {
+            totals.put("cufe_estacion", ticket.cufe().trim());
+        }
+        if (StringUtils.hasText(ticket.qr())) {
+            totals.put("qr_estacion", ticket.qr().trim());
+        }
         totals.put("cargos", ticket.cargos() == null ? List.of() : ticket.cargos());
         totals.put("pagos", ticket.pagos() == null ? List.of() : ticket.pagos());
         totals.put("impuestos", ticket.impuestos() == null ? List.of() : ticket.impuestos());
-        totals.put("subtotal", itemsTotal.subtract(ticket.hasExplicitPropinaCargo() ? BigDecimal.ZERO : tip.max(BigDecimal.ZERO)));
+        totals.put("subtotal", declaredSubtotal);
         totals.put("total", declaredTotal);
         return totals;
     }
@@ -395,7 +408,31 @@ public class IngestInvoiceMapper {
         if (value.length() == 10 && value.charAt(4) == '-' && value.charAt(7) == '-') {
             return value + "T00:00:00-05:00";
         }
+        if (value.length() == 10 && value.charAt(2) == '/' && value.charAt(5) == '/') {
+            java.time.LocalDate date = java.time.LocalDate.parse(
+                    value,
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
+            );
+            return date + "T00:00:00-05:00";
+        }
         return value;
+    }
+
+    private static String correctionCode(String raw, String fallback) {
+        if (raw != null && raw.trim().matches("[1-6]")) {
+            return raw.trim();
+        }
+        return fallback;
+    }
+
+    private static String descripcionConceptoNotaCredito(String codigo) {
+        return switch (codigo) {
+            case "2" -> "Anulación de factura electrónica";
+            case "3" -> "Rebaja o descuento parcial o total";
+            case "4" -> "Ajuste de precio";
+            case "5" -> "Otros";
+            default -> "Devolución parcial de los bienes y/o no aceptación parcial del servicio";
+        };
     }
 
     private String firstText(String... values) {

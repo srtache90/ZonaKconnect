@@ -57,9 +57,15 @@ namespace DIAN_NET.Services
                 ExigirTestSetSiHabilitacion(request.Ambiente, request.TestSetId);
                 SincronizarTipoAmbienteFactura(request.Factura, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlFactura(request.Factura);
-                var cufe = _cufeQrService.CalcularCUFE(request.Factura, request.Ambiente);
-                var cufeChain = _cufeQrService.ConstruirCadenaCUFE(request.Factura, request.Ambiente);
-                var qrCode = _cufeQrService.GenerarQRCode(
+                var cufeEstacion = IdentificadorEstacion(request.Factura.Cufe);
+                var cufe = string.IsNullOrEmpty(cufeEstacion)
+                    ? _cufeQrService.CalcularCUFE(request.Factura, request.Ambiente)
+                    : cufeEstacion;
+                var cufeChain = string.IsNullOrEmpty(cufeEstacion)
+                    ? _cufeQrService.ConstruirCadenaCUFE(request.Factura, request.Ambiente)
+                    : null;
+                var qrCode = QrEstacion(
+                    request.Factura.Qr,
                     cufe,
                     request.Factura.Emisor.Nit,
                     request.Factura.NumeroDocumento,
@@ -135,8 +141,12 @@ namespace DIAN_NET.Services
                 ExigirTestSetSiHabilitacion(request.Ambiente, request.TestSetId);
                 ValidarNotaCredito(request.NotaCredito, request.Ambiente);
                 var xmlSinFirma = _xmlTransformService.GenerarXmlNotaCredito(request.NotaCredito);
-                var cude = _cufeQrService.CalcularCUDE(request.NotaCredito, request.Ambiente);
-                var qrCode = _cufeQrService.GenerarQRCode(
+                var cudeEstacion = IdentificadorEstacion(request.NotaCredito.Cufe);
+                var cude = string.IsNullOrEmpty(cudeEstacion)
+                    ? _cufeQrService.CalcularCUDE(request.NotaCredito, request.Ambiente)
+                    : cudeEstacion;
+                var qrCode = QrEstacion(
+                    request.NotaCredito.Qr,
                     cude,
                     request.NotaCredito.Emisor.Nit,
                     request.NotaCredito.NumeroDocumento,
@@ -257,6 +267,27 @@ namespace DIAN_NET.Services
             {
                 return CrearRespuestaError("Error al procesar la nómina electrónica", ex, _lastDebugXmlId);
             }
+        }
+
+        private static string IdentificadorEstacion(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private string QrEstacion(
+            string? qrEstacion,
+            string identificador,
+            string nitEmisor,
+            string numeroDocumento,
+            decimal total,
+            DateTime fechaEmision)
+        {
+            if (!string.IsNullOrWhiteSpace(qrEstacion))
+            {
+                return qrEstacion.Trim();
+            }
+
+            return _cufeQrService.GenerarQRCode(identificador, nitEmisor, numeroDocumento, total, fechaEmision);
         }
 
         private async Task<EnviarFacturaResponse> FirmarZipYEnviarAsync(

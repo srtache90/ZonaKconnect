@@ -191,6 +191,8 @@ type dianInvoice struct {
 	Totales           dianTotals        `json:"totales"`
 	Observaciones     string            `json:"observaciones,omitempty"`
 	Notas             []string          `json:"notas,omitempty"`
+	Cufe              string            `json:"cufe,omitempty"`
+	Qr                string            `json:"qr,omitempty"`
 	ConfiguracionDian dianConfigDTO     `json:"configuracionDian"`
 }
 
@@ -209,6 +211,8 @@ type dianCreditNote struct {
 	Totales             dianTotals              `json:"totales"`
 	Observaciones       string                  `json:"observaciones,omitempty"`
 	Notas               []string                `json:"notas,omitempty"`
+	Cufe                string                  `json:"cufe,omitempty"`
+	Qr                  string                  `json:"qr,omitempty"`
 	ConfiguracionDian   dianConfigDTO           `json:"configuracionDian"`
 }
 
@@ -1493,7 +1497,7 @@ func (a *app) emitInvoiceToDianNet(ctx context.Context, tenantID, emissionPointI
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
+	ambiente := emissionAmbiente(invoiceReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
 	testSetID := strings.TrimSpace(emissionCtx.DIANConfig.TestSetID)
 	if strings.EqualFold(ambiente, "Habilitacion") && testSetID == "" {
 		return nil, fmt.Errorf("ambiente Habilitacion requiere test_set_id en la sociedad tenant_id=%s", tenantID)
@@ -1609,7 +1613,7 @@ func (a *app) emitCreditNoteToDianNet(ctx context.Context, tenantID, emissionPoi
 		return nil, fmt.Errorf("configuracion DIAN incompleta tenant_id=%s", tenantID)
 	}
 
-	ambiente := resolveDianAmbiente(emissionCtx.DIANConfig.Ambiente)
+	ambiente := emissionAmbiente(creditNoteReq.Ambiente, emissionCtx.DIANConfig.Ambiente)
 	testSetID := strings.TrimSpace(emissionCtx.DIANConfig.TestSetID)
 	if strings.EqualFold(ambiente, "Habilitacion") && testSetID == "" {
 		return nil, fmt.Errorf("ambiente Habilitacion requiere test_set_id en la sociedad tenant_id=%s", tenantID)
@@ -1942,6 +1946,7 @@ func buildDianCustomer(c invoiceCustomer) dianCustomer {
 	if tipoIdentificacion == "31" {
 		tipoPersona = "1"
 	}
+	email := strings.TrimSpace(c.Email)
 	return dianCustomer{
 		TipoIdentificacion:   tipoIdentificacion,
 		NumeroIdentificacion: numeroIdentificacion,
@@ -1951,7 +1956,7 @@ func buildDianCustomer(c invoiceCustomer) dianCustomer {
 		NombreComercial:      razonSocial,
 		Direccion:            defaultAddress(c.Direccion),
 		Telefono:             c.Telefono,
-		Email:                c.Email,
+		Email:                email,
 		RegimenFiscal:        regimenFiscal,
 		TributoID:            tributoID,
 		TributoNombre:        tributoNombre,
@@ -1982,22 +1987,23 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 		})
 	}
 
-	now := nowColombia()
 	invoiceTypeCode := "01"
 	if isContingencyInvoice(req) {
 		invoiceTypeCode = "05"
 	}
 	totals := resolveTotalsFromItems(sourceItems, req.Totals)
-	totals.Propina = parseStoredTotals(req.Totals).Propina
-	if totals.Propina > 0 && totals.Total <= totals.Subtotal+totals.TotalImpuestos {
-		totals.Total = totals.Subtotal + totals.TotalImpuestos + totals.Propina
-	}
+	facts := stationCommercialData(req.Totals)
+	applyStationTotals(&totals, facts)
+	cufeEstacion, qrEstacion := stationDocumentIdentity(req.Totals)
+	issuedAt := documentIssueTime(facts)
+	documentPrefix := firstNonEmpty(facts.Prefijo, prefijo)
+	resolucion := firstNonEmpty(facts.Resolucion, emissionCtx.ResolucionDIAN)
 	return dianInvoice{
 		TipoDocumento:    "FV",
 		InvoiceTypeCode:  invoiceTypeCode,
-		NumeroDocumento:  fmt.Sprintf("%s%d", prefijo, numero),
-		FechaEmision:     now,
-		FechaVencimiento: now,
+		NumeroDocumento:  fmt.Sprintf("%s%d", documentPrefix, numero),
+		FechaEmision:     issuedAt,
+		FechaVencimiento: issuedAt,
 		Moneda:           "COP",
 		Emisor:           buildDianEmisor(emissionCtx),
 		Cliente:          buildDianCustomer(req.Cliente),
@@ -2005,15 +2011,17 @@ func buildDianInvoice(req createInvoiceRequest, emissionCtx companyEmissionConte
 		Totales:          totals,
 		Observaciones:    "Factura generada desde Core Go y emitida por DIAN_NET",
 		Notas:            []string{},
+		Cufe:             cufeEstacion,
+		Qr:               qrEstacion,
 		ConfiguracionDian: dianConfigDTO{
-			NumeroResolucion: emissionCtx.ResolucionDIAN,
+			NumeroResolucion: resolucion,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
 			FechaInicio:      emissionCtx.VigenciaDesde,
 			FechaFin:         emissionCtx.VigenciaHasta,
-			Prefijo:          prefijo,
+			Prefijo:          documentPrefix,
 			RangoInicio:      strconv.FormatInt(emissionCtx.RangoDesde, 10),
 			RangoFin:         strconv.FormatInt(emissionCtx.RangoHasta, 10),
-			TipoAmbiente:     dianEnvironmentCode(ambiente),
+			TipoAmbiente:     dianEnvironmentCode(documentAmbiente(ambiente, facts)),
 			SoftwareID:       defaultString(emissionCtx.DIANConfig.SoftwareID, "SOFTWARE-ID-LOCAL"),
 			Pin:              defaultString(emissionCtx.DIANConfig.Pin, "PIN-LOCAL"),
 			ClaveTecnica:     emissionCtx.ClaveTecnica,
@@ -2045,7 +2053,11 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		})
 	}
 
-	now := nowColombia()
+	facts := stationCommercialData(req.Totals)
+	applyStationTotals(&totals, facts)
+	issuedAt := documentIssueTime(facts)
+	documentPrefix := firstNonEmpty(facts.Prefijo, prefijo)
+	resolucion := firstNonEmpty(facts.Resolucion, emissionCtx.ResolucionDIAN)
 	reference := req.FacturaReferencia
 	if reference.TipoDocumento == "" {
 		reference.TipoDocumento = "FV"
@@ -2054,23 +2066,49 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		reference.SchemeName = "CUFE-SHA384"
 	}
 
+	typeCode := strings.TrimSpace(req.CreditNoteTypeCode)
+	conceptFromType := ""
+	if typeCode != "91" {
+		if len(typeCode) == 1 && typeCode >= "1" && typeCode <= "6" {
+			conceptFromType = typeCode
+		}
+		typeCode = "91"
+	}
+
 	concepts := req.ConceptosCorreccion
 	for i := range concepts {
 		if concepts[i].ReferenceID == "" {
 			concepts[i].ReferenceID = reference.NumeroDocumento
 		}
 		if concepts[i].Codigo == "" {
-			concepts[i].Codigo = "1"
+			if conceptFromType != "" {
+				concepts[i].Codigo = conceptFromType
+			} else {
+				concepts[i].Codigo = "1"
+			}
 		}
 		concepts[i].Descripcion = describeConceptoNotaCredito(concepts[i].Codigo)
 	}
+	if len(concepts) == 0 {
+		codigo := conceptFromType
+		if codigo == "" {
+			codigo = "2"
+		}
+		concepts = []dianCorrectionConcept{{
+			ReferenceID: reference.NumeroDocumento,
+			Codigo:      codigo,
+			Descripcion: describeConceptoNotaCredito(codigo),
+		}}
+	}
+
+	cufeEstacion, qrEstacion := stationDocumentIdentity(req.Totals)
 
 	return dianCreditNote{
 		TipoDocumento:       "NC",
 		CustomizationID:     defaultString(req.CustomizationID, "20"),
-		CreditNoteTypeCode:  defaultString(req.CreditNoteTypeCode, "91"),
-		NumeroDocumento:     fmt.Sprintf("%s%d", prefijo, numero),
-		FechaEmision:        now,
+		CreditNoteTypeCode:  defaultString(typeCode, "91"),
+		NumeroDocumento:     fmt.Sprintf("%s%d", documentPrefix, numero),
+		FechaEmision:        issuedAt,
 		Moneda:              "COP",
 		FacturaReferencia:   reference,
 		Emisor:              buildDianEmisor(emissionCtx),
@@ -2080,15 +2118,17 @@ func buildDianCreditNote(req createCreditNoteRequest, emissionCtx companyEmissio
 		Totales:             totals,
 		Observaciones:       "Nota credito generada desde Core Go y emitida por DIAN_NET",
 		Notas:               []string{},
+		Cufe:                cufeEstacion,
+		Qr:                  qrEstacion,
 		ConfiguracionDian: dianConfigDTO{
-			NumeroResolucion: emissionCtx.ResolucionDIAN,
+			NumeroResolucion: resolucion,
 			FechaResolucion:  emissionCtx.VigenciaDesde,
 			FechaInicio:      emissionCtx.VigenciaDesde,
 			FechaFin:         emissionCtx.VigenciaHasta,
-			Prefijo:          prefijo,
+			Prefijo:          documentPrefix,
 			RangoInicio:      strconv.FormatInt(emissionCtx.RangoDesde, 10),
 			RangoFin:         strconv.FormatInt(emissionCtx.RangoHasta, 10),
-			TipoAmbiente:     dianEnvironmentCode(ambiente),
+			TipoAmbiente:     dianEnvironmentCode(documentAmbiente(ambiente, facts)),
 			SoftwareID:       defaultString(emissionCtx.DIANConfig.SoftwareID, "SOFTWARE-ID-LOCAL"),
 			Pin:              defaultString(emissionCtx.DIANConfig.Pin, "PIN-LOCAL"),
 			ClaveTecnica:     emissionCtx.ClaveTecnica,
@@ -2257,6 +2297,214 @@ func parseStoredTotals(raw json.RawMessage) storedInvoiceTotals {
 		totals.TotalImpuestos = totals.Iva
 	}
 	return totals
+}
+
+type stationFacts struct {
+	IssuedAt   time.Time
+	HasIssued  bool
+	Ambiente   string
+	Prefijo    string
+	Resolucion string
+	Base       float64
+	HasBase    bool
+	Subtotal   float64
+	HasSubtotal bool
+	Tax        float64
+	HasTax     bool
+	Propina    float64
+	HasTip     bool
+	Total      float64
+	HasTotal   bool
+}
+
+func stationCommercialData(raw json.RawMessage) stationFacts {
+	var facts stationFacts
+	if len(raw) == 0 || !json.Valid(raw) {
+		return facts
+	}
+	var root map[string]any
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return facts
+	}
+	nested, _ := root["simphony_json"].(map[string]any)
+	if issued, ok := parseIssueTime(firstJSONString(root, nested, "fecha_hora", "fechaHora", "CreditNoteInvoiceDate")); ok {
+		facts.IssuedAt = issued
+		facts.HasIssued = true
+	}
+	facts.Ambiente = firstJSONString(root, nested, "tipo_ambiente", "tipoAmbiente", "ambiente")
+	facts.Prefijo = firstJSONString(root, nested, "prefijo", "Prefijo")
+	facts.Resolucion = firstJSONString(root, nested, "resolucion", "Resolucion")
+	if value, ok := firstJSONNumber(root, nested, "base", "Base"); ok {
+		facts.Base = value
+		facts.HasBase = true
+	}
+	if value, ok := firstJSONNumber(root, nested, "subtotal", "Subtotal"); ok {
+		facts.Subtotal = value
+		facts.HasSubtotal = true
+	}
+	if value, ok := firstJSONNumber(root, nested, "inc", "INC", "total_impuestos"); ok {
+		facts.Tax = value
+		facts.HasTax = true
+	}
+	if value, ok := firstJSONNumber(root, nested, "propina"); ok {
+		facts.Propina = value
+		facts.HasTip = true
+	}
+	if value, ok := firstJSONNumber(root, nested, "total", "Total"); ok {
+		facts.Total = value
+		facts.HasTotal = true
+	}
+	return facts
+}
+
+func applyStationTotals(totals *dianTotals, facts stationFacts) {
+	if facts.HasBase {
+		totals.Subtotal = facts.Base
+	} else if facts.HasSubtotal && facts.Subtotal < totals.Subtotal {
+		totals.Subtotal = facts.Subtotal
+	}
+	if facts.HasTax {
+		totals.TotalImpuestos = facts.Tax
+	}
+	if facts.HasTip {
+		totals.Propina = facts.Propina
+	}
+	if facts.HasTotal {
+		totals.Total = facts.Total
+		return
+	}
+	if facts.HasTip && totals.Total <= totals.Subtotal+totals.TotalImpuestos {
+		totals.Total = totals.Subtotal + totals.TotalImpuestos + totals.Propina
+	}
+}
+
+func documentIssueTime(facts stationFacts) time.Time {
+	if facts.HasIssued {
+		return facts.IssuedAt
+	}
+	return nowColombia()
+}
+
+func documentAmbiente(fallback string, facts stationFacts) string {
+	if strings.TrimSpace(facts.Ambiente) == "" {
+		return fallback
+	}
+	return resolveDianAmbiente(facts.Ambiente)
+}
+
+func emissionAmbiente(requestAmbiente, configAmbiente string) string {
+	if strings.TrimSpace(requestAmbiente) != "" {
+		return resolveDianAmbiente(requestAmbiente)
+	}
+	return resolveDianAmbiente(configAmbiente)
+}
+
+func parseIssueTime(value string) (time.Time, bool) {
+	text := strings.TrimSpace(value)
+	if text == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05Z07:00", "2006-01-02T15:04:05", "02/01/2006"} {
+		if parsed, err := time.Parse(layout, text); err == nil {
+			return parsed, true
+		}
+	}
+	return time.Time{}, false
+}
+
+func firstJSONString(root, nested map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if text := jsonString(root[key]); text != "" {
+			return text
+		}
+		if text := jsonString(nested[key]); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func firstJSONNumber(root, nested map[string]any, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		if value, ok := jsonNumber(root[key]); ok {
+			return value, true
+		}
+		if value, ok := jsonNumber(nested[key]); ok {
+			return value, true
+		}
+	}
+	return 0, false
+}
+
+func jsonString(value any) string {
+	text, ok := value.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(text)
+}
+
+func jsonNumber(value any) (float64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		if typed > 0 {
+			return typed, true
+		}
+	case string:
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
+		if err == nil && parsed > 0 {
+			return parsed, true
+		}
+	}
+	return 0, false
+}
+
+func stationDocumentIdentity(raw json.RawMessage) (string, string) {
+	if len(raw) == 0 || !json.Valid(raw) {
+		return "", ""
+	}
+	var payload struct {
+		Cufe         string `json:"cufe_estacion"`
+		CufePlano    string `json:"cufe"`
+		QR           string `json:"qr_estacion"`
+		QRPlano      string `json:"qr"`
+		SimphonyJSON struct {
+			Cufe string `json:"cufe"`
+			QR   string `json:"qr"`
+		} `json:"simphony_json"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return "", ""
+	}
+	cufe := firstNonEmpty(payload.Cufe, payload.CufePlano, payload.SimphonyJSON.Cufe)
+	qr := firstNonEmpty(payload.QR, payload.QRPlano, payload.SimphonyJSON.QR)
+	if cufe == "" {
+		cufe = documentKeyFromQR(qr)
+	}
+	return strings.TrimSpace(cufe), strings.TrimSpace(qr)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if text := strings.TrimSpace(value); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func documentKeyFromQR(qr string) string {
+	const marker = "documentkey="
+	lower := strings.ToLower(qr)
+	index := strings.Index(lower, marker)
+	if index < 0 {
+		return ""
+	}
+	value := qr[index+len(marker):]
+	if cut := strings.IndexAny(value, "&# "); cut >= 0 {
+		value = value[:cut]
+	}
+	return strings.TrimSpace(value)
 }
 
 func ensureItemTaxes(items []invoiceItem, totalsJSON json.RawMessage) []invoiceItem {

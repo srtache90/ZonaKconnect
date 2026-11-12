@@ -21,6 +21,8 @@ class IngestInvoiceMapperPosTest {
         String json = """
                 {
                   "numero_factura": 1,
+                  "cufe": "566a8126f1196ae734d8131415e4b1f5188a4b767cfaf6b98ba3dfa37fbe39d2",
+                  "qr": "https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=566a8126f1196ae734d8131415e4b1f5188a4b767cfaf6b98ba3dfa37fbe39d2",
                   "numero_ticket": "34770",
                   "check_id": "HPL000019389",
                   "caja_wsid": "17401",
@@ -39,15 +41,16 @@ class IngestInvoiceMapperPosTest {
 
         assertEquals("CONSUMIDOR FINAL", dto.customer().businessName());
         assertEquals("222222222222", dto.customer().identificationNumber());
-        assertEquals(3, dto.items().size());
+        assertEquals(2, dto.items().size());
         assertEquals("ClubColombia", dto.items().get(0).description());
         assertEquals(new BigDecimal("4"), dto.items().get(0).quantity());
-        assertEquals("Propina", dto.items().get(2).description());
-        assertEquals(new BigDecimal("13611.00"), dto.items().get(2).unitPrice());
 
         @SuppressWarnings("unchecked")
         Map<String, Object> totals = (Map<String, Object>) dto.totals();
+        assertEquals(0, new BigDecimal("13611.00").compareTo(new BigDecimal(totals.get("propina").toString())));
         assertEquals("POS", totals.get("origen"));
+        assertEquals("566a8126f1196ae734d8131415e4b1f5188a4b767cfaf6b98ba3dfa37fbe39d2", totals.get("cufe_estacion"));
+        assertTrue(totals.get("qr_estacion").toString().contains("documentkey=566a8126"));
         assertEquals("34770", totals.get("numero_ticket"));
         assertEquals("17401", totals.get("caja_wsid"));
         assertEquals(new BigDecimal("160611.00"), totals.get("total"));
@@ -168,7 +171,7 @@ class IngestInvoiceMapperPosTest {
         PosTicketRequest ticket = objectMapper.readValue(json, PosTicketRequest.class);
         CreateInvoiceRequestDTO dto = mapper.fromPos(ticket);
 
-        assertEquals(4, dto.items().size());
+        assertEquals(3, dto.items().size());
         assertEquals(new BigDecimal("18519.00"), dto.items().get(0).taxes().get(0).taxableBase());
         assertEquals(new BigDecimal("1481.00"), dto.items().get(0).taxes().get(0).amount());
         assertEquals("04", dto.items().get(0).taxes().get(0).code());
@@ -177,8 +180,9 @@ class IngestInvoiceMapperPosTest {
         assertEquals(new BigDecimal("430.00"), dto.items().get(1).taxes().get(0).amount());
         assertEquals(new BigDecimal("9074.00"), dto.items().get(2).taxes().get(0).taxableBase());
         assertEquals(new BigDecimal("726.00"), dto.items().get(2).taxes().get(0).amount());
-        assertEquals("Propina", dto.items().get(3).description());
-        assertTrue(dto.items().get(3).taxes() == null || dto.items().get(3).taxes().isEmpty());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> totals = (Map<String, Object>) dto.totals();
+        assertEquals(0, new BigDecimal("3296").compareTo(new BigDecimal(totals.get("propina").toString())));
     }
 
     @Test
@@ -221,5 +225,38 @@ class IngestInvoiceMapperPosTest {
         assertTrue(dto.facturaReferencia().fechaEmision().startsWith("2026-08-23T"));
         assertEquals("2", dto.conceptosCorreccion().get(0).codigo());
         assertEquals("SKU-A1", dto.items().get(0).code());
+    }
+
+    @Test
+    void fromPosCreditNoteTreatsStationCodeAsCorrectionConcept() throws Exception {
+        String json = """
+                {
+                  "tipo_documento": "NC",
+                  "credit_note_type_code": "2",
+                  "CreditNoteReason": "PRUEBA",
+                  "CreditNoteInvoiceDate": "09/11/2026",
+                  "propina": 4019,
+                  "cliente": {
+                    "razon_social": "CONSUMIDOR FINAL",
+                    "tipo_identificacion": "13",
+                    "numero_identificacion": "2222222222"
+                  },
+                  "items": [
+                    {"codigo": "200001", "descripcion": "AgPanna1000Pet", "cantidad": "1", "precio": "18519", "descuento": "0"}
+                  ],
+                  "factura_referencia": {
+                    "numeroDocumento": "SETP990000031",
+                    "cufe": "cufe-estacion"
+                  }
+                }
+                """;
+        PosTicketRequest ticket = objectMapper.readValue(json, PosTicketRequest.class);
+        CreateCreditNoteRequestDTO dto = mapper.fromPosCreditNote(ticket);
+
+        assertEquals("91", dto.creditNoteTypeCode());
+        assertEquals("2", dto.conceptosCorreccion().get(0).codigo());
+        assertEquals("PRUEBA", dto.conceptosCorreccion().get(0).descripcion());
+        assertTrue(dto.facturaReferencia().fechaEmision().startsWith("2026-11-09T"));
+        assertEquals(1, dto.items().size());
     }
 }

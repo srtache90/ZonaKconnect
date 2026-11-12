@@ -30,6 +30,10 @@ namespace DIAN_NET.Models
         // Información adicional
         public string Observaciones { get; set; }
         public List<string> Notas { get; set; } = new List<string>();
+
+        // Identificador calculado e impreso por la estación. Si viene, no se recalcula.
+        public string Cufe { get; set; }
+        public string Qr { get; set; }
         
         // Configuración DIAN
         public ConfiguracionDianDto ConfiguracionDian { get; set; }

@@ -524,15 +524,21 @@ namespace DIAN_NET.Services
 
         private XElement CrearLegalMonetaryTotal(TotalesDto totales, List<ItemDto> items)
         {
-            var lineExtension = (items ?? new List<ItemDto>()).Sum(i => i.Subtotal);
+            var lineExtension = totales?.Subtotal > 0
+                ? totales.Subtotal
+                : (items ?? new List<ItemDto>()).Sum(i => i.Subtotal);
             var propina = totales?.Propina ?? 0m;
             var impuestos = (items ?? new List<ItemDto>())
                 .SelectMany(i => i.Impuestos ?? new List<ImpuestoDto>())
                 .ToList();
-            var taxAmount = impuestos.Where(i => !i.EsRetencion).Sum(i => i.Valor);
+            var taxAmount = totales?.TotalImpuestos > 0
+                ? totales.TotalImpuestos
+                : impuestos.Where(i => !i.EsRetencion).Sum(i => i.Valor);
             var withholdingAmount = impuestos.Where(i => i.EsRetencion).Sum(i => i.Valor);
             var taxInclusive = lineExtension + taxAmount;
-            var payable = taxInclusive + propina - withholdingAmount;
+            var payable = totales?.Total > 0
+                ? totales.Total
+                : taxInclusive + propina - withholdingAmount;
 
             var monetaryTotal = new XElement(XName.Get("LegalMonetaryTotal", CAC_NAMESPACE));
             monetaryTotal.Add(new XElement(XName.Get("LineExtensionAmount", CBC_NAMESPACE),
@@ -672,6 +678,11 @@ namespace DIAN_NET.Services
 
         private static void RecalcularTotalesFactura(FacturaDto factura)
         {
+            if (factura.Totales != null && factura.Totales.Subtotal > 0 && factura.Totales.Total > 0)
+            {
+                return;
+            }
+
             var items = factura.Items ?? new List<ItemDto>();
             var subtotal = items.Sum(i => i.Subtotal);
             var impuestos = items.SelectMany(i => i.Impuestos ?? Enumerable.Empty<ImpuestoDto>()).ToList();
@@ -877,7 +888,7 @@ namespace DIAN_NET.Services
             }
 
             notaCredito.CustomizationID = Default(notaCredito.CustomizationID, "20");
-            notaCredito.CreditNoteTypeCode = Default(notaCredito.CreditNoteTypeCode, "91");
+            notaCredito.CreditNoteTypeCode = "91";
             notaCredito.Moneda = Default(notaCredito.Moneda, "COP");
             notaCredito.ConfiguracionDian ??= new ConfiguracionDianDto();
 
@@ -1002,6 +1013,11 @@ namespace DIAN_NET.Services
             creditNote.Add(CrearAccountingSupplierParty(notaCredito.Emisor, notaCredito.ConfiguracionDian.Prefijo));
             creditNote.Add(CrearAccountingCustomerParty(notaCredito.Cliente));
             creditNote.Add(CrearPaymentMeans(notaCredito.FechaEmision));
+
+            if (notaCredito.Totales?.Propina > 0)
+            {
+                creditNote.Add(CrearAllowanceChargePropina(notaCredito.Totales.Propina));
+            }
 
             foreach (var taxTotal in CrearTaxTotals(notaCredito.Items, incluirRetenciones: true))
             {
