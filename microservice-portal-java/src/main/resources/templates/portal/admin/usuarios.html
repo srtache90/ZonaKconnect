@@ -1,357 +1,1561 @@
 ﻿<!doctype html>
 <html class="light" lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios y roles | Zona K e-Docs')}"></th:block>
-        <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zona K e-Docs</title>
+    <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios y Control de Acceso | Zona K e-Docs')}"></th:block>
     <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
-    <style>
-        .role-badge-ADMIN { background: #eef1f5; color: #101b2b; }
-        .role-badge-EMISOR { background: #e8e8e8; color: #12283f; }
-        .role-badge-RECEPTOR { background: #e8f5e9; color: #1b5e20; }
-        .role-badge-CONSULTA { background: #fff8e1; color: #f57f17; }
-        .role-badge-OPERADOR { background: #eceff1; color: #37474f; }
-        .perm-yes { color: #1b5e20; font-weight: 600; }
-        .perm-no { color: #9e9e9e; }
-
-        .users-admin-page .zk-card,
-        .users-admin-page .zk-filter-card {
-            width: auto;
-            min-width: 0;
-            height: auto;
-            left: auto;
-            padding: 0;
-        }
-
-        .users-admin-page .zk-filter-card {
-            padding: 1rem;
-        }
-
-        .users-admin-page .user-form-card .card-body {
-            padding: 1.25rem;
-        }
-
-        .users-admin-page .user-form-card h2 {
-            font-size: 1.15rem;
-            line-height: 1.35;
-            letter-spacing: 0;
-        }
-
-        .users-admin-page .user-form-card .form-label {
-            margin-bottom: .35rem;
-            font-size: .875rem;
-            font-weight: 600;
-        }
-
-        .users-admin-page .user-form-card .form-control,
-        .users-admin-page .user-form-card .form-select {
-            min-height: 2.5rem;
-            padding: .5rem .75rem;
-            font-size: .9rem;
-        }
-
-        .users-admin-page .user-form-card select[multiple] {
-            min-height: 10rem;
-            color: #202124 !important;
-            background-color: #fff !important;
-            font-size: .95rem !important;
-            line-height: 1.45;
-        }
-
-        .users-admin-page .user-form-card select[multiple] option {
-            padding: .3rem .45rem;
-            color: #202124;
-            background-color: #fff;
-        }
-
-        .users-admin-page .user-form-card select[multiple] option:checked {
-            color: #172033;
-            background: #dce8f5 linear-gradient(0deg, #dce8f5 0%, #dce8f5 100%);
-        }
-
-        .users-admin-page .user-form-card .form-text {
-            margin-top: .35rem;
-            font-size: .75rem;
-            line-height: 1.4;
-        }
-
-        .users-admin-page .user-form-card .user-form-actions {
-            padding-top: .25rem;
-        }
-
-        @media (max-width: 767.98px) {
-            .users-admin-page .user-form-card .card-body {
-                padding: 1rem;
-            }
-        }
-    </style>
+    <meta name="description" content="Administración de usuarios, roles RBAC, sociedades y alcance por punto de venta en Zona K e-Docs.">
+    <link rel="stylesheet" th:href="@{/css/usuarios-admin.css?v=20261112-users1}" href="/css/usuarios-admin.css">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: header}"></div>
 
-<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop users-admin-page">
-    <div class="mb-5">
-        <p class="dc-page-subtitle mb-1">Configuración / Acceso</p>
-        <h1 class="dc-page-title">Usuarios y roles</h1>
-        <p class="dc-page-subtitle">
-            Alta de operadores, rol por capacidad (emisión / recepción / consulta), sociedades multi-tenant
-            y alcance por punto de venta.
-        </p>
-    </div>
+<main class="dc-page dc-page-wide px-margin-mobile md:px-margin-desktop">
+    <div class="usr-page">
 
-    <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
-    <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
+        <div class="alert alert-success rounded-4" th:if="${success != null}" th:text="${success}"></div>
+        <div class="alert alert-danger rounded-4" th:if="${error != null}" th:text="${error}"></div>
 
-    <section class="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <div class="zk-filter-card p-3">
-            <div class="small text-muted mb-1">ADMIN</div>
-            <div class="fw-semibold mb-1">Administración</div>
-            <p class="small text-muted mb-0">Sociedades, PV, certificados, usuarios y toda la configuración.</p>
-        </div>
-        <div class="zk-filter-card p-3">
-            <div class="small text-muted mb-1">EMISOR</div>
-            <div class="fw-semibold mb-1">Emisión</div>
-            <p class="small text-muted mb-0">Facturas, NC/ND y reportes de emisión en sus sociedades/PV.</p>
-        </div>
-        <div class="zk-filter-card p-3">
-            <div class="small text-muted mb-1">RECEPTOR</div>
-            <div class="fw-semibold mb-1">Recepción</div>
-            <p class="small text-muted mb-0">Bandeja RADIAN, eventos 085–088, asignación de punto y sync correo.</p>
-        </div>
-        <div class="zk-filter-card p-3">
-            <div class="small text-muted mb-1">CONSULTA</div>
-            <div class="fw-semibold mb-1">Solo lectura</div>
-            <p class="small text-muted mb-0">Ve recepción e histórico; no transmite eventos ni muta datos.</p>
-        </div>
-    </section>
+        <!-- ============================================================
+             VISTA 1 — HUB DE USUARIOS Y CONTROL DE ACCESO
+             ============================================================ -->
+        <section class="usr-view" id="usersHub">
 
-    <section class="card zk-card mb-4">
-        <div class="card-body p-0">
-            <div class="px-4 py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="usr-top">
                 <div>
-                    <h2 class="h5 mb-0">Matriz de capacidades</h2>
-                    <p class="small text-muted mb-0">Qué puede hacer cada rol en el portal.</p>
+                    <p class="usr-crumbs">
+                        Configuración
+                        <span aria-hidden="true">/</span>
+                        <strong>Usuarios y Permisos</strong>
+                        <span class="usr-crumbs-chip">RBAC</span>
+                    </p>
+                    <h1 class="usr-title">Usuarios y Control de Acceso</h1>
+                    <p class="usr-sub">
+                        Directorio ejecutivo de operadores, roles por capacidad DIAN, alcance multi-sociedad
+                        y control por punto de venta.
+                    </p>
                 </div>
-                <a class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                   th:href="@{/portal/admin/proveedores-punto}">Proveedor → Punto</a>
+                <div class="usr-top-actions">
+                    <span class="usr-status-pill">
+                        <span class="usr-dot" aria-hidden="true"></span>
+                        Multi-Tenant RBAC Activo
+                    </span>
+                    <a class="usr-btn usr-btn-ghost" th:href="@{/portal/admin/proveedores-punto}" href="/portal/admin/proveedores-punto">
+                        <span class="material-symbols-outlined" aria-hidden="true">route</span>
+                        Proveedor → Punto
+                    </a>
+                    <button type="button" class="usr-btn usr-btn-ghost" onclick="abrirMatriz()">
+                        <span class="material-symbols-outlined" aria-hidden="true">table_view</span>
+                        Matriz de Permisos
+                    </button>
+                    <button type="button" class="usr-btn usr-btn-primary" onclick="nuevoUsuario()">
+                        <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+                        Nuevo Usuario
+                    </button>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 small">
-                    <thead>
-                    <tr class="text-muted text-uppercase">
-                        <th>Capacidad</th>
-                        <th class="text-center">ADMIN</th>
-                        <th class="text-center">EMISOR</th>
-                        <th class="text-center">RECEPTOR</th>
-                        <th class="text-center">CONSULTA</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td>Configuración / sociedades / certificados</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-no">—</td>
-                        <td class="text-center perm-no">—</td>
-                        <td class="text-center perm-no">—</td>
-                    </tr>
-                    <tr>
-                        <td>Emitir FE / NC / ND</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-no">—</td>
-                        <td class="text-center perm-no">—</td>
-                    </tr>
-                    <tr>
-                        <td>Ver bandeja de recepción</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-no">—</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-yes">Sí</td>
-                    </tr>
-                    <tr>
-                        <td>Transmitir eventos RADIAN / asignar PV</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-no">—</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-no">—</td>
-                    </tr>
-                    <tr>
-                        <td>Alcance filtrado por punto de venta</td>
-                        <td class="text-center text-muted">Todos</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-yes">Sí</td>
-                        <td class="text-center perm-yes">Sí</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
 
-    <section class="card zk-card user-form-card mb-4">
-        <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                <div>
-                    <h2 class="h5 mb-1" id="formTitle">Crear o editar usuario</h2>
-                    <p class="small text-muted mb-0">Asigne rol, sociedades y alcance de puntos. Sin sociedades = acceso a todas.</p>
-                </div>
-                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button" onclick="limpiarFormulario()">Nuevo</button>
-            </div>
-            <form th:action="@{/portal/admin/usuarios}" method="post" class="row g-2">
-                <input type="hidden" name="id" id="usuarioId">
+            <!-- KPIs -->
+            <section class="usr-kpis" aria-label="Indicadores de usuarios y control de acceso">
+                <article class="usr-kpi">
+                    <div class="usr-kpi-icon">
+                        <span class="material-symbols-outlined" aria-hidden="true">group</span>
+                    </div>
+                    <div class="usr-kpi-body">
+                        <p class="usr-kpi-label">Total operadores</p>
+                        <div class="usr-kpi-value">
+                            <span id="kpiTotal" th:text="|${#lists.size(usuarios)} Activos|">0 Activos</span>
+                            <span class="usr-dot" aria-hidden="true"></span>
+                        </div>
+                        <p class="usr-kpi-sub">
+                            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                            Cobertura multi-tenant 100%
+                        </p>
+                    </div>
+                </article>
 
-                <div class="col-md-4">
-                    <label class="form-label" for="username">Usuario</label>
-                    <input class="form-control rounded-3" id="username" name="username" required autocomplete="username">
+                <article class="usr-kpi">
+                    <div class="usr-kpi-icon">
+                        <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+                    </div>
+                    <div class="usr-kpi-body">
+                        <p class="usr-kpi-label">Seguridad de acceso</p>
+                        <div class="usr-kpi-value">Cifrado Alto</div>
+                        <p class="usr-kpi-sub">BCrypt · PasswordEncoder verificado</p>
+                    </div>
+                </article>
+
+                <article class="usr-kpi">
+                    <div class="usr-kpi-icon">
+                        <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+                    </div>
+                    <div class="usr-kpi-body">
+                        <p class="usr-kpi-label">Roles activos</p>
+                        <div class="usr-kpi-value">4 Roles</div>
+                        <p class="usr-kpi-sub">Admin · Emisor · Receptor · Consulta</p>
+                    </div>
+                </article>
+
+                <article class="usr-kpi">
+                    <div class="usr-kpi-icon">
+                        <span class="material-symbols-outlined" aria-hidden="true">corporate_fare</span>
+                    </div>
+                    <div class="usr-kpi-body">
+                        <p class="usr-kpi-label">Alcance DIAN</p>
+                        <div class="usr-kpi-value" th:text="|${#lists.size(puntosVenta)} PV|">0 PV</div>
+                        <p class="usr-kpi-sub">Segmentación multi-sociedad</p>
+                    </div>
+                </article>
+            </section>
+
+            <!-- Buscador y filtros -->
+            <div class="usr-toolbar">
+                <div class="usr-search">
+                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                    <input type="search" id="userSearch" autocomplete="off"
+                           placeholder="Buscar por usuario, rol, sociedad o punto de venta..."
+                           oninput="aplicarFiltros()">
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="password">Contraseña</label>
-                    <input class="form-control rounded-3" id="password" name="password" type="password"
-                           autocomplete="new-password"
-                           placeholder="Obligatoria en alta; vacía conserva en edición">
+
+                <div class="usr-filter-pills" role="group" aria-label="Filtrar operadores por rol">
+                    <button type="button" class="usr-filter-pill is-active" data-filter="todos" onclick="setFiltro(this)">
+                        Todos <span id="countTodos" th:text="${#lists.size(usuarios)}">0</span>
+                    </button>
+                    <button type="button" class="usr-filter-pill" data-filter="ADMIN" onclick="setFiltro(this)">
+                        Admin <span id="countAdmin">0</span>
+                    </button>
+                    <button type="button" class="usr-filter-pill" data-filter="EMISOR" onclick="setFiltro(this)">
+                        Emisión <span id="countEmisor">0</span>
+                    </button>
+                    <button type="button" class="usr-filter-pill" data-filter="RECEPTOR" onclick="setFiltro(this)">
+                        Recepción <span id="countReceptor">0</span>
+                    </button>
+                    <button type="button" class="usr-filter-pill" data-filter="CONSULTA" onclick="setFiltro(this)">
+                        Consulta <span id="countConsulta">0</span>
+                    </button>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="rol">Rol</label>
-                    <select class="form-select rounded-3" id="rol" name="rol" required>
-                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ADMIN</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="sociedadIds">Sociedades</label>
-                    <select class="form-select rounded-3" id="sociedadIds" name="sociedadIds" multiple size="5">
+
+                <div class="usr-select-wrap">
+                    <span class="material-symbols-outlined" aria-hidden="true">corporate_fare</span>
+                    <select id="userSocietyFilter" onchange="aplicarFiltros()" aria-label="Filtrar por sociedad">
+                        <option value="">Todas las sociedades</option>
                         <option th:each="sociedad : ${sociedades}"
                                 th:value="${sociedad.id}"
-                                th:text="${sociedad.razonSocial + ' (' + sociedad.nit + ')'}">
+                                th:text="${sociedad.razonSocial}">
                             Sociedad
                         </option>
                     </select>
-                    <div class="form-text">Ctrl/Cmd + clic para múltiple. Vacío = todas las sociedades.</div>
+                    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label" for="pointScopes">Puntos de venta (alcance)</label>
-                    <select class="form-select rounded-3" id="pointScopes" name="pointScopes" multiple size="5">
-                        <option th:each="sociedad : ${sociedades}"
-                                th:value="${sociedad.id + ':*'}"
-                                th:text="${'★ Todos los PV · ' + sociedad.razonSocial}">
-                            Todos
-                        </option>
-                        <option th:each="punto : ${puntosVenta}"
-                                th:value="${punto.sociedadId + ':' + punto.id}"
-                                th:text="${punto.codigo + ' - ' + punto.nombre + ' · ' + punto.sociedadRazonSocial + ' (' + punto.prefijo + ')'}">
-                            PV
-                        </option>
-                    </select>
-                    <div class="form-text">
-                        Vacío = todos los PV de sus sociedades. Use ★ para forzar acceso total por sociedad.
+            </div>
+
+            <!-- Tarjetas de operadores -->
+            <div class="usr-cards" id="userCards" th:if="${!#lists.isEmpty(usuarios)}">
+                <article class="usr-card"
+                         th:each="usuario : ${usuarios}"
+                         th:attr="data-id=${usuario.id},
+                                  data-username=${usuario.username()},
+                                  data-rol=${usuario.rol()},
+                                  data-sociedades=${usuario.sociedadIdsCsv()},
+                                  data-sociedad-ids=${usuario.sociedadIdsCsv()},
+                                  data-puntos=${usuario.pointScopesCsv()},
+                                  data-sociedades-label=${usuario.sociedadesLabel()},
+                                  data-puntos-label=${usuario.puntosLabel()},
+                                  data-global-sociedades=${#lists.isEmpty(usuario.sociedadIds())}">
+
+                    <div class="usr-card-head">
+                        <div class="usr-avatar" aria-hidden="true">
+                            <span class="usr-avatar-text"
+                                  th:text="${#strings.length(usuario.username()) >= 2
+                                             ? #strings.toUpperCase(#strings.substring(usuario.username(), 0, 2))
+                                             : #strings.toUpperCase(usuario.username())}">US</span>
+                            <span class="usr-avatar-check">
+                                <span class="material-symbols-outlined">check</span>
+                            </span>
+                        </div>
+                        <div class="usr-identity">
+                            <h2 class="usr-card-name" th:text="${usuario.username()}">usuario</h2>
+                            <p class="usr-handle"
+                               th:text="|Acceso al portal · #${#strings.substring(usuario.id().toString(), 0, 8)}|">
+                                Acceso al portal
+                            </p>
+                        </div>
+                        <span class="usr-active" title="Cuenta habilitada en el portal">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            Activo
+                        </span>
+                    </div>
+
+                    <span class="usr-role-badge"
+                          th:classappend="${' role-' + #strings.toLowerCase(usuario.rol())}"
+                          data-role-badge>
+                        <span class="material-symbols-outlined" data-role-icon aria-hidden="true">shield_person</span>
+                        <span data-role-label
+                              th:text="${usuario.rol() == 'ADMIN'
+                                         ? 'ADMIN — CONTROL TOTAL'
+                                         : (usuario.rol() == 'EMISOR' or usuario.rol() == 'OPERADOR'
+                                            ? 'EMISOR — FACTURACIÓN Y DIAN'
+                                            : (usuario.rol() == 'RECEPTOR'
+                                               ? 'RECEPTOR — RADIAN'
+                                               : 'CONSULTA — SOLO LECTURA'))}">
+                            ADMIN — CONTROL TOTAL
+                        </span>
+                    </span>
+
+                    <div class="usr-scope-grid">
+                        <div class="usr-scope">
+                            <span class="usr-scope-label">Sociedades</span>
+                            <span class="usr-scope-value"
+                                  th:text="${#strings.isEmpty(usuario.sociedadesLabel())
+                                             ? 'Todas (Acceso Global)'
+                                             : usuario.sociedadesLabel()}">
+                                Todas (Acceso Global)
+                            </span>
+                        </div>
+                        <div class="usr-scope">
+                            <span class="usr-scope-label">Alcance PV</span>
+                            <span class="usr-scope-value" th:text="${usuario.puntosLabel()}">Todos los PV</span>
+                        </div>
+                    </div>
+
+                    <div class="usr-card-actions">
+                        <button type="button" class="usr-btn usr-btn-outline usr-btn-sm"
+                                onclick="abrirDetalle(this)">
+                            <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+                            Editar permisos
+                        </button>
+                        <button type="button" class="usr-btn usr-btn-soft usr-btn-sm"
+                                onclick="abrirDetalle(this)">
+                            Gestionar
+                            <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <div class="usr-empty" id="userEmpty" th:if="${#lists.isEmpty(usuarios)}">
+                <span class="material-symbols-outlined" aria-hidden="true">group_off</span>
+                <strong>Aún no hay operadores registrados</strong>
+                <span>Usa «Nuevo Usuario» para crear el primer operador del portal.</span>
+            </div>
+
+            <div class="usr-empty is-hidden" id="userNoResults">
+                <span class="material-symbols-outlined" aria-hidden="true">search_off</span>
+                <strong>Sin resultados</strong>
+                <span>No hay operadores que coincidan con la búsqueda o los filtros seleccionados.</span>
+            </div>
+
+            <div class="usr-security-banner">
+                <div class="usr-security-icon">
+                    <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
+                </div>
+                <div>
+                    <p class="usr-security-title">Control de acceso centralizado</p>
+                    <p class="usr-security-copy">
+                        Los roles definen capacidades DIAN; las sociedades y los puntos de venta delimitan el alcance
+                        multi-tenant. Los cambios de rol y alcance se aplican en el próximo inicio de sesión del operador.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             VISTA 2 — GESTIÓN DEDICADA DEL OPERADOR
+             ============================================================ -->
+        <section class="usr-view is-hidden" id="userDetail">
+
+            <div class="usr-detail-top">
+                <div>
+                    <button type="button" class="usr-back" onclick="volverAlDirectorio()">
+                        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                        Volver a Usuarios y Roles
+                    </button>
+                    <p class="usr-crumbs">
+                        Configuración
+                        <span aria-hidden="true">/</span>
+                        Acceso
+                        <span aria-hidden="true">/</span>
+                        <strong id="detalleCrumbNombre">Nuevo operador</strong>
+                    </p>
+                </div>
+                <div class="usr-detail-badges">
+                    <span class="usr-status-pill">
+                        <span class="usr-dot" aria-hidden="true"></span>
+                        Multi-Tenant RBAC Activo
+                    </span>
+                    <span class="usr-tenant-chip">
+                        Tenant ID: <strong id="detalleTenant">#—</strong>
+                    </span>
+                </div>
+            </div>
+
+            <div class="usr-detail-head">
+                <div class="usr-detail-id">
+                    <div class="usr-avatar usr-avatar-lg" aria-hidden="true">
+                        <span id="detalleMono">US</span>
+                        <span class="usr-avatar-check">
+                            <span class="material-symbols-outlined">check</span>
+                        </span>
+                    </div>
+                    <div class="usr-detail-id-body">
+                        <div class="usr-detail-name-row">
+                            <h2 id="detalleUsername">Nuevo operador</h2>
+                            <span class="usr-status-pill usr-status-pill-sm">
+                                <span class="usr-dot" aria-hidden="true"></span>
+                                Activo
+                            </span>
+                        </div>
+                        <p class="usr-detail-handle" id="detalleHandle">@nuevo.operador · Acceso al portal</p>
+                        <div class="usr-detail-chips">
+                            <span class="usr-role-badge role-emisor" id="detalleRolBadge">
+                                <span class="material-symbols-outlined" data-role-icon aria-hidden="true">receipt_long</span>
+                                <span data-role-label>EMISOR — FACTURACIÓN Y DIAN</span>
+                            </span>
+                            <span class="usr-scope-chip" id="detalleAcceso">
+                                <span class="material-symbols-outlined" aria-hidden="true">public</span>
+                                Cobertura global
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-12 d-flex justify-content-end gap-2 user-form-actions">
-                    <button class="btn btn-outline-secondary rounded-pill px-4" type="button" onclick="limpiarFormulario()">Limpiar</button>
-                    <button class="btn btn-zk rounded-pill px-4" type="submit">Guardar usuario</button>
+
+                <div class="usr-detail-meta">
+                    <div class="usr-session">
+                        <span class="usr-session-line">
+                            <span class="usr-dot is-muted" aria-hidden="true"></span>
+                            Sesión no monitoreada
+                        </span>
+                        <small>IP y última conexión no registradas en este esquema.</small>
+                    </div>
+                    <label class="usr-switch" for="modoEdicion">
+                        <input type="checkbox" id="modoEdicion" checked onchange="setModoEdicion(this.checked)">
+                        <span class="usr-switch-track" aria-hidden="true">
+                            <span class="usr-switch-thumb"></span>
+                        </span>
+                        <span class="usr-switch-copy">Modo edición</span>
+                    </label>
+                    <div class="usr-detail-actions">
+                        <button type="button" class="usr-btn usr-btn-outline usr-btn-sm" id="btnResetClave"
+                                onclick="resetearClave()" title="Prepara el campo para ingresar una nueva contraseña">
+                            <span class="material-symbols-outlined" aria-hidden="true">key</span>
+                            Resetear clave
+                        </button>
+                        <button type="button" class="usr-btn usr-btn-outline usr-btn-sm" id="btnAuditarSesion"
+                                disabled title="La auditoría de sesión no está disponible en este módulo">
+                            <span class="material-symbols-outlined" aria-hidden="true">manage_history</span>
+                            Auditar sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="usuarioForm" th:action="@{/portal/admin/usuarios}" method="post" novalidate>
+                <input type="hidden" name="id" id="usuarioId">
+
+                <div class="usr-alert usr-alert-danger" id="usrClientAlert" role="alert" hidden>
+                    <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                    <span id="usrClientAlertText"></span>
+                </div>
+
+                <div class="usr-tabs" role="tablist" aria-label="Configuración del operador">
+                    <button type="button" class="usr-tab is-active" id="tab-perfil" data-tab="perfil"
+                            role="tab" aria-selected="true" aria-controls="pane-perfil" onclick="selectTab(this)">
+                        <span class="usr-tab-num">1</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+                        Perfil y Credenciales
+                    </button>
+                    <button type="button" class="usr-tab" id="tab-sociedades" data-tab="sociedades"
+                            role="tab" aria-selected="false" aria-controls="pane-sociedades" tabindex="-1"
+                            onclick="selectTab(this)">
+                        <span class="usr-tab-num">2</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">corporate_fare</span>
+                        Sociedades y Tenancy
+                    </button>
+                    <button type="button" class="usr-tab" id="tab-puntos" data-tab="puntos"
+                            role="tab" aria-selected="false" aria-controls="pane-puntos" tabindex="-1"
+                            onclick="selectTab(this)">
+                        <span class="usr-tab-num">3</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">point_of_sale</span>
+                        Alcance Puntos de Venta
+                    </button>
+                    <button type="button" class="usr-tab" id="tab-dian" data-tab="dian"
+                            role="tab" aria-selected="false" aria-controls="pane-dian" tabindex="-1"
+                            onclick="selectTab(this)">
+                        <span class="usr-tab-num">4</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+                        Privilegios DIAN
+                    </button>
+                </div>
+
+                <!-- Pestaña 1: Perfil y credenciales -->
+                <div class="usr-panel is-active" id="pane-perfil" data-pane="perfil"
+                     role="tabpanel" aria-labelledby="tab-perfil" tabindex="0">
+                    <div class="usr-section-head">
+                        <div>
+                            <h3>Perfil y credenciales</h3>
+                            <p>Identidad de acceso, rol RBAC y contraseña del operador.</p>
+                        </div>
+                        <span class="usr-status-pill">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            BCrypt
+                        </span>
+                    </div>
+
+                    <div class="usr-grid-2">
+                        <div class="usr-field">
+                            <label class="usr-label" for="username">Usuario de acceso <span class="req">*</span></label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">person</span>
+                                <input class="usr-input" id="username" name="username" required
+                                       autocomplete="username" maxlength="80">
+                            </div>
+                            <p class="usr-help">Identidad principal con la que el operador inicia sesión.</p>
+                        </div>
+
+                        <div class="usr-field">
+                            <label class="usr-label" for="rol">Rol RBAC <span class="req">*</span></label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">admin_panel_settings</span>
+                                <select class="usr-select" id="rol" name="rol" required onchange="onRolChange()">
+                                    <option th:each="r : ${roles}"
+                                            th:value="${r}"
+                                            th:text="${r == 'ADMIN'
+                                                       ? 'ADMIN — Control total'
+                                                       : (r == 'EMISOR'
+                                                          ? 'EMISOR — Facturación y DIAN'
+                                                          : (r == 'RECEPTOR'
+                                                             ? 'RECEPTOR — RADIAN'
+                                                             : 'CONSULTA — Solo lectura'))}">
+                                        EMISOR — Facturación y DIAN
+                                    </option>
+                                </select>
+                                <span class="material-symbols-outlined usr-select-arrow" aria-hidden="true">expand_more</span>
+                            </div>
+                            <p class="usr-help">El rol determina las capacidades DIAN y de facturación.</p>
+                        </div>
+
+                        <div class="usr-field usr-field-full">
+                            <label class="usr-label" for="password">Contraseña</label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">lock</span>
+                                <input class="usr-input usr-input-password" id="password" name="password"
+                                       type="password" autocomplete="new-password"
+                                       placeholder="Conservar actual o ingresar nueva">
+                                <button type="button" class="usr-eye" id="togglePassword"
+                                        onclick="togglePasswordVisibility()" aria-label="Mostrar u ocultar contraseña">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                            <p class="usr-help">
+                                En alta es obligatoria. En edición, déjala vacía para conservar la contraseña actual.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="usr-form-note">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span>
+                            Este esquema autentica por usuario y no almacena correo corporativo ni estado de sesión.
+                            Los campos visibles respetan el contrato actual del formulario.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Pestaña 2: Sociedades y tenancy -->
+                <div class="usr-panel" id="pane-sociedades" data-pane="sociedades"
+                     role="tabpanel" aria-labelledby="tab-sociedades" tabindex="0">
+                    <div class="usr-section-head">
+                        <div>
+                            <h3>Sociedades asignadas y tenancy</h3>
+                            <p>Define el perímetro multi-sociedad del operador dentro del portal.</p>
+                        </div>
+                        <span class="usr-status-pill">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            Acceso Global / Multi-Tenant
+                        </span>
+                    </div>
+
+                    <label class="usr-global-box" for="accesoTodasSociedades">
+                        <input type="checkbox" id="accesoTodasSociedades" checked onchange="onGlobalSociedadesChange()">
+                        <span class="usr-global-icon">
+                            <span class="material-symbols-outlined" aria-hidden="true">public</span>
+                        </span>
+                        <span class="usr-global-copy">
+                            <strong>Acceso global a todas las sociedades</strong>
+                            <small>El operador hereda el alcance completo del tenant. Desactívalo para asignar sociedades específicas.</small>
+                        </span>
+                    </label>
+
+                    <div class="usr-soc-grid">
+                        <label class="usr-check-card"
+                               th:each="sociedad, iter : ${sociedades}"
+                               th:attr="data-sociedad-card=${sociedad.id}">
+                            <input type="checkbox" class="usr-check-input" name="sociedadIds"
+                                   th:value="${sociedad.id}" onchange="onSociedadChange()">
+                            <span class="usr-check-box" aria-hidden="true">
+                                <span class="material-symbols-outlined">check</span>
+                            </span>
+                            <span class="usr-check-copy">
+                                <span class="usr-check-title" th:text="${sociedad.razonSocial}">Sociedad</span>
+                                <span class="usr-check-sub"
+                                      th:text="|NIT ${sociedad.nit} · DIAN ${sociedad.dianAmbiente != null and !#strings.isEmpty(sociedad.dianAmbiente) ? sociedad.dianAmbiente : 'No configurada'}|">
+                                    NIT · DIAN
+                                </span>
+                                <span class="usr-check-badge" th:if="${iter.index == 0}">Principal</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="usr-form-note">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span>
+                            Sin sociedades seleccionadas el usuario obtiene acceso global. Al desactivar el acceso global
+                            se preseleccionan todas las sociedades para que puedas ajustar el perímetro.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Pestaña 3: Alcance de puntos de venta -->
+                <div class="usr-panel" id="pane-puntos" data-pane="puntos"
+                     role="tabpanel" aria-labelledby="tab-puntos" tabindex="0">
+                    <div class="usr-section-head">
+                        <div>
+                            <h3>Alcance de Puntos de Venta (PV)</h3>
+                            <p>Delimita los puntos operativos que el usuario puede consultar, emitir o sincronizar.</p>
+                        </div>
+                        <span class="usr-status-pill">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            Segmentación por PV
+                        </span>
+                    </div>
+
+                    <label class="usr-global-box" for="accesoTodosPuntos">
+                        <input type="checkbox" id="accesoTodosPuntos" checked onchange="onGlobalPuntosChange()">
+                        <span class="usr-global-icon">
+                            <span class="material-symbols-outlined" aria-hidden="true">star</span>
+                        </span>
+                        <span class="usr-global-copy">
+                            <strong>Todos los Puntos de Venta (Acceso Ilimitado)</strong>
+                            <small>El usuario puede operar y sincronizar con cualquier PV de sus sociedades asignadas.</small>
+                        </span>
+                    </label>
+
+                    <div class="usr-pv-groups" id="usrPvGroups">
+                        <div class="usr-pv-group"
+                             th:each="sociedad : ${sociedades}"
+                             th:attr="data-sociedad-group=${sociedad.id}">
+                            <div class="usr-pv-head">
+                                <div class="usr-pv-society">
+                                    <h4 th:text="${sociedad.razonSocial}">Sociedad</h4>
+                                    <p>
+                                        NIT <span th:text="${sociedad.nit}">900.000.000-0</span>
+                                        ·
+                                        <span data-pv-count>0</span> PV
+                                    </p>
+                                </div>
+                                <label class="usr-all-points">
+                                    <input type="checkbox" class="usr-pv-all" name="pointScopes"
+                                           th:value="${sociedad.id + ':*'}"
+                                           onchange="onTodosPuntosSociedad(this)">
+                                    <span>★ Todos los PV de esta sociedad</span>
+                                </label>
+                            </div>
+
+                            <div class="usr-pv-grid">
+                                <label class="usr-pv-card"
+                                       th:each="punto : ${puntosVenta}"
+                                       th:if="${punto.sociedadId == sociedad.id}"
+                                       th:attr="data-sociedad-pv=${sociedad.id}">
+                                    <input type="checkbox" class="usr-pv-check" name="pointScopes"
+                                           th:value="${sociedad.id + ':' + punto.id}"
+                                           onchange="onPuntoChange(this)">
+                                    <span class="usr-pv-check-box" aria-hidden="true">
+                                        <span class="material-symbols-outlined">check</span>
+                                    </span>
+                                    <span class="usr-pv-copy">
+                                        <span class="usr-pv-code" th:text="${punto.codigo}">PV-001</span>
+                                        <span class="usr-pv-name" th:text="${punto.nombre}">Punto de venta</span>
+                                        <span class="usr-pv-meta"
+                                              th:text="|${punto.prefijo} · ${punto.direccion != null and !#strings.isEmpty(punto.direccion) ? punto.direccion : 'Sin dirección registrada'}|">
+                                            FE · Dirección
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="usr-pv-empty" th:if="${#lists.isEmpty(puntosVenta)}">
+                        Aún no hay puntos de venta registrados. El alcance «Todos los PV» cubrirá los puntos que se creen a futuro.
+                    </div>
+
+                    <div class="usr-form-note">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span>
+                            Si no se envía ningún alcance de PV, el backend interpreta acceso total a los puntos de las
+                            sociedades asignadas. Usa «Todos los PV de esta sociedad» o selecciona puntos específicos.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Pestaña 4: Privilegios DIAN -->
+                <div class="usr-panel" id="pane-dian" data-pane="dian"
+                     role="tabpanel" aria-labelledby="tab-dian" tabindex="0">
+                    <div class="usr-section-head">
+                        <div>
+                            <h3>Resumen de Privilegios DIAN y Facturación</h3>
+                            <p>Capacidades derivadas del rol RBAC seleccionado. No se envían como campos del formulario.</p>
+                        </div>
+                        <span class="usr-status-pill">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            Derivado del rol
+                        </span>
+                    </div>
+
+                    <div class="usr-perm-grid">
+                        <div class="usr-perm-pill is-on" id="permEmision">
+                            <span class="usr-perm-icon">
+                                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                            </span>
+                            <span class="usr-perm-copy">
+                                <strong>Emisión FE / NC / ND</strong>
+                                <small>Habilitado con certificado</small>
+                            </span>
+                        </div>
+
+                        <div class="usr-perm-pill is-on" id="permRecepcion">
+                            <span class="usr-perm-icon">
+                                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                            </span>
+                            <span class="usr-perm-copy">
+                                <strong>Recepción RADIAN</strong>
+                                <small>Habilitado / acuses de ley</small>
+                            </span>
+                        </div>
+
+                        <div class="usr-perm-pill is-on" id="permCertificados">
+                            <span class="usr-perm-icon">
+                                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                            </span>
+                            <span class="usr-perm-copy">
+                                <strong>Certificados y llaves</strong>
+                                <small>Habilitado / gestión .P12</small>
+                            </span>
+                        </div>
+
+                        <div class="usr-perm-pill is-on" id="permDescarga">
+                            <span class="usr-perm-icon">
+                                <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                            </span>
+                            <span class="usr-perm-copy">
+                                <strong>Descarga XML / PDF</strong>
+                                <small>Habilitado sin restricción</small>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="usr-form-note">
+                        <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                        <span>
+                            Los privilegios mostrados son informativos y se calculan a partir del rol. El contrato de
+                            guardado permanece en los campos <strong>username</strong>, <strong>password</strong>,
+                            <strong>rol</strong>, <strong>sociedadIds</strong> y <strong>pointScopes</strong>.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="usr-actionbar">
+                    <div class="usr-actionbar-info">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <span>Edición en curso: los cambios de rol y alcance aplicarán en el próximo inicio de sesión.</span>
+                    </div>
+                    <div class="usr-actionbar-actions">
+                        <button type="button" class="usr-bar-btn" onclick="descartarCambios()">
+                            Descartar cambios
+                        </button>
+                        <button type="button" class="usr-bar-btn" id="btnValidarPermisos" onclick="validarPermisos()">
+                            <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+                            Validar permisos
+                        </button>
+                        <button type="submit" class="usr-bar-btn primary" id="btnGuardarUsuario">
+                            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                            Guardar cambios de <strong id="guardarUsuarioNombre">NUEVO OPERADOR</strong>
+                        </button>
+                    </div>
                 </div>
             </form>
-        </div>
-    </section>
-
-    <section class="card zk-card">
-        <div class="card-body p-0">
-            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom flex-wrap gap-2">
-                <div>
-                    <h2 class="h5 mb-0">Usuarios registrados</h2>
-                    <p class="small text-muted mb-0">Rol, sociedades y alcance de puntos vigentes.</p>
-                </div>
-                <span class="badge rounded-pill text-bg-light border zk-data"
-                      th:text="'Total: ' + ${#lists.size(usuarios)}">Total: 0</span>
-            </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                    <tr class="text-muted small text-uppercase">
-                        <th class="ps-4">Usuario</th>
-                        <th>Rol</th>
-                        <th>Sociedades</th>
-                        <th>Alcance PV</th>
-                        <th class="text-end pe-4">Acción</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="usuario : ${usuarios}">
-                        <td class="ps-4">
-                            <div class="fw-semibold" th:text="${usuario.username()}">admin</div>
-                        </td>
-                        <td>
-                            <span class="badge rounded-pill px-3 py-2"
-                                  th:classappend="' role-badge-' + ${usuario.rol()}"
-                                  th:text="${usuario.rol()}">ADMIN</span>
-                        </td>
-                        <td>
-                            <span class="small"
-                                  th:text="${#strings.isEmpty(usuario.sociedadesLabel()) ? 'Todas las sociedades' : usuario.sociedadesLabel()}">
-                                Todas
-                            </span>
-                        </td>
-                        <td>
-                            <span class="small" th:text="${usuario.puntosLabel()}">Todos</span>
-                        </td>
-                        <td class="text-end pe-4">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-dark rounded-pill px-3"
-                                    th:attr="data-id=${usuario.id()},
-                                             data-username=${usuario.username()},
-                                             data-rol=${usuario.rol()},
-                                             data-sociedades=${usuario.sociedadIdsCsv()},
-                                             data-puntos=${usuario.pointScopesCsv()}"
-                                    onclick="editarUsuario(this)">
-                                Editar
-                            </button>
-                        </td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(usuarios)}">
-                        <td colspan="5" class="text-center text-muted py-5">No hay usuarios registrados.</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
+        </section>
+    </div>
 </main>
 
-<script>
-    function limpiarFormulario() {
-        document.getElementById('usuarioId').value = '';
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
-        document.getElementById('rol').value = 'EMISOR';
-        document.getElementById('formTitle').textContent = 'Crear usuario';
-        Array.from(document.getElementById('sociedadIds').options).forEach(opt => opt.selected = false);
-        Array.from(document.getElementById('pointScopes').options).forEach(opt => opt.selected = false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function editarUsuario(button) {
-        document.getElementById('usuarioId').value = button.dataset.id || '';
-        document.getElementById('username').value = button.dataset.username || '';
-        document.getElementById('password').value = '';
-        let rol = button.dataset.rol || 'EMISOR';
-        if (rol === 'OPERADOR') {
-            rol = 'EMISOR';
-        }
-        document.getElementById('rol').value = rol;
-        document.getElementById('formTitle').textContent = 'Editar usuario: ' + (button.dataset.username || '');
-        const selectedSoc = (button.dataset.sociedades || '').split(',').map(v => v.trim()).filter(Boolean);
-        Array.from(document.getElementById('sociedadIds').options).forEach(opt => {
-            opt.selected = selectedSoc.includes(opt.value);
-        });
-        const selectedPts = (button.dataset.puntos || '').split(',').map(v => v.trim()).filter(Boolean);
-        Array.from(document.getElementById('pointScopes').options).forEach(opt => {
-            opt.selected = selectedPts.includes(opt.value);
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-</script>
 <div th:replace="~{portal/fragments/portal-nav :: bottomNav(${navModule}, ${navActive})}"></div>
 <div th:replace="~{portal/fragments/portal-nav :: shellScripts}"></div>
+
+<dialog class="usr-dialog" id="matrizPermisos" aria-labelledby="matrizPermisosTitulo">
+    <div class="usr-dialog-head">
+        <div>
+            <h2 id="matrizPermisosTitulo">Matriz de permisos por rol</h2>
+            <p>Capacidades del portal Zona K e-Docs. Solo lectura informativa.</p>
+        </div>
+        <button type="button" class="usr-dialog-close" onclick="cerrarMatriz()" aria-label="Cerrar matriz de permisos">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+    </div>
+    <div class="usr-dialog-body">
+        <table class="usr-matrix">
+            <thead>
+            <tr>
+                <th>Capacidad</th>
+                <th>ADMIN</th>
+                <th>EMISOR</th>
+                <th>RECEPTOR</th>
+                <th>CONSULTA</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Configuración, sociedades y certificados</td>
+                <td class="yes">Sí</td>
+                <td class="no">—</td>
+                <td class="no">—</td>
+                <td class="no">—</td>
+            </tr>
+            <tr>
+                <td>Emitir FE / NC / ND</td>
+                <td class="yes">Sí</td>
+                <td class="yes">Sí</td>
+                <td class="no">—</td>
+                <td class="no">—</td>
+            </tr>
+            <tr>
+                <td>Ver bandeja de recepción</td>
+                <td class="yes">Sí</td>
+                <td class="no">—</td>
+                <td class="yes">Sí</td>
+                <td class="yes">Sí</td>
+            </tr>
+            <tr>
+                <td>Transmitir eventos RADIAN / asignar PV</td>
+                <td class="yes">Sí</td>
+                <td class="no">—</td>
+                <td class="yes">Sí</td>
+                <td class="no">—</td>
+            </tr>
+            <tr>
+                <td>Alcance filtrado por punto de venta</td>
+                <td class="no">Todos</td>
+                <td class="yes">Sí</td>
+                <td class="yes">Sí</td>
+                <td class="yes">Sí</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</dialog>
+
+<script>
+    (function () {
+        'use strict';
+
+        const byId = function (id) { return document.getElementById(id); };
+        const qsa = function (selector, root) {
+            return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+        };
+        const setText = function (id, value) {
+            const el = byId(id);
+            if (el) { el.textContent = value == null ? '' : value; }
+        };
+        const setVal = function (id, value) {
+            const el = byId(id);
+            if (el) { el.value = value == null ? '' : value; }
+        };
+
+        const ROLE_META = {
+            ADMIN: {
+                label: 'ADMIN — CONTROL TOTAL',
+                className: 'role-admin',
+                icon: 'shield_person',
+                perms: { emision: true, recepcion: true, certificados: true, descarga: true }
+            },
+            EMISOR: {
+                label: 'EMISOR — FACTURACIÓN Y DIAN',
+                className: 'role-emisor',
+                icon: 'receipt_long',
+                perms: { emision: true, recepcion: false, certificados: false, descarga: true }
+            },
+            RECEPTOR: {
+                label: 'RECEPTOR — RADIAN',
+                className: 'role-receptor',
+                icon: 'inbox',
+                perms: { emision: false, recepcion: true, certificados: false, descarga: true }
+            },
+            CONSULTA: {
+                label: 'CONSULTA — SOLO LECTURA',
+                className: 'role-consulta',
+                icon: 'visibility',
+                perms: { emision: false, recepcion: true, certificados: false, descarga: true }
+            }
+        };
+
+        const hub = byId('usersHub');
+        const detail = byId('userDetail');
+        const form = byId('usuarioForm');
+        const modeSwitch = byId('modoEdicion');
+        const globalSociedades = byId('accesoTodasSociedades');
+        const globalPuntos = byId('accesoTodosPuntos');
+        const roleSelect = byId('rol');
+        const usernameInput = byId('username');
+        const passwordInput = byId('password');
+        const btnGuardar = byId('btnGuardarUsuario');
+        const btnResetClave = byId('btnResetClave');
+        const btnValidarPermisos = byId('btnValidarPermisos');
+
+        let currentCard = null;
+        let editing = true;
+        let selectedRole = 'EMISOR';
+
+        function normalizeRole(role) {
+            if (!role) { return 'CONSULTA'; }
+            const normalized = String(role).trim().toUpperCase();
+            return normalized === 'OPERADOR' ? 'EMISOR' : normalized;
+        }
+
+        function metaFor(role) {
+            return ROLE_META[normalizeRole(role)] || ROLE_META.CONSULTA;
+        }
+
+        function initialsFor(name) {
+            const clean = String(name || '').trim();
+            if (!clean) { return 'US'; }
+            const parts = clean.split(/[.\-_\s]+/).filter(Boolean);
+            if (parts.length > 1) {
+                return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+            }
+            return clean.slice(0, 2).toUpperCase();
+        }
+
+        function roleBadgeMarkup(role) {
+            const meta = metaFor(role);
+            return {
+                className: 'usr-role-badge ' + meta.className,
+                icon: meta.icon,
+                label: meta.label
+            };
+        }
+
+        function updateCardBadges() {
+            qsa('.usr-card').forEach(function (card) {
+                const meta = roleBadgeMarkup(card.dataset.rol);
+                const badge = card.querySelector('[data-role-badge]');
+                const icon = badge ? badge.querySelector('[data-role-icon]') : null;
+                const label = badge ? badge.querySelector('[data-role-label]') : null;
+                const mono = card.querySelector('.usr-avatar-text');
+                if (badge) { badge.className = meta.className; }
+                if (icon) { icon.textContent = meta.icon; }
+                if (label) { label.textContent = meta.label; }
+                if (mono) { mono.textContent = initialsFor(card.dataset.username); }
+            });
+        }
+
+        function updatePrivileges(role) {
+            const meta = metaFor(role);
+            const items = [
+                { id: 'permEmision', key: 'emision', on: 'Habilitado con certificado', off: 'No asignado a este rol' },
+                {
+                    id: 'permRecepcion', key: 'recepcion',
+                    on: normalizeRole(role) === 'CONSULTA' ? 'Habilitado / solo lectura' : 'Habilitado / acuses de ley',
+                    off: 'No asignado a este rol'
+                },
+                { id: 'permCertificados', key: 'certificados', on: 'Habilitado / gestión .P12', off: 'Solo administradores' },
+                { id: 'permDescarga', key: 'descarga', on: 'Habilitado sin restricción', off: 'No asignado a este rol' }
+            ];
+
+            items.forEach(function (item) {
+                const pill = byId(item.id);
+                if (!pill) { return; }
+                const enabled = Boolean(meta.perms[item.key]);
+                const icon = pill.querySelector('.usr-perm-icon .material-symbols-outlined');
+                const copy = pill.querySelector('.usr-perm-copy small');
+                pill.classList.toggle('is-on', enabled);
+                pill.classList.toggle('is-off', !enabled);
+                if (icon) { icon.textContent = enabled ? 'check_circle' : 'remove_circle'; }
+                if (copy) { copy.textContent = enabled ? item.on : item.off; }
+            });
+        }
+
+        function updateDetail(data) {
+            const username = (data && data.username) ? data.username : 'Nuevo operador';
+            const role = normalizeRole(data && data.rol ? data.rol : selectedRole);
+            const meta = metaFor(role);
+            const global = !data || data.global !== false;
+            const societies = (data && data.sociedades)
+                ? data.sociedades.split(',').map(function (v) { return v.trim(); }).filter(Boolean)
+                : [];
+
+            setText('detalleUsername', username);
+            setText('detalleHandle', '@' + username + ' · Acceso al portal');
+            setText('detalleMono', initialsFor(username));
+            setText('detalleCrumbNombre', username);
+            setText('guardarUsuarioNombre', username.toUpperCase());
+            setText('detalleTenant', data && data.id ? '#' + data.id.slice(0, 8) : '#—');
+            setText('detalleAcceso', global || societies.length === 0
+                ? 'Cobertura global'
+                : (societies.length + (societies.length === 1 ? ' sociedad' : ' sociedades')));
+
+            const badge = byId('detalleRolBadge');
+            if (badge) {
+                badge.className = 'usr-role-badge ' + meta.className;
+                const icon = badge.querySelector('[data-role-icon]');
+                const label = badge.querySelector('[data-role-label]');
+                if (icon) { icon.textContent = meta.icon; }
+                if (label) { label.textContent = meta.label; }
+            }
+            updatePrivileges(role);
+        }
+
+        function hideClientAlert() {
+            const alert = byId('usrClientAlert');
+            if (alert) {
+                alert.hidden = true;
+                alert.classList.remove('usr-alert-success', 'usr-alert-danger');
+            }
+        }
+
+        function showClientAlert(message, type) {
+            const alert = byId('usrClientAlert');
+            const text = byId('usrClientAlertText');
+            if (!alert || !text) { return; }
+            text.textContent = message || '';
+            alert.hidden = !message;
+            alert.classList.remove('usr-alert-success', 'usr-alert-danger');
+            if (message) {
+                alert.classList.add(type === 'success' ? 'usr-alert-success' : 'usr-alert-danger');
+                const icon = alert.querySelector('.material-symbols-outlined');
+                if (icon) { icon.textContent = type === 'success' ? 'check_circle' : 'error'; }
+            }
+        }
+
+        function selectTabByName(name) {
+            const tab = document.querySelector('.usr-tab[data-tab="' + name + '"]');
+            if (tab) { selectTab(tab); }
+        }
+
+        function selectTab(button) {
+            qsa('.usr-tab').forEach(function (tab) {
+                const active = tab === button;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                tab.tabIndex = active ? 0 : -1;
+            });
+            qsa('.usr-panel').forEach(function (panel) {
+                const active = panel.dataset.pane === button.dataset.tab;
+                panel.classList.toggle('is-active', active);
+                panel.hidden = !active;
+            });
+        }
+
+        function setModoEdicion(enabled) {
+            editing = Boolean(enabled);
+            if (modeSwitch) { modeSwitch.checked = editing; }
+            qsa('.usr-panel').forEach(function (panel) {
+                panel.classList.toggle('is-readonly', !editing);
+            });
+            qsa('#usuarioForm .usr-input, #usuarioForm .usr-select').forEach(function (el) {
+                el.tabIndex = editing ? 0 : -1;
+                if (el.tagName === 'SELECT') {
+                    el.style.pointerEvents = editing ? '' : 'none';
+                } else {
+                    el.readOnly = !editing;
+                }
+            });
+            qsa('#usuarioForm input[type="checkbox"], #usuarioForm .usr-eye').forEach(function (el) {
+                el.tabIndex = editing ? 0 : -1;
+            });
+            if (btnGuardar) { btnGuardar.disabled = !editing; }
+            if (btnResetClave) { btnResetClave.disabled = !editing; }
+            if (btnValidarPermisos) { btnValidarPermisos.disabled = !editing; }
+        }
+
+        function selectedSocietyIds() {
+            const isGlobal = globalSociedades && globalSociedades.checked;
+            return qsa('input[name="sociedadIds"]').filter(function (input) {
+                return isGlobal || input.checked;
+            }).map(function (input) {
+                return input.value;
+            });
+        }
+
+        function allSocietyIds() {
+            return qsa('input[name="sociedadIds"]').map(function (input) { return input.value; });
+        }
+
+        function refreshDetailScope() {
+            const isGlobal = !globalSociedades || globalSociedades.checked;
+            const selected = selectedSocietyIds();
+            setText('detalleAcceso', isGlobal || selected.length === 0
+                ? 'Cobertura global'
+                : (selected.length + (selected.length === 1 ? ' sociedad' : ' sociedades')));
+        }
+
+        function syncSocietySelection() {
+            if (!globalSociedades) { return; }
+            const isGlobal = globalSociedades.checked;
+            const inputs = qsa('input[name="sociedadIds"]');
+
+            inputs.forEach(function (input) {
+                input.disabled = isGlobal;
+                input.closest('.usr-check-card').classList.toggle('is-disabled', isGlobal);
+                if (isGlobal) { input.checked = false; }
+            });
+
+            if (!isGlobal) {
+                const anyChecked = inputs.some(function (input) { return input.checked; });
+                if (!anyChecked) {
+                    globalSociedades.checked = true;
+                    inputs.forEach(function (input) {
+                        input.disabled = true;
+                        input.closest('.usr-check-card').classList.add('is-disabled');
+                    });
+                }
+            }
+
+            refreshDetailScope();
+            syncPointSelection();
+        }
+
+        function syncPointSelection() {
+            const globalSociedad = globalSociedades && globalSociedades.checked;
+            const selected = selectedSocietyIds();
+            const allPoints = globalPuntos && globalPuntos.checked;
+
+            qsa('[data-sociedad-group]').forEach(function (group) {
+                const societyId = group.getAttribute('data-sociedad-group');
+                const active = globalSociedad || selected.indexOf(societyId) !== -1;
+                group.classList.toggle('is-hidden', !active);
+                group.classList.toggle('is-disabled', !active);
+
+                const allOfSociety = group.querySelector('.usr-pv-all');
+                const points = qsa('.usr-pv-check', group);
+
+                if (!active) {
+                    if (allOfSociety) { allOfSociety.checked = false; }
+                    points.forEach(function (point) { point.checked = false; });
+                }
+
+                if (allPoints) {
+                    if (allOfSociety) { allOfSociety.checked = false; }
+                    points.forEach(function (point) { point.checked = false; });
+                }
+
+                if (allOfSociety) {
+                    allOfSociety.disabled = !active || allPoints;
+                }
+
+                points.forEach(function (point) {
+                    const blockedByAll = allOfSociety && allOfSociety.checked;
+                    point.disabled = !active || allPoints || blockedByAll;
+                });
+            });
+        }
+
+        function onGlobalSociedadesChange() {
+            if (globalSociedades && !globalSociedades.checked) {
+                qsa('input[name="sociedadIds"]').forEach(function (input) {
+                    input.checked = true;
+                });
+            }
+            syncSocietySelection();
+        }
+
+        function onSociedadChange() {
+            if (globalPuntos && !globalPuntos.checked) {
+                const checked = qsa('input[name="sociedadIds"]:checked');
+                checked.forEach(function (sociedad) {
+                    const group = document.querySelector('[data-sociedad-group="' + sociedad.value + '"]');
+                    if (!group) { return; }
+                    const scoped = qsa('input[name="pointScopes"]:checked', group);
+                    if (!scoped.length) {
+                        const all = group.querySelector('.usr-pv-all');
+                        if (all) { all.checked = true; }
+                    }
+                });
+            }
+            syncSocietySelection();
+        }
+
+        function onGlobalPuntosChange() {
+            if (globalPuntos && !globalPuntos.checked) {
+                qsa('[data-sociedad-group]').forEach(function (group) {
+                    if (group.classList.contains('is-hidden')) { return; }
+                    const scoped = qsa('input[name="pointScopes"]:checked', group);
+                    if (!scoped.length) {
+                        const all = group.querySelector('.usr-pv-all');
+                        if (all) { all.checked = true; }
+                    }
+                });
+            }
+            syncPointSelection();
+        }
+
+        function onTodosPuntosSociedad(input) {
+            const group = input.closest('[data-sociedad-group]');
+            if (!group) { return; }
+            if (input.checked) {
+                qsa('.usr-pv-check', group).forEach(function (point) {
+                    point.checked = false;
+                });
+            }
+            syncPointSelection();
+        }
+
+        function onPuntoChange(input) {
+            if (input.checked) {
+                const group = input.closest('[data-sociedad-group]');
+                const all = group ? group.querySelector('.usr-pv-all') : null;
+                if (all) { all.checked = false; }
+            }
+            syncPointSelection();
+        }
+
+        function restoreSociedades(data) {
+            const selectedIds = (data.sociedades || '').split(',').map(function (value) {
+                return value.trim();
+            }).filter(Boolean);
+            if (globalSociedades) {
+                globalSociedades.checked = selectedIds.length === 0;
+            }
+            qsa('input[name="sociedadIds"]').forEach(function (input) {
+                input.checked = selectedIds.indexOf(input.value) !== -1;
+            });
+            syncSocietySelection();
+        }
+
+        function restorePuntos(data) {
+            const scopes = (data.puntos || '').split(',').map(function (value) {
+                return value.trim();
+            }).filter(Boolean);
+            const isGlobal = scopes.length === 0;
+            if (globalPuntos) { globalPuntos.checked = isGlobal; }
+
+            qsa('input[name="pointScopes"]').forEach(function (input) {
+                input.checked = false;
+            });
+
+            if (!isGlobal) {
+                const available = qsa('input[name="pointScopes"]');
+                scopes.forEach(function (scope) {
+                    const match = available.find(function (input) { return input.value === scope; });
+                    if (match) { match.checked = true; }
+                });
+
+                const societies = selectedSocietyIds();
+                societies.forEach(function (societyId) {
+                    const group = document.querySelector('[data-sociedad-group="' + societyId + '"]');
+                    if (!group) { return; }
+                    const all = group.querySelector('.usr-pv-all');
+                    const specific = qsa('.usr-pv-check', group).some(function (point) {
+                        return point.checked;
+                    });
+                    if (!specific && all) { all.checked = true; }
+                });
+            }
+            syncPointSelection();
+        }
+
+        function resetForm() {
+            setVal('usuarioId', '');
+            setVal('username', '');
+            setVal('password', '');
+            setVal('rol', 'EMISOR');
+            selectedRole = 'EMISOR';
+            passwordInput.type = 'password';
+            const eyeIcon = document.querySelector('#togglePassword .material-symbols-outlined');
+            if (eyeIcon) { eyeIcon.textContent = 'visibility'; }
+            if (globalSociedades) { globalSociedades.checked = true; }
+            if (globalPuntos) { globalPuntos.checked = true; }
+            qsa('input[name="sociedadIds"]').forEach(function (input) { input.checked = false; });
+            qsa('input[name="pointScopes"]').forEach(function (input) { input.checked = false; });
+            syncSocietySelection();
+            syncPointSelection();
+            updateDetail({ username: 'Nuevo operador', rol: 'EMISOR', global: true, sociedades: '', id: '' });
+            hideClientAlert();
+        }
+
+        function nuevoUsuario(push) {
+            currentCard = null;
+            resetForm();
+            setModoEdicion(true);
+            selectTabByName('perfil');
+            showView('detalle', push !== false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (usernameInput) { usernameInput.focus(); }
+        }
+
+        function abrirDetalle(button, push) {
+            const card = button.closest('.usr-card');
+            if (!card) { return; }
+            currentCard = card;
+            const data = {
+                id: card.dataset.id || '',
+                username: card.dataset.username || '',
+                rol: card.dataset.rol || 'CONSULTA',
+                sociedades: card.dataset.sociedades || '',
+                puntos: card.dataset.puntos || ''
+            };
+
+            setVal('usuarioId', data.id);
+            setVal('username', data.username);
+            setVal('password', '');
+            setVal('rol', normalizeRole(data.rol));
+            selectedRole = normalizeRole(data.rol);
+            passwordInput.type = 'password';
+            const eyeIcon = document.querySelector('#togglePassword .material-symbols-outlined');
+            if (eyeIcon) { eyeIcon.textContent = 'visibility'; }
+
+            restoreSociedades(data);
+            restorePuntos(data);
+            updateDetail({
+                id: data.id,
+                username: data.username,
+                rol: data.rol,
+                global: (data.sociedades || '').trim() === '',
+                sociedades: data.sociedades
+            });
+
+            hideClientAlert();
+            setModoEdicion(true);
+            selectTabByName('perfil');
+            showView('detalle', push !== false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function volverAlDirectorio(push) {
+            currentCard = null;
+            showView('hub', push !== false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function descartarCambios() {
+            if (currentCard) {
+                abrirDetalle(currentCard.querySelector('.usr-btn-soft') || currentCard, false);
+            } else {
+                resetForm();
+                setModoEdicion(true);
+                selectTabByName('perfil');
+                hideClientAlert();
+            }
+        }
+
+        function validarFormulario() {
+            const username = (usernameInput.value || '').trim();
+            const isNew = !byId('usuarioId').value;
+            const password = passwordInput.value || '';
+
+            if (!username) {
+                selectTabByName('perfil');
+                showClientAlert('El usuario de acceso es obligatorio.', 'error');
+                usernameInput.focus();
+                return false;
+            }
+            if (!roleSelect.value) {
+                selectTabByName('perfil');
+                showClientAlert('Selecciona un rol RBAC válido.', 'error');
+                roleSelect.focus();
+                return false;
+            }
+            if (isNew && !password) {
+                selectTabByName('perfil');
+                showClientAlert('La contraseña es obligatoria para crear un operador.', 'error');
+                passwordInput.focus();
+                return false;
+            }
+            if (globalSociedades && !globalSociedades.checked
+                && !qsa('input[name="sociedadIds"]:checked').length) {
+                selectTabByName('sociedades');
+                showClientAlert('Selecciona al menos una sociedad o activa el acceso global.', 'error');
+                return false;
+            }
+
+            // Si una sociedad activa no tiene alcance explícito, el backend interpreta acceso total.
+            if (globalPuntos && !globalPuntos.checked) {
+                qsa('[data-sociedad-group]').forEach(function (group) {
+                    if (group.classList.contains('is-hidden')) { return; }
+                    const scoped = qsa('input[name="pointScopes"]:checked', group);
+                    if (!scoped.length) {
+                        const all = group.querySelector('.usr-pv-all');
+                        if (all) { all.checked = true; }
+                    }
+                });
+                syncPointSelection();
+            }
+            return true;
+        }
+
+        function validarPermisos() {
+            if (validarFormulario()) {
+                showClientAlert('Permisos coherentes. Puedes guardar los cambios.', 'success');
+            }
+        }
+
+        function resetearClave() {
+            if (!editing) { setModoEdicion(true); }
+            passwordInput.value = '';
+            passwordInput.type = 'text';
+            const eyeIcon = document.querySelector('#togglePassword .material-symbols-outlined');
+            if (eyeIcon) { eyeIcon.textContent = 'visibility_off'; }
+            passwordInput.focus();
+            showClientAlert('Ingresa la nueva contraseña. Si la dejas vacía al guardar, se conservará la actual.', 'success');
+        }
+
+        function togglePasswordVisibility() {
+            const showing = passwordInput.type === 'text';
+            passwordInput.type = showing ? 'password' : 'text';
+            const icon = document.querySelector('#togglePassword .material-symbols-outlined');
+            if (icon) { icon.textContent = showing ? 'visibility' : 'visibility_off'; }
+        }
+
+        function onRolChange() {
+            selectedRole = normalizeRole(roleSelect.value);
+            const data = {
+                id: byId('usuarioId').value,
+                username: (usernameInput.value || '').trim() || 'Nuevo operador',
+                rol: selectedRole,
+                global: globalSociedades ? globalSociedades.checked : true,
+                sociedades: globalSociedades && !globalSociedades.checked
+                    ? qsa('input[name="sociedadIds"]:checked').map(function (input) { return input.value; }).join(',')
+                    : ''
+            };
+            updateDetail(data);
+        }
+
+        function setFiltro(button) {
+            qsa('.usr-filter-pill').forEach(function (pill) {
+                pill.classList.toggle('is-active', pill === button);
+            });
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const query = (byId('userSearch').value || '').trim().toLowerCase();
+            const filterButton = document.querySelector('.usr-filter-pill.is-active');
+            const roleFilter = filterButton ? filterButton.dataset.filter : 'todos';
+            const societyFilter = byId('userSocietyFilter').value;
+            const cards = qsa('.usr-card');
+            let visible = 0;
+
+            cards.forEach(function (card) {
+                const data = card.dataset;
+                const role = normalizeRole(data.rol);
+                const meta = metaFor(role);
+                const text = [
+                    data.username, data.rol, role, meta.label,
+                    data.sociedadesLabel, data.puntosLabel, data.sociedades
+                ].filter(Boolean).join(' ').toLowerCase();
+                const matchesText = !query || text.indexOf(query) !== -1;
+                const matchesRole = roleFilter === 'todos' || role === roleFilter;
+                const globalSociety = data.globalSociedades === 'true';
+                const societyIds = (data.sociedadIds || '').split(',').map(function (v) {
+                    return v.trim();
+                }).filter(Boolean);
+                const matchesSociety = !societyFilter || globalSociety || societyIds.indexOf(societyFilter) !== -1;
+                const show = matchesText && matchesRole && matchesSociety;
+                card.classList.toggle('is-hidden', !show);
+                if (show) { visible += 1; }
+            });
+
+            const noResults = byId('userNoResults');
+            if (noResults) {
+                noResults.classList.toggle('is-hidden', visible > 0 || cards.length === 0);
+            }
+        }
+
+        function actualizarContadores() {
+            const cards = qsa('.usr-card');
+            const counts = { todos: cards.length, ADMIN: 0, EMISOR: 0, RECEPTOR: 0, CONSULTA: 0 };
+            cards.forEach(function (card) {
+                const role = normalizeRole(card.dataset.rol);
+                if (counts[role] != null) { counts[role] += 1; }
+            });
+            setText('countTodos', counts.todos);
+            setText('countAdmin', counts.ADMIN);
+            setText('countEmisor', counts.EMISOR);
+            setText('countReceptor', counts.RECEPTOR);
+            setText('countConsulta', counts.CONSULTA);
+            setText('kpiTotal', counts.todos + ' Activos');
+        }
+
+        function actualizarContadoresPv() {
+            qsa('[data-sociedad-group]').forEach(function (group) {
+                const count = group.querySelectorAll('.usr-pv-card').length;
+                const label = group.querySelector('[data-pv-count]');
+                if (label) {
+                    label.textContent = String(count);
+                }
+            });
+        }
+
+        function showView(view, push) {
+            const isDetail = view === 'detalle';
+            hub.classList.toggle('is-hidden', isDetail);
+            detail.classList.toggle('is-hidden', !isDetail);
+            if (push) {
+                const params = new URLSearchParams();
+                if (isDetail) {
+                    const id = byId('usuarioId').value;
+                    if (id) {
+                        params.set('usuario', id);
+                    } else {
+                        params.set('nuevo', '1');
+                    }
+                }
+                const query = params.toString();
+                history.pushState({ view: view }, '', location.pathname + (query ? '?' + query : ''));
+            }
+        }
+
+        function abrirDesdeUrl() {
+            const params = new URLSearchParams(location.search);
+            if (params.get('nuevo') === '1') {
+                nuevoUsuario(false);
+                return true;
+            }
+            const id = params.get('usuario');
+            if (id) {
+                const card = qsa('.usr-card').find(function (item) {
+                    return item.dataset.id === id;
+                });
+                if (card) {
+                    const trigger = card.querySelector('.usr-btn-soft') || card.querySelector('.usr-btn');
+                    abrirDetalle(trigger || card, false);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function abrirMatriz() {
+            const dialog = byId('matrizPermisos');
+            if (!dialog) { return; }
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+        }
+
+        function cerrarMatriz() {
+            const dialog = byId('matrizPermisos');
+            if (!dialog) { return; }
+            if (typeof dialog.close === 'function') {
+                dialog.close();
+            } else {
+                dialog.removeAttribute('open');
+            }
+        }
+
+        // Eventos del formulario.
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                if (!editing) {
+                    event.preventDefault();
+                    showClientAlert('Activa el modo edición para guardar cambios.', 'error');
+                    return;
+                }
+                if (!validarFormulario()) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        qsa('.usr-tab').forEach(function (tab, index, tabs) {
+            tab.addEventListener('keydown', function (event) {
+                let next = null;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    next = tabs[(index + 1) % tabs.length];
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    next = tabs[(index - 1 + tabs.length) % tabs.length];
+                } else if (event.key === 'Home') {
+                    next = tabs[0];
+                } else if (event.key === 'End') {
+                    next = tabs[tabs.length - 1];
+                }
+                if (next) {
+                    event.preventDefault();
+                    next.focus();
+                    selectTab(next);
+                }
+            });
+        });
+
+        if (usernameInput) {
+            usernameInput.addEventListener('input', function () {
+                const username = (usernameInput.value || '').trim() || 'Nuevo operador';
+                setText('detalleUsername', username);
+                setText('detalleHandle', '@' + username + ' · Acceso al portal');
+                setText('detalleMono', initialsFor(username));
+                setText('detalleCrumbNombre', username);
+                setText('guardarUsuarioNombre', username.toUpperCase());
+            });
+        }
+
+        if (passwordInput) {
+            passwordInput.addEventListener('input', hideClientAlert);
+        }
+
+        const matrixDialog = byId('matrizPermisos');
+        if (matrixDialog) {
+            matrixDialog.addEventListener('click', function (event) {
+                if (event.target === matrixDialog) {
+                    cerrarMatriz();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            updateCardBadges();
+            actualizarContadores();
+            actualizarContadoresPv();
+            aplicarFiltros();
+            updatePrivileges('EMISOR');
+
+            // Estado inicial del formulario oculto: acceso global y todos los PV.
+            if (globalSociedades) { globalSociedades.checked = true; }
+            if (globalPuntos) { globalPuntos.checked = true; }
+            syncSocietySelection();
+            syncPointSelection();
+
+            if (!abrirDesdeUrl()) {
+                showView('hub', false);
+            }
+        });
+
+        window.addEventListener('popstate', function () {
+            if (!abrirDesdeUrl()) {
+                showView('hub', false);
+            }
+        });
+
+        // Funciones usadas desde atributos onclick del template.
+        window.abrirMatriz = abrirMatriz;
+        window.cerrarMatriz = cerrarMatriz;
+        window.nuevoUsuario = nuevoUsuario;
+        window.abrirDetalle = abrirDetalle;
+        window.volverAlDirectorio = volverAlDirectorio;
+        window.descartarCambios = descartarCambios;
+        window.validarPermisos = validarPermisos;
+        window.resetearClave = resetearClave;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+        window.onRolChange = onRolChange;
+        window.onGlobalSociedadesChange = onGlobalSociedadesChange;
+        window.onSociedadChange = onSociedadChange;
+        window.onGlobalPuntosChange = onGlobalPuntosChange;
+        window.onTodosPuntosSociedad = onTodosPuntosSociedad;
+        window.onPuntoChange = onPuntoChange;
+        window.setModoEdicion = setModoEdicion;
+        window.selectTab = selectTab;
+        window.setFiltro = setFiltro;
+        window.aplicarFiltros = aplicarFiltros;
+    }());
+</script>
 </body>
 </html>
