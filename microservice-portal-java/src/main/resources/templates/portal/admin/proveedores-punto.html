@@ -13,7 +13,7 @@
     <div class="mb-6">
         <p class="text-xs text-gray-500 font-medium mb-2">Configuración / Recepción / Enrutamiento Proveedor → Punto de Venta</p>
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            <div class="min-w-0">
+            <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Enrutamiento Proveedor ➔ Punto de Venta</h1>
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-[#007a53] border border-emerald-200 px-3 py-1 text-xs font-bold">
@@ -21,13 +21,13 @@
                         Automatización Activa
                     </span>
                 </div>
-                <p class="text-sm text-gray-500 mt-1 max-w-2xl">
+                <p class="text-sm text-gray-500 mt-2 max-w-2xl">
                     Enruta automáticamente facturas electrónicas recibidas al punto de venta correspondiente según el NIT del emisor.
                     Complementa el alcance de usuarios RECEPTOR / ADMIN.
                 </p>
             </div>
 
-            <div class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 px-4 shadow-sm">
+            <div class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3 px-4 shadow-sm flex-shrink-0">
                 <div class="bg-emerald-50 text-emerald-800 font-bold text-xs p-2 rounded-lg">ZK</div>
                 <div class="min-w-0">
                     <p class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">SOCIEDAD ACTIVA</p>
@@ -65,13 +65,13 @@
     <!-- KPIS -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-start justify-between gap-3">
-            <div>
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">REGLAS ACTIVAS</p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-2">
                     <span class="text-2xl font-bold text-gray-900" th:text="${#lists.size(rows)}">0</span>
                     <span class="rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 font-medium">100% operativo</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Enrutamiento automatizado</p>
+                <p class="text-xs text-gray-500 mt-2">Enrutamiento automatizado</p>
             </div>
             <div class="h-10 w-10 rounded-full bg-emerald-50 text-[#007a53] flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">shield</span>
@@ -79,13 +79,13 @@
         </article>
 
         <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-start justify-between gap-3">
-            <div>
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">PROVEEDORES ASIGNADOS</p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-2">
                     <span class="text-2xl font-bold text-gray-900" th:text="${#lists.size(rows)}">0</span>
                     <span class="rounded-full bg-gray-100 text-gray-700 text-xs px-2 py-0.5 font-medium">Mapeados</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Emisores con NIT verificado</p>
+                <p class="text-xs text-gray-500 mt-2">Emisores con NIT verificado</p>
             </div>
             <div class="h-10 w-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">apartment</span>
@@ -93,13 +93,13 @@
         </article>
 
         <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-start justify-between gap-3">
-            <div>
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">PUNTOS DE VENTA</p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-2">
                     <span class="text-2xl font-bold text-gray-900" th:text="${#lists.size(puntosVenta)}">0</span>
                     <span class="rounded-full bg-gray-100 text-gray-700 text-xs px-2 py-0.5 font-medium">Sedes</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Caja Principal, Norte, Domicilios</p>
+                <p class="text-xs text-gray-500 mt-2">Caja Principal, Norte, Domicilios</p>
             </div>
             <div class="h-10 w-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">storefront</span>
@@ -107,13 +107,13 @@
         </article>
 
         <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-start justify-between gap-3">
-            <div>
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">EFICIENCIA RECEPCIÓN</p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-2">
                     <span class="text-2xl font-bold text-gray-900">99.4%</span>
                     <span class="rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 font-medium">Auto-clasificadas</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Sin intervención manual</p>
+                <p class="text-xs text-gray-500 mt-2">Sin intervención manual</p>
             </div>
             <div class="h-10 w-10 rounded-full bg-emerald-50 text-[#007a53] flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">bolt</span>
