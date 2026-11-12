@@ -4,7 +4,7 @@
     <th:block th:replace="~{portal/fragments/portal-nav :: tailwindHead('Usuarios y Control de Acceso | Zona K e-Docs')}"></th:block>
     <link rel="icon" type="image/png" th:href="@{/imagen/zonak.png}" href="/imagen/zonak.png">
     <meta name="description" content="Administración de usuarios, roles RBAC, sociedades y alcance por punto de venta en Zona K e-Docs.">
-    <link rel="stylesheet" th:href="@{/css/usuarios-admin.css?v=20261112-users1}" href="/css/usuarios-admin.css">
+    <link rel="stylesheet" th:href="@{/css/usuarios-admin.css?v=20261112-users2}" href="/css/usuarios-admin.css">
 </head>
 <body class="text-on-surface">
 <div th:replace="~{portal/fragments/portal-nav :: sidebar(${navModule}, ${navActive})}"></div>
@@ -36,18 +36,16 @@
                     </p>
                 </div>
                 <div class="usr-top-actions">
-                    <span class="usr-status-pill">
-                        <span class="usr-dot" aria-hidden="true"></span>
-                        Multi-Tenant RBAC Activo
-                    </span>
-                    <a class="usr-btn usr-btn-ghost" th:href="@{/portal/admin/proveedores-punto}" href="/portal/admin/proveedores-punto">
-                        <span class="material-symbols-outlined" aria-hidden="true">route</span>
-                        Proveedor → Punto
-                    </a>
-                    <button type="button" class="usr-btn usr-btn-ghost" onclick="abrirMatriz()">
-                        <span class="material-symbols-outlined" aria-hidden="true">table_view</span>
-                        Matriz de Permisos
-                    </button>
+                    <div class="usr-top-actions-row">
+                        <span class="usr-status-pill">
+                            <span class="usr-dot" aria-hidden="true"></span>
+                            Multi-Tenant RBAC Activo
+                        </span>
+                        <button type="button" class="usr-btn usr-btn-ghost" onclick="abrirMatriz()">
+                            <span class="material-symbols-outlined" aria-hidden="true">table_view</span>
+                            Matriz de Permisos
+                        </button>
+                    </div>
                     <button type="button" class="usr-btn usr-btn-primary" onclick="nuevoUsuario()">
                         <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
                         Nuevo Usuario
@@ -102,8 +100,10 @@
                     </div>
                     <div class="usr-kpi-body">
                         <p class="usr-kpi-label">Alcance DIAN</p>
-                        <div class="usr-kpi-value" th:text="|${#lists.size(puntosVenta)} PV|">0 PV</div>
-                        <p class="usr-kpi-sub">Segmentación multi-sociedad</p>
+                        <div class="usr-kpi-value">Puntos y PV</div>
+                        <p class="usr-kpi-sub">
+                            <span th:text="|${#lists.size(puntosVenta)} PV · |"></span>Segmentación multi-sociedad
+                        </p>
                     </div>
                 </article>
             </section>
@@ -119,19 +119,19 @@
 
                 <div class="usr-filter-pills" role="group" aria-label="Filtrar operadores por rol">
                     <button type="button" class="usr-filter-pill is-active" data-filter="todos" onclick="setFiltro(this)">
-                        Todos <span id="countTodos" th:text="${#lists.size(usuarios)}">0</span>
+                        Todos <span class="usr-pill-count">(<span id="countTodos" th:text="${#lists.size(usuarios)}">0</span>)</span>
                     </button>
                     <button type="button" class="usr-filter-pill" data-filter="ADMIN" onclick="setFiltro(this)">
-                        Admin <span id="countAdmin">0</span>
+                        Administradores <span class="usr-pill-count">(<span id="countAdmin">0</span>)</span>
                     </button>
                     <button type="button" class="usr-filter-pill" data-filter="EMISOR" onclick="setFiltro(this)">
-                        Emisión <span id="countEmisor">0</span>
+                        Emisión <span class="usr-pill-count">(<span id="countEmisor">0</span>)</span>
                     </button>
                     <button type="button" class="usr-filter-pill" data-filter="RECEPTOR" onclick="setFiltro(this)">
-                        Recepción <span id="countReceptor">0</span>
+                        Recepción <span class="usr-pill-count">(<span id="countReceptor">0</span>)</span>
                     </button>
                     <button type="button" class="usr-filter-pill" data-filter="CONSULTA" onclick="setFiltro(this)">
-                        Consulta <span id="countConsulta">0</span>
+                        Consulta <span class="usr-pill-count">(<span id="countConsulta">0</span>)</span>
                     </button>
                 </div>
 
@@ -149,7 +149,16 @@
                 </div>
             </div>
 
-            <!-- Tarjetas de operadores -->
+            <!-- Directorio de operadores -->
+            <div class="usr-directory-head">
+                <div class="usr-directory-title-wrap">
+                    <h2 class="usr-directory-title">Directorio de Usuarios Activos</h2>
+                    <span class="usr-directory-count" id="dirCount"
+                          th:text="|${#lists.size(usuarios)} registrados|">0 registrados</span>
+                </div>
+                <span class="usr-directory-mode">Visualización en Cards • Master-Detail</span>
+            </div>
+
             <div class="usr-cards" id="userCards" th:if="${!#lists.isEmpty(usuarios)}">
                 <article class="usr-card"
                          th:each="usuario : ${usuarios}"
@@ -220,9 +229,9 @@
 
                     <div class="usr-card-actions">
                         <button type="button" class="usr-btn usr-btn-outline usr-btn-sm"
-                                onclick="abrirDetalle(this)">
+                                onclick="editarInline(this)">
                             <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-                            Editar permisos
+                            Editar Permisos
                         </button>
                         <button type="button" class="usr-btn usr-btn-soft usr-btn-sm"
                                 onclick="abrirDetalle(this)">
@@ -244,6 +253,162 @@
                 <strong>Sin resultados</strong>
                 <span>No hay operadores que coincidan con la búsqueda o los filtros seleccionados.</span>
             </div>
+
+            <!-- Editor inline: crear o editar sin salir del directorio -->
+            <section class="usr-inline-editor is-hidden" id="inlineEditor" aria-labelledby="inlineEditorTitle">
+                <form id="inlineUsuarioForm" th:action="@{/portal/admin/usuarios}" method="post" novalidate>
+                    <input type="hidden" name="id" id="inlineUsuarioId">
+
+                    <div class="usr-inline-head">
+                        <div class="usr-inline-heading">
+                            <span class="usr-inline-icon" aria-hidden="true">
+                                <span class="material-symbols-outlined">person_add</span>
+                            </span>
+                            <div>
+                                <div class="usr-inline-title-row">
+                                    <h2 id="inlineEditorTitle">Crear o Editar Usuario</h2>
+                                    <span class="usr-inline-tag">Formulario Ejecutivo</span>
+                                </div>
+                                <p class="usr-inline-sub">
+                                    Asigne rol, sociedades y alcance de puntos de venta. Sin sociedades marcadas
+                                    = acceso a todas automáticamente.
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" class="usr-inline-close" onclick="cerrarEditorInline()"
+                                aria-label="Cerrar formulario">
+                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                        </button>
+                    </div>
+
+                    <div class="usr-alert usr-alert-danger" id="inlineAlert" role="alert" hidden>
+                        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                        <span id="inlineAlertText"></span>
+                    </div>
+
+                    <div class="usr-inline-fields">
+                        <div class="usr-field">
+                            <label class="usr-label" for="inlineUsername">Usuario <span class="req">*</span></label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">person</span>
+                                <input class="usr-input" id="inlineUsername" name="username" required maxlength="80"
+                                       autocomplete="off" placeholder="ej. operador_zonak">
+                            </div>
+                        </div>
+
+                        <div class="usr-field">
+                            <label class="usr-label" for="inlinePassword">Contraseña <span class="req">*</span></label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">lock</span>
+                                <input class="usr-input usr-input-password" id="inlinePassword" name="password"
+                                       type="password" autocomplete="new-password"
+                                       placeholder="Obligatoria en alta; vacía conserva la actual">
+                                <button type="button" class="usr-eye" onclick="toggleInlinePassword()"
+                                        aria-label="Mostrar u ocultar contraseña">
+                                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="usr-field">
+                            <label class="usr-label" for="inlineRol">Rol <span class="req">*</span></label>
+                            <div class="usr-input-wrap">
+                                <span class="material-symbols-outlined usr-input-icon" aria-hidden="true">admin_panel_settings</span>
+                                <select class="usr-select" id="inlineRol" name="rol" required>
+                                    <option th:each="r : ${roles}"
+                                            th:value="${r}"
+                                            th:text="${r == 'ADMIN'
+                                                       ? 'ADMIN — Control total'
+                                                       : (r == 'EMISOR'
+                                                          ? 'EMISOR — Facturación y DIAN'
+                                                          : (r == 'RECEPTOR'
+                                                             ? 'RECEPTOR — RADIAN'
+                                                             : 'CONSULTA — Solo lectura'))}">
+                                        EMISOR — Facturación y DIAN
+                                    </option>
+                                </select>
+                                <span class="material-symbols-outlined usr-select-arrow" aria-hidden="true">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="usr-inline-columns">
+                        <div class="usr-inline-block">
+                            <div class="usr-inline-block-head">
+                                <h3>Sociedades asignadas</h3>
+                                <span class="usr-inline-hint">Multi-selección</span>
+                            </div>
+
+                            <div class="usr-inline-list">
+                                <label class="usr-inline-check" th:each="sociedad : ${sociedades}">
+                                    <input type="checkbox" th:value="${sociedad.id}"
+                                           th:attr="data-inline-sociedad=${sociedad.id}"
+                                           onchange="onInlineSociedadChange()">
+                                    <span class="usr-inline-checkbox" aria-hidden="true">
+                                        <span class="material-symbols-outlined">check</span>
+                                    </span>
+                                    <span class="usr-inline-check-copy">
+                                        <strong th:text="${sociedad.razonSocial}">Sociedad</strong>
+                                        <small th:text="|(${sociedad.nit})|">(NIT)</small>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <p class="usr-inline-tip">
+                                <strong>Tip:</strong> Selección flexible. Vacío = acceso a todas las sociedades registradas.
+                            </p>
+                        </div>
+
+                        <div class="usr-inline-block">
+                            <div class="usr-inline-block-head">
+                                <h3>Puntos de venta (alcance)</h3>
+                                <span class="usr-inline-tag-soft">Filtro Activo</span>
+                            </div>
+
+                            <div class="usr-inline-pv">
+                                <div class="usr-inline-pv-group" th:each="sociedad : ${sociedades}"
+                                     th:attr="data-inline-group=${sociedad.id}">
+                                    <label class="usr-inline-pv-all">
+                                        <input type="checkbox" class="inline-pv-all"
+                                               th:attr="data-inline-scope=${sociedad.id + ':*'}"
+                                               onchange="onInlineTodosPuntos(this)">
+                                        <span class="material-symbols-outlined" aria-hidden="true">star</span>
+                                        <span th:text="|Todos los PV · ${sociedad.razonSocial}|">Todos los PV</span>
+                                    </label>
+
+                                    <label class="usr-inline-pv-item" th:each="punto : ${puntosVenta}"
+                                           th:if="${punto.sociedadId == sociedad.id}">
+                                        <input type="checkbox" class="inline-pv-check"
+                                               th:attr="data-inline-scope=${sociedad.id + ':' + punto.id}"
+                                               onchange="onInlinePunto(this)">
+                                        <span class="usr-inline-checkbox" aria-hidden="true">
+                                            <span class="material-symbols-outlined">check</span>
+                                        </span>
+                                        <span class="usr-inline-check-copy">
+                                            <strong th:text="${punto.codigo}">PV-001</strong>
+                                            <small th:text="${punto.nombre}">Punto de venta</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <p class="usr-inline-tip">
+                                <strong>Regla:</strong> Vacío = todos los PV de sus sociedades. Use ★ para forzar acceso total.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="usr-inline-foot">
+                        <button type="button" class="usr-btn usr-btn-outline" onclick="resetInlineEditor()">
+                            Cancelar / Limpiar
+                        </button>
+                        <button type="submit" class="usr-btn usr-btn-primary">
+                            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                            Guardar Usuario
+                        </button>
+                    </div>
+                </form>
+            </section>
 
             <div class="usr-security-banner">
                 <div class="usr-security-icon">
@@ -810,6 +975,13 @@
         const btnResetClave = byId('btnResetClave');
         const btnValidarPermisos = byId('btnValidarPermisos');
 
+        const inlineEditor = byId('inlineEditor');
+        const inlineForm = byId('inlineUsuarioForm');
+        const inlineUsername = byId('inlineUsername');
+        const inlinePassword = byId('inlinePassword');
+        const inlineRol = byId('inlineRol');
+        const inlineAlert = byId('inlineAlert');
+
         let currentCard = null;
         let editing = true;
         let selectedRole = 'EMISOR';
@@ -1183,12 +1355,172 @@
 
         function nuevoUsuario(push) {
             currentCard = null;
-            resetForm();
-            setModoEdicion(true);
-            selectTabByName('perfil');
-            showView('detalle', push !== false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            if (usernameInput) { usernameInput.focus(); }
+            resetInlineEditor();
+            showInlineEditor();
+            if (push !== false) {
+                history.pushState({ view: 'hub' }, '', location.pathname + '?nuevo=1');
+            }
+            if (inlineUsername) { inlineUsername.focus({ preventScroll: true }); }
+        }
+
+        function showInlineEditor() {
+            if (!inlineEditor) { return; }
+            inlineEditor.classList.remove('is-hidden');
+            inlineEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function cerrarEditorInline() {
+            if (inlineEditor) { inlineEditor.classList.add('is-hidden'); }
+            if (new URLSearchParams(location.search).get('nuevo') === '1') {
+                history.replaceState({ view: 'hub' }, '', location.pathname);
+            }
+        }
+
+        function inlineSocietyInputs() {
+            return inlineForm ? qsa('[data-inline-sociedad]', inlineForm) : [];
+        }
+
+        function inlineScopeInputs(root) {
+            return inlineForm ? qsa('[data-inline-scope]', root || inlineForm) : [];
+        }
+
+        function hideInlineAlert() {
+            if (inlineAlert) {
+                inlineAlert.hidden = true;
+            }
+        }
+
+        function showInlineAlert(message) {
+            const text = byId('inlineAlertText');
+            if (!inlineAlert || !text) { return; }
+            text.textContent = message || '';
+            inlineAlert.hidden = !message;
+        }
+
+        function syncInlineSocieties() {
+            const inputs = inlineSocietyInputs();
+            const selected = inputs.filter(function (input) { return input.checked; })
+                .map(function (input) { return input.value; });
+
+            qsa('[data-inline-group]', inlineForm).forEach(function (group) {
+                const active = selected.length === 0
+                    || selected.indexOf(group.getAttribute('data-inline-group')) !== -1;
+                group.classList.toggle('is-hidden', !active);
+                if (!active) {
+                    inlineScopeInputs(group).forEach(function (input) { input.checked = false; });
+                }
+            });
+
+            syncInlinePuntos();
+        }
+
+        function syncInlinePuntos() {
+            qsa('[data-inline-group]', inlineForm).forEach(function (group) {
+                const active = !group.classList.contains('is-hidden');
+                const all = group.querySelector('.inline-pv-all');
+                const points = qsa('.inline-pv-check', group);
+                const allChecked = Boolean(all && all.checked);
+
+                if (all) { all.disabled = !active; }
+                points.forEach(function (input) {
+                    input.disabled = !active || allChecked;
+                });
+            });
+        }
+
+        function onInlineSociedadChange() {
+            inlineSocietyInputs().filter(function (input) { return input.checked; })
+                .forEach(function (society) {
+                    const group = inlineForm.querySelector('[data-inline-group="' + society.value + '"]');
+                    if (!group || !inlineScopeInputs(group).some(function (input) { return input.checked; })) {
+                        const all = group ? group.querySelector('.inline-pv-all') : null;
+                        if (all) { all.checked = true; }
+                    }
+                });
+            syncInlineSocieties();
+        }
+
+        function onInlineTodosPuntos(input) {
+            const group = input.closest('[data-inline-group]');
+            if (group && input.checked) {
+                qsa('.inline-pv-check', group).forEach(function (point) { point.checked = false; });
+            }
+            syncInlinePuntos();
+        }
+
+        function onInlinePunto(input) {
+            if (input.checked) {
+                const group = input.closest('[data-inline-group]');
+                const all = group ? group.querySelector('.inline-pv-all') : null;
+                if (all) { all.checked = false; }
+            }
+            syncInlinePuntos();
+        }
+
+        function toggleInlinePassword() {
+            if (!inlinePassword) { return; }
+            const showing = inlinePassword.type === 'text';
+            inlinePassword.type = showing ? 'password' : 'text';
+            const icon = inlineForm ? inlineForm.querySelector('.usr-eye .material-symbols-outlined') : null;
+            if (icon) { icon.textContent = showing ? 'visibility' : 'visibility_off'; }
+        }
+
+        function resetInlineEditor() {
+            if (!inlineForm) { return; }
+            setVal('inlineUsuarioId', '');
+            if (inlineUsername) { inlineUsername.value = ''; }
+            if (inlinePassword) {
+                inlinePassword.value = '';
+                inlinePassword.type = 'password';
+            }
+            if (inlineRol) { inlineRol.value = 'EMISOR'; }
+            inlineSocietyInputs().forEach(function (input) { input.checked = false; });
+            inlineScopeInputs().forEach(function (input) { input.checked = false; });
+            const eyeIcon = inlineForm.querySelector('.usr-eye .material-symbols-outlined');
+            if (eyeIcon) { eyeIcon.textContent = 'visibility'; }
+            hideInlineAlert();
+            syncInlineSocieties();
+            syncInlinePuntos();
+        }
+
+        function editarInline(button) {
+            const card = button.closest('.usr-card');
+            if (!card || !inlineForm) { return; }
+            currentCard = card;
+
+            const societies = (card.dataset.sociedades || '').split(',')
+                .map(function (value) { return value.trim(); }).filter(Boolean);
+            const scopes = (card.dataset.puntos || '').split(',')
+                .map(function (value) { return value.trim(); }).filter(Boolean);
+
+            setVal('inlineUsuarioId', card.dataset.id || '');
+            if (inlineUsername) { inlineUsername.value = card.dataset.username || ''; }
+            if (inlinePassword) {
+                inlinePassword.value = '';
+                inlinePassword.type = 'password';
+            }
+            if (inlineRol) { inlineRol.value = normalizeRole(card.dataset.rol); }
+
+            inlineSocietyInputs().forEach(function (input) {
+                input.checked = societies.indexOf(input.value) !== -1;
+            });
+            inlineScopeInputs().forEach(function (input) {
+                input.checked = scopes.indexOf(input.getAttribute('data-inline-scope')) !== -1;
+            });
+
+            syncInlineSocieties();
+
+            societies.forEach(function (societyId) {
+                const group = inlineForm.querySelector('[data-inline-group="' + societyId + '"]');
+                if (!group || !inlineScopeInputs(group).some(function (input) { return input.checked; })) {
+                    const all = group ? group.querySelector('.inline-pv-all') : null;
+                    if (all) { all.checked = true; }
+                }
+            });
+
+            syncInlinePuntos();
+            hideInlineAlert();
+            showInlineEditor();
         }
 
         function abrirDetalle(button, push) {
@@ -1381,7 +1713,14 @@
             setText('countEmisor', counts.EMISOR);
             setText('countReceptor', counts.RECEPTOR);
             setText('countConsulta', counts.CONSULTA);
-            setText('kpiTotal', counts.todos + ' Activos');
+            setText('kpiTotal', counts.todos + (counts.todos === 1 ? ' Activo' : ' Activos'));
+            setText('dirCount', counts.todos + (counts.todos === 1 ? ' registrado' : ' registrados'));
+
+            qsa('.usr-filter-pill').forEach(function (pill) {
+                const filter = pill.dataset.filter;
+                const total = filter === 'todos' ? counts.todos : (counts[filter] || 0);
+                pill.hidden = filter !== 'todos' && total === 0;
+            });
         }
 
         function actualizarContadoresPv() {
@@ -1467,6 +1806,61 @@
             });
         }
 
+        if (inlineForm) {
+            inlineForm.addEventListener('submit', function (event) {
+                const username = inlineUsername ? inlineUsername.value.trim() : '';
+                const isNew = !byId('inlineUsuarioId').value;
+
+                if (!username) {
+                    event.preventDefault();
+                    showInlineAlert('El usuario es obligatorio.');
+                    inlineUsername.focus();
+                    return;
+                }
+                if (!inlineRol || !inlineRol.value) {
+                    event.preventDefault();
+                    showInlineAlert('Selecciona un rol válido.');
+                    inlineRol.focus();
+                    return;
+                }
+                if (isNew && !inlinePassword.value) {
+                    event.preventDefault();
+                    showInlineAlert('La contraseña es obligatoria para crear un operador.');
+                    inlinePassword.focus();
+                    return;
+                }
+                inlineSocietyInputs().filter(function (input) { return input.checked; })
+                    .forEach(function (society) {
+                        const group = inlineForm.querySelector('[data-inline-group="' + society.value + '"]');
+                        if (!group || !inlineScopeInputs(group).some(function (input) { return input.checked; })) {
+                            const all = group ? group.querySelector('.inline-pv-all') : null;
+                            if (all) { all.checked = true; }
+                        }
+                    });
+                syncInlinePuntos();
+
+                qsa('.inline-generated', inlineForm).forEach(function (input) { input.remove(); });
+
+                function addHidden(name, value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    input.className = 'inline-generated';
+                    inlineForm.appendChild(input);
+                }
+
+                inlineSocietyInputs().filter(function (input) { return input.checked; })
+                    .forEach(function (input) { addHidden('sociedadIds', input.value); });
+
+                inlineScopeInputs().filter(function (input) { return input.checked; })
+                    .forEach(function (input) { addHidden('pointScopes', input.getAttribute('data-inline-scope')); });
+            });
+
+            if (inlineUsername) { inlineUsername.addEventListener('input', hideInlineAlert); }
+            if (inlinePassword) { inlinePassword.addEventListener('input', hideInlineAlert); }
+        }
+
         qsa('.usr-tab').forEach(function (tab, index, tabs) {
             tab.addEventListener('keydown', function (event) {
                 let next = null;
@@ -1523,6 +1917,7 @@
             if (globalPuntos) { globalPuntos.checked = true; }
             syncSocietySelection();
             syncPointSelection();
+            resetInlineEditor();
 
             if (!abrirDesdeUrl()) {
                 showView('hub', false);
@@ -1555,6 +1950,13 @@
         window.selectTab = selectTab;
         window.setFiltro = setFiltro;
         window.aplicarFiltros = aplicarFiltros;
+        window.editarInline = editarInline;
+        window.cerrarEditorInline = cerrarEditorInline;
+        window.resetInlineEditor = resetInlineEditor;
+        window.toggleInlinePassword = toggleInlinePassword;
+        window.onInlineSociedadChange = onInlineSociedadChange;
+        window.onInlineTodosPuntos = onInlineTodosPuntos;
+        window.onInlinePunto = onInlinePunto;
     }());
 </script>
 </body>
